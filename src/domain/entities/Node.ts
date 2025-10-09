@@ -1,9 +1,6 @@
-enum InputType {
-  TEXT = "text",
-  NUMBER = "number",
-  ARRAY = "array",
-  OBJECT = "object"
-}
+
+type InputType = 'buscar_documento' | 'id_da_defesa' | 'do_estado';
+
 
 // um mapeamento nomeDeCampo → objeto { [inputType]: referência }
 type InputDefinition = {
@@ -13,12 +10,12 @@ type InputDefinition = {
 // const exemplo: InputDefinition = {
 //   nome: { text: "nome" },  // campo nome espera uma string
 
-export default class Node {
+export default class NodeEntitie {
   nome: string;
   agente: string;
   modelo_llm: string;
   prompt: string;
-  chaveDeSaida: string;
+  chave_de_saida: string;
   entradas: InputDefinition;
 
   constructor(
@@ -26,14 +23,14 @@ export default class Node {
     agente: string,
     modelo_llm: string,
     prompt: string,
-    chaveDeSaida: string,
+    chave_de_saida: string,
     entradas: InputDefinition
   ) {
     this.nome = nome;
     this.agente = agente;
     this.modelo_llm = modelo_llm;
     this.prompt = prompt;
-    this.chaveDeSaida = chaveDeSaida;
+    this.chave_de_saida = chave_de_saida;
     this.entradas = entradas;
   }
 }

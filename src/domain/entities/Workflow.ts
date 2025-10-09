@@ -1,11 +1,11 @@
 import Edge from "./Edge";
-import Node from "./Node";
+import NodeEntitie from "./Node";
 
 export default class Workflow {
     constructor(
        readonly documentos: Record<string, string | string[]>,
-       readonly grafo: { nodes: Node[]; edges: Edge[] },
-       readonly modificarSaida: Record<string, string>
+       readonly grafo: { nos: NodeEntitie[]; arestas: Edge[], ponto_de_entrada: string[] },
+       readonly modificar_saida: Record<string, string>
     ) {
     }
 
@@ -14,10 +14,11 @@ export default class Workflow {
        return JSON.stringify({
           documentos: this.documentos,
           grafo: {
-             nodes: this.grafo.nodes,
-             edges: this.grafo.edges
+             ponto_de_entrada: this.grafo.ponto_de_entrada,
+             nos: this.grafo.nos,
+             arestas: this.grafo.arestas
           },
-          modificarSaida: this.modificarSaida
+          modificar_saida: this.modificar_saida
        }, null, 2);
     }
 }
