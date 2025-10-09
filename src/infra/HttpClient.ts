@@ -10,4 +10,6 @@ export interface HttpConfig {
   headers?: Record<string, string>;
   params?: Record<string, any>;
   timeout?: number;
-}   
+  responseType?: 'json' | 'stream' | 'arraybuffer' | 'blob' | 'text';
+  signal?: AbortSignal; // Adicionando suporte a AbortSignal
+}
