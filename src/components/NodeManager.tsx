@@ -119,6 +119,7 @@ export default function NodeManager({ nodes, onCreate, onUpdate, onDelete }: Nod
 
         <button
           onClick={() => setShowCreateForm(true)}
+          data-testid="create-node-button"
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 whitespace-nowrap"
         >
           <RiAddLine className="text-xl" />
