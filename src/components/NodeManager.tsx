@@ -1,4 +1,3 @@
-'use client';
 
 import { useState } from 'react';
 import { 
@@ -285,7 +284,7 @@ export default function NodeManager({ nodes, onCreate, onUpdate, onDelete }: Nod
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-4">
                       <div className={`w-12 h-12 ${typeInfo.color} rounded-lg flex items-center justify-center`}>
-                        <IconComponent className="text-white text-xl" />
+                        <IconComponent className="w-4 text-white text-xl" />
                       </div>
 
                       <div className="flex-1">
@@ -303,19 +302,19 @@ export default function NodeManager({ nodes, onCreate, onUpdate, onDelete }: Nod
                         <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                           {node.llmModel && (
                             <div className="flex items-center space-x-1">
-                              <RiBrainLine />
+                              <RiBrainLine className="w-4" />
                               <span>{llmModels.find(m => m.value === node.llmModel)?.label}</span>
                             </div>
                           )}
 
                           <div className="flex items-center space-x-1">
-                            <RiTimeLine />
+                            <RiTimeLine className="w-4" />
                             <span>{node.createdAt.toLocaleDateString()}</span>
                           </div>
 
                           {node.prompt && (
                             <div className="flex items-center space-x-1">
-                              <RiFileTextLine />
+                              <RiFileTextLine className="w-4" />
                               <span>Prompt configurado</span>
                             </div>
                           )}
@@ -329,7 +328,7 @@ export default function NodeManager({ nodes, onCreate, onUpdate, onDelete }: Nod
                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="Editar nó"
                       >
-                        <RiEditLine />
+                        <RiEditLine className="w-4" />
                       </button>
 
                       <button
@@ -337,7 +336,7 @@ export default function NodeManager({ nodes, onCreate, onUpdate, onDelete }: Nod
                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="Excluir nó"
                       >
-                        <RiDeleteBinLine />
+                        <RiDeleteBinLine className="h-4" />
                       </button>
                     </div>
                   </div>
@@ -348,7 +347,7 @@ export default function NodeManager({ nodes, onCreate, onUpdate, onDelete }: Nod
         ) : (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <RiNodeTree className="text-2xl text-gray-400" />
+              <RiNodeTree className="w-4 text-2xl text-gray-400" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Nenhum nó encontrado</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
