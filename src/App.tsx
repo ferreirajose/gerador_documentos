@@ -1,15 +1,20 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Home from './Home'
 import './App.css'
+import Dashboard from './Dashboard'
+import { ThemeProvider } from "./components/common/theme-provider"
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        {/* Adicione outras rotas conforme necessário */}
-      </Routes>
-    </Router>
+    <ThemeProvider defaultTheme="system" storageKey="app-theme">
+      <Router>
+        <Routes>
+          <Route path="/home" element={<Home />} />
+          <Route path="/" element={<Dashboard />} />
+          {/* Adicione outras rotas conforme necessário */}
+        </Routes>
+      </Router>
+    </ThemeProvider>
   )
 }
 

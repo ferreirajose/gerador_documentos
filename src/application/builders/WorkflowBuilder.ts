@@ -1,5 +1,5 @@
 import Edge from '@/domain/entities/Edge';
-import NodeEntitie from '@/domain/entities/Node';
+import NodeEntitie from '@/domain/entities/NodeEntitie';
 import Workflow from '@/domain/entities/Workflow';
 
 export class WorkflowBuilder {
@@ -116,7 +116,7 @@ export class WorkflowBuilder {
         return this;
     }
 
-    public setmodificar_saida(key: string, template: string): WorkflowBuilder {
+    public setModificarSaida(key: string, template: string): WorkflowBuilder {
         this.modificar_saida[key] = template;
         return this;
     }

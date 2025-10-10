@@ -8,14 +8,14 @@ const BASE_URL = import.meta.env.VITE_API_URL;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
 
 export default function Home() {
-    
+
     async function createAndSendWorkflow() {
         // Criar o workflow usando o builder
         const builder = new WorkflowBuilder();
 
         // Configurar documentos
         builder.setDocumentos({
-             auditoria_especial: '10831034617427640767',
+            auditoria_especial: '10831034617427640767',
             defesas_do_caso: [
                 '13333786561136215878',
                 '7065879860948131635',
@@ -23,7 +23,7 @@ export default function Home() {
                 '691210388070956173'
             ]
         });
-        
+
         // Configurar ponto de entrada
         builder
             .setPontoDeEntrada(['AuditorNode', 'DefenseNode']);
@@ -47,21 +47,21 @@ export default function Home() {
             .addEntrada('lista_de_origem', 'id_da_defesa', 'doc.defesas_do_caso')
             .addEntrada('conteudo_defesa', 'buscar_documento', '{id_da_defesa}')
             .endNode();
-                    
+
         // 5) RelatorNode
         builder
-        .addNode('RelatorNode')
+            .addNode('RelatorNode')
             .setAgent('relator')
             .setModel('gpt-4.1')
             .setPrompt(RelatorPrompt)
             .setOutputKey('workflow_data.voto_relator')
             .addEntrada('relatorio_da_auditoria', 'do_estado', 'workflow_data.analise_auditoria')
             .addEntrada('pareceres_das_defesas', 'do_estado', 'workflow_data.analises_defesas')
-        .endNode();
+            .endNode();
 
         // 6) InfoExtractorNode
         builder
-        .addNode('InfoExtractorNode')
+            .addNode('InfoExtractorNode')
             .setAgent('info_extractor')
             .setModel('gemini-2.5-pro')
             .setPrompt(InfoExtractorPrompt)
@@ -69,7 +69,7 @@ export default function Home() {
             .addEntrada('relatorio_da_auditoria', 'do_estado', 'workflow_data.analise_auditoria')
             .addEntrada('pareceres_das_defesas', 'do_estado', 'workflow_data.analises_defesas')
             .addEntrada('voto_relator', 'do_estado', 'workflow_data.voto_relator')
-        .endNode();
+            .endNode();
 
         // Configurar arestas
         // builder
@@ -81,7 +81,7 @@ export default function Home() {
             .addEdge('InfoExtractorNode', 'END');
 
         // Configurar template de saída
-        builder.setmodificar_saida(
+        builder.setModificarSaida(
             'relatorio_final',
             '{workflow_data.analise_auditoria}' +
             '{workflow_data.analises_defesas}' +
@@ -94,10 +94,10 @@ export default function Home() {
         const service = new WorkflowRelatorioService(workFlowGateway);
 
         const streaming = await service.gerarRelatorioComStreaming(workflowJson);
-        
+
         streaming.onData((data) => {
             console.log("Dados recebidos:", data);
-              console.log(`Status: ${data.status}`);
+            console.log(`Status: ${data.status}`);
 
         });
 
@@ -112,8 +112,13 @@ export default function Home() {
     }
 
     return (
-        <div>
-            <button onClick={createAndSendWorkflow}>Executar Fluxo</button>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+            <button 
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
+                onClick={createAndSendWorkflow}
+            >
+                Executar Fluxo
+            </button>
         </div>
     );
 }
