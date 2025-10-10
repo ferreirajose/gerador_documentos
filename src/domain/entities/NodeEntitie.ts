@@ -1,7 +1,6 @@
 
 type InputType = 'buscar_documento' | 'id_da_defesa' | 'do_estado';
 
-
 // um mapeamento nomeDeCampo → objeto { [inputType]: referência }
 type InputDefinition = {
   [field: string]: { [K in InputType]?: string }

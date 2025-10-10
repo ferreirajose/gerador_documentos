@@ -1,5 +1,5 @@
 import Edge from "./Edge";
-import NodeEntitie from "./Node";
+import NodeEntitie from "./NodeEntitie";
 
 export default class Workflow {
     constructor(

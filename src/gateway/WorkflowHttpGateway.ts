@@ -1,4 +1,4 @@
-import { DataResponse } from "@/types/types";
+import { DataResponse } from "@/types/process-docs";
 import HttpClient from "@/infra/HttpClient";
 import { StreamingResponse } from "@/application/services/WorkflowRelatorioService";
 import WorkflowGateway from "./WorkflowGateway";
