@@ -15,21 +15,8 @@ import {
   RiLoginCircleLine
 } from '@remixicon/react';
 
-interface Node {
-  id: string;
-  name: string;
-  type: 'entry' | 'process' | 'end';
-  llmModel?: string;
-  prompt?: string;
-  createdAt: Date;
-}
-
-interface NodeManagerProps {
-  nodes: Node[];
-  onCreate: (node: Omit<Node, 'id' | 'createdAt'>) => void;
-  onUpdate: (id: string, updates: Partial<Node>) => void;
-  onDelete: (id: string) => void;
-}
+import { WorkflowBuilder } from '@/application/builders/WorkflowBuilder';
+import { useWorkflow } from '@/context/WorkflowContext';
 
 const nodeTypes = [
   { value: 'entry', label: 'Entrada', icon: RiLoginCircleLine, color: 'bg-green-500' },
@@ -44,9 +31,12 @@ const llmModels = [
   { value: 'gemini-pro', label: 'Gemini Pro' },
 ];
 
-export default function NodeManager({ nodes, onCreate, onUpdate, onDelete }: NodeManagerProps) {
+export default function NodeManager() {
+  // const { nodes, handleNodeCreate, handleNodeUpdate, handleNodeDelete } = useWorkflow();
+  const { state, createNode, updateNode, deleteNode } = useWorkflow();
+
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingNode, setEditingNode] = useState<Node | null>(null);
+  const [editingNode, setEditingNode] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
 
@@ -69,18 +59,54 @@ export default function NodeManager({ nodes, onCreate, onUpdate, onDelete }: Nod
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validar se o nome já existe
+    const nameExists = state.nodes.some(node => 
+      node.name === formData.name && node.id !== editingNode?.id
+    );
+
+    if (nameExists) {
+      alert('Já existe um nó com este nome. Por favor, escolha um nome único.');
+      return;
+    }
+
+    // Criar nó usando WorkflowBuilder
+    const builder = new WorkflowBuilder();
+    builder.addNode(formData.name)
+          .setAgent(getAgentByType(formData.type))
+          .setModel(formData.llmModel)
+          .setPrompt(formData.prompt)
+          .setOutputKey(`workflow_data.${formData.name}`)
+          .endNode();
+
+    const nodeData = {
+      name: formData.name,
+      type: formData.type,
+      llmModel: formData.llmModel,
+      prompt: formData.prompt,
+      workflowData: builder.toJSON()
+    };
+
     if (editingNode) {
-      onUpdate(editingNode.id, formData);
+      updateNode(editingNode.id, nodeData);
       setEditingNode(null);
     } else {
-      onCreate(formData);
+      createNode(nodeData);
       setShowCreateForm(false);
     }
 
     resetForm();
   };
 
-  const handleEdit = (node: Node) => {
+  const getAgentByType = (type: string): string => {
+    const agentMap: Record<string, string> = {
+      'entry': 'info_extractor',
+      'process': 'financial_analyst',
+      'end': 'strategic_advisor'
+    };
+    return agentMap[type] || 'financial_analyst';
+  };
+
+  const handleEdit = (node: any) => {
     setEditingNode(node);
     setFormData({
       name: node.name,
@@ -91,13 +117,19 @@ export default function NodeManager({ nodes, onCreate, onUpdate, onDelete }: Nod
     setShowCreateForm(true);
   };
 
+  const onDelete = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este nó?')) {
+      deleteNode(id);   
+    }
+  };  
+
   const handleCancel = () => {
     setShowCreateForm(false);
     setEditingNode(null);
     resetForm();
   };
 
-  const filteredNodes = nodes.filter(node => {
+  const filteredNodes = state.nodes.filter(node => {
     const matchesSearch = node.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || node.type === filterType;
     return matchesSearch && matchesType;
