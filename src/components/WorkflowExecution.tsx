@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useWorkflow } from '@/context/WorkflowContext';
 import WorkflowRelatorioService from '../application/services/WorkflowRelatorioService';
 import WorkflowHttpGateway from '../gateway/WorkflowHttpGateway';
 import AxiosAdapter from '../infra/AxiosAdapter';
+import { useWorkFlow } from '@/context/WorkflowContext';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
@@ -14,11 +14,9 @@ export default function WorkflowExecution() {
     setResults, 
     addLog, 
     clearLogs, 
-    setFiles,
     buildCompleteWorkflow 
-  } = useWorkflow();
+  } = useWorkFlow();
   const [isExecuting, setIsExecuting] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [executionResults, setExecutionResults] = useState<any>(null);
   const [executionLogs, setExecutionLogs] = useState<any[]>([]);
 
@@ -81,17 +79,11 @@ export default function WorkflowExecution() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles(Array.from(e.target.files));
-    }
-  };
 
   const resetExecution = () => {
     setExecuting(false);
     setResults(null);
     clearLogs();
-    setFiles([]);
   };
 
   const canExecute = state.nodes.length > 0 && !state.isExecuting;
@@ -109,6 +101,7 @@ export default function WorkflowExecution() {
           {executionLogs.length > 0 && (
             <button
               onClick={resetExecution}
+              data-testid="reset-execution-button"
               disabled={isExecuting}
               className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50"
             >
@@ -119,6 +112,7 @@ export default function WorkflowExecution() {
           
           <button
             onClick={executeWorkflow}
+            data-testid="execute-workflow-button"
             disabled={!canExecute}
             className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 whitespace-nowrap ${
               canExecute
@@ -127,7 +121,7 @@ export default function WorkflowExecution() {
             }`}
           >
             <i className={`${isExecuting ? 'ri-loader-line animate-spin' : 'ri-play-circle-line'}`}></i>
-            <span>{isExecuting ? 'Executando...' : 'Executar Workflow'}</span>
+            <span data-testid="text-executing">{isExecuting ? 'Executando...' : 'Executar Workflow'}</span>
           </button>
         </div>
       </div>
@@ -141,7 +135,7 @@ export default function WorkflowExecution() {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Total de Nós</h3>
-              <p className="text-2xl font-bold text-blue-600">{state.nodes.length}</p>
+              <p className="text-2xl font-bold text-blue-600" data-testid="text-nodes-length">{state.nodes.length}</p>
             </div>
           </div>
         </div>
@@ -153,7 +147,7 @@ export default function WorkflowExecution() {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Conexões</h3>
-              <p className="text-2xl font-bold text-green-600">{state.connections.length}</p>
+              <p className="text-2xl font-bold text-green-600" data-testid="text-connections-length">{state.connections.length}</p>
             </div>
           </div>
         </div>
@@ -171,41 +165,6 @@ export default function WorkflowExecution() {
         </div>
       </div>
 
-      {/* File Upload */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Arquivos de Entrada</h3>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Selecionar arquivos para processamento
-            </label>
-            <input
-              type="file"
-              multiple
-              onChange={handleFileUpload}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
-          {selectedFiles.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">
-                Arquivos Selecionados ({selectedFiles.length})
-              </h4>
-              <div className="space-y-1">
-                {selectedFiles.map((file, index) => (
-                  <div key={index} className="text-sm text-blue-700 flex items-center space-x-2">
-                    <i className="ri-file-line text-xs"></i>
-                    <span>{file.name}</span>
-                    <span className="text-blue-600">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Execution Status with Streaming */}
       {executionLogs.length > 0 && (
@@ -277,6 +236,22 @@ export default function WorkflowExecution() {
           </p>
         </div>
       )}
+
+      {/* Workflow Output */}
+      {buildCompleteWorkflow && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Workflow Gerado
+            </h3>
+          </div>
+          <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
+            {buildCompleteWorkflow()}
+          </pre>
+        </div>
+      )}
+
     </div>
+    
   );
 }

@@ -1,15 +1,13 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { WorkflowBuilder } from '../application/builders/WorkflowBuilder';
+import { Node } from '@/types/nodes';
 
-// Tipos
-export interface Node {
+export interface NodeDocument {
   id: string;
   name: string;
-  type: 'entry' | 'process' | 'end';
-  llmModel?: string;
-  prompt?: string;
-  createdAt: Date;
-  workflowData?: any;
+  file: File;
+  nodeId: string;
+  uploadedAt: Date;
 }
 
 export interface Connection {
@@ -26,7 +24,7 @@ export interface WorkflowState {
   isExecuting: boolean;
   executionResults: any;
   executionLogs: any[];
-  selectedFiles: File[];
+  nodeDocuments: NodeDocument[]; // ← NOVO: documentos específicos por nó
 }
 
 // Ações
@@ -41,8 +39,11 @@ type WorkflowAction =
   | { type: 'SET_EXECUTION_RESULTS'; payload: any }
   | { type: 'ADD_EXECUTION_LOG'; payload: any }
   | { type: 'CLEAR_EXECUTION_LOGS' }
-  | { type: 'SET_SELECTED_FILES'; payload: File[] }
-  | { type: 'RESET_WORKFLOW' };
+  | { type: 'RESET_WORKFLOW' }
+  | { type: 'ADD_NODE_DOCUMENT'; payload: { nodeId: string; file: File } }
+  | { type: 'DELETE_NODE_DOCUMENT'; payload: string }
+  | { type: 'DELETE_NODE_DOCUMENTS'; payload: string }
+  | { type: 'CLEAR_NODE_DOCUMENTS' }
 
 // Estado inicial
 const initialState: WorkflowState = {
@@ -51,7 +52,8 @@ const initialState: WorkflowState = {
   isExecuting: false,
   executionResults: null,
   executionLogs: [],
-  selectedFiles: [],
+  nodeDocuments: [], // ← NOVO
+
 };
 
 // Reducer
@@ -134,15 +136,40 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         executionLogs: [],
       };
 
-    case 'SET_SELECTED_FILES':
-      return {
-        ...state,
-        selectedFiles: action.payload,
-      };
-
     case 'RESET_WORKFLOW':
       return {
         ...initialState,
+      };
+
+    case 'ADD_NODE_DOCUMENT':
+      const newDocument: NodeDocument = {
+        id: `doc_${Date.now()}`,
+        name: action.payload.file.name,
+        file: action.payload.file,
+        nodeId: action.payload.nodeId,
+        uploadedAt: new Date(),
+      };
+      return {
+        ...state,
+        nodeDocuments: [...state.nodeDocuments, newDocument],
+      };
+
+    case 'DELETE_NODE_DOCUMENT':
+      return {
+        ...state,
+        nodeDocuments: state.nodeDocuments.filter(doc => doc.id !== action.payload),
+      };
+
+    case 'DELETE_NODE_DOCUMENTS':
+      return {
+        ...state,
+        nodeDocuments: state.nodeDocuments.filter(doc => doc.nodeId !== action.payload),
+      };
+
+    case 'CLEAR_NODE_DOCUMENTS':
+      return {
+        ...state,
+        nodeDocuments: [],
       };
 
     default:
@@ -171,14 +198,22 @@ const WorkflowContext = createContext<{
   buildCompleteWorkflow: () => any;
   getNodeWorkflowData: (nodeId: string) => any;
   getConnectionWorkflowData: (connectionId: string) => any;
+  exportWorkflowJSON: () => string;
+
+  // Novos métodos para documentos dos nós
+  addNodeDocument: (nodeId: string, file: File) => void;
+  deleteNodeDocument: (documentId: string) => void;
+  deleteNodeDocuments: (nodeId: string) => void;
+  clearNodeDocuments: () => void;
+  getNodeDocuments: (nodeId: string) => NodeDocument[];
 } | null>(null);
 
 // Provider
-interface WorkflowProviderProps {
+interface WorkFlowProviderProps {
   children: ReactNode;
 }
 
-export function WorkflowProvider({ children }: WorkflowProviderProps) {
+export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
   const [state, dispatch] = useReducer(workflowReducer, initialState);
 
   // Métodos auxiliares
@@ -222,29 +257,57 @@ export function WorkflowProvider({ children }: WorkflowProviderProps) {
     dispatch({ type: 'CLEAR_EXECUTION_LOGS' });
   };
 
-  const setFiles = (files: File[]) => {
-    dispatch({ type: 'SET_SELECTED_FILES', payload: files });
-  };
-
   const resetWorkflow = () => {
     dispatch({ type: 'RESET_WORKFLOW' });
   };
 
+  // Métodos para documentos dos nós
+  const addNodeDocument = (nodeId: string, file: File) => {
+    dispatch({ type: 'ADD_NODE_DOCUMENT', payload: { nodeId, file } });
+  };
+
+  const deleteNodeDocument = (documentId: string) => {
+    dispatch({ type: 'DELETE_NODE_DOCUMENT', payload: documentId });
+  };
+
+  const deleteNodeDocuments = (nodeId: string) => {
+    dispatch({ type: 'DELETE_NODE_DOCUMENTS', payload: nodeId });
+  };
+
+  const clearNodeDocuments = () => {
+    dispatch({ type: 'CLEAR_NODE_DOCUMENTS' });
+  };
+
+  const getNodeDocuments = (nodeId: string): NodeDocument[] => {
+    return state.nodeDocuments.filter(doc => doc.nodeId === nodeId);
+  };
+
   // Métodos do WorkflowBuilder
+  // WorkflowContext.tsx - método buildCompleteWorkflow
   const buildCompleteWorkflow = () => {
     const builder = new WorkflowBuilder();
 
-    // Configurar documentos se houver arquivos
-    if (state.selectedFiles.length > 0) {
-      builder.setDocumentos({
-        uploaded_files: state.selectedFiles.map(file => file.name)
+    // Configurar documentos baseados nos nós de entrada
+    const entryNodes = state.nodes.filter(node => node.type === 'entry');
+    
+    if (entryNodes.length > 0) {
+      const documentos: Record<string, any> = {};
+      
+      entryNodes.forEach(entryNode => {
+        const nodeDocuments = getNodeDocuments(entryNode.id);
+        if (nodeDocuments.length > 0) {
+          documentos[entryNode.name] = nodeDocuments[0].file;
+        }
       });
+
+      if (Object.keys(documentos).length > 0) {
+        builder.setDocumentos(documentos);
+      }
     }
 
-    // Configurar ponto de entrada (nós do tipo 'entry')
-    const entryNodes = state.nodes.filter(node => node.type === 'entry');
+    // Configurar ponto de entrada
     if (entryNodes.length > 0) {
-      builder.setPontoDeEntrada(entryNodes.map(node => node.name)); // Usar nome em vez de ID
+      builder.setPontoDeEntrada(entryNodes.map(node => node.name));
     }
 
     // Adicionar todos os nós
@@ -252,20 +315,20 @@ export function WorkflowProvider({ children }: WorkflowProviderProps) {
       const nodeData = node.workflowData || {};
       
       builder.addNode(node.name)
-            .setAgent(nodeData.agent || getAgentByType(node.type))
+            .setAgent(node.name.toLocaleLowerCase())
             .setModel(node.llmModel || 'claude-3.7-sonnet@20250219')
             .setPrompt(node.prompt || '')
             .setOutputKey(`workflow_data.${node.name}`)
             .endNode();
     });
-
+    
     // Adicionar todas as conexões usando NOMES dos nós
     state.connections.forEach(connection => {
       const fromNode = state.nodes.find(n => n.id === connection.fromNodeId);
       const toNode = state.nodes.find(n => n.id === connection.toNodeId);
       
       if (fromNode && toNode) {
-        builder.addEdge(fromNode.name, toNode.name); // Usar nomes em vez de IDs
+        builder.addEdge(fromNode.name, toNode.name);
       }
     });
 
@@ -278,16 +341,7 @@ export function WorkflowProvider({ children }: WorkflowProviderProps) {
 
     return builder.toJSON();
   };
-
-  const getAgentByType = (type: string): string => {
-    const agentMap: Record<string, string> = {
-      'entry': 'info_extractor',
-      'process': 'financial_analyst',
-      'end': 'strategic_advisor'
-    };
-    return agentMap[type] || 'financial_analyst';
-  };
-
+  
   const getNodeWorkflowData = (nodeId: string) => {
     const node = state.nodes.find(n => n.id === nodeId);
     return node?.workflowData || null;
@@ -296,6 +350,10 @@ export function WorkflowProvider({ children }: WorkflowProviderProps) {
   const getConnectionWorkflowData = (connectionId: string) => {
     const connection = state.connections.find(c => c.id === connectionId);
     return connection?.workflowData || null;
+  };
+
+  const exportWorkflowJSON = (): string => {
+    return buildCompleteWorkflow();
   };
 
   const value = {
@@ -316,6 +374,11 @@ export function WorkflowProvider({ children }: WorkflowProviderProps) {
     buildCompleteWorkflow,
     getNodeWorkflowData,
     getConnectionWorkflowData,
+    exportWorkflowJSON,
+
+    addNodeDocument, // ← NOVO
+    deleteNodeDocument, // ← NOVO
+    getNodeDocuments, // ← NOVO
   };
 
   return (
@@ -326,10 +389,10 @@ export function WorkflowProvider({ children }: WorkflowProviderProps) {
 }
 
 // Hook personalizado
-export function useWorkflow() {
+export function useWorkFlow() {
   const context = useContext(WorkflowContext);
   if (!context) {
-    throw new Error('useWorkflow deve ser usado dentro de um WorkflowProvider');
+    throw new Error('useWorkFlow deve ser usado dentro de um WorkFlowProvider');
   }
   return context;
 }

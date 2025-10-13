@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { useWorkflow } from '@/context/WorkflowContext';
-import { WorkflowBuilder } from '../application/builders/WorkflowBuilder';
 import { 
   RiAddLine,
   RiSearchLine,
@@ -14,14 +12,17 @@ import {
   RiArrowRightLine,
   RiLink
 } from '@remixicon/react';
+import { useWorkFlow } from '@/context/WorkflowContext';
 
 export default function ConnectionManager() {
   const { 
     state, 
     createConnection, 
     updateConnection, 
-    deleteConnection 
-  } = useWorkflow();
+    deleteConnection,
+    exportWorkflowJSON
+
+  } = useWorkFlow();
   
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingConnection, setEditingConnection] = useState<any>(null);
@@ -42,26 +43,24 @@ export default function ConnectionManager() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Criar conexão usando WorkflowBuilder com NOMES dos nós
-    const fromNode = state.nodes.find(n => n.id === formData.fromNodeId);
-    const toNode = state.nodes.find(n => n.id === formData.toNodeId);
-    
-    if (!fromNode || !toNode) return;
-
-    const builder = new WorkflowBuilder();
-    builder.addEdge(fromNode.name, toNode.name); // Usar nomes em vez de IDs
-
-    const workflowConnection = {
-      fromNodeId: formData.fromNodeId,
-      toNodeId: formData.toNodeId,
-      workflowData: builder.toJSON()
-    };
+    // Validação básica
+    if (!isValidConnection()) return;
 
     if (editingConnection) {
-      updateConnection(editingConnection.id, workflowConnection);
+      // Atualizar conexão existente - apenas atualiza os IDs
+      updateConnection(editingConnection.id, {
+        fromNodeId: formData.fromNodeId,
+        toNodeId: formData.toNodeId,
+        // workflowData será gerado pelo WorkflowContext quando necessário
+      });
       setEditingConnection(null);
     } else {
-      createConnection(workflowConnection);
+      // Criar nova conexão - apenas armazena os IDs
+      createConnection({
+        fromNodeId: formData.fromNodeId,
+        toNodeId: formData.toNodeId,
+        // workflowData será gerado pelo WorkflowContext quando necessário
+      });
       setShowCreateForm(false);
     }
     
@@ -107,29 +106,13 @@ export default function ConnectionManager() {
     );
   };
 
-  // Validação adicional para verificar se já existe conexão com os mesmos NOMES
-  const connectionExistsByName = (fromId: string, toId: string) => {
-    const fromNode = state.nodes.find(n => n.id === fromId);
-    const toNode = state.nodes.find(n => n.id === toId);
-    
-    if (!fromNode || !toNode) return false;
-
-    return state.connections.some(conn => {
-      const connFromNode = state.nodes.find(n => n.id === conn.fromNodeId);
-      const connToNode = state.nodes.find(n => n.id === conn.toNodeId);
-      
-      return connFromNode?.name === fromNode.name && connToNode?.name === toNode.name;
-    });
-  };
-
   const isValidConnection = () => {
     if (!formData.fromNodeId || !formData.toNodeId) return false;
     if (formData.fromNodeId === formData.toNodeId) return false;
     
     if (!editingConnection) {
-      // Verificar tanto por ID quanto por nome
-      return !connectionExists(formData.fromNodeId, formData.toNodeId) && 
-             !connectionExistsByName(formData.fromNodeId, formData.toNodeId);
+      // Verificar apenas por IDs (não precisa verificar por nomes)
+      return !connectionExists(formData.fromNodeId, formData.toNodeId);
     }
     
     return true;
@@ -147,6 +130,7 @@ export default function ConnectionManager() {
         <button
           onClick={() => setShowCreateForm(true)}
           disabled={state.nodes.length < 2}
+          data-testid="create-connection-button"
           className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 whitespace-nowrap ${
             state.nodes.length < 2
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400'
@@ -188,6 +172,7 @@ export default function ConnectionManager() {
               <input
                 type="text"
                 value={searchTerm}
+                data-testid="search-connections-input"
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Digite o nome dos nós..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -206,6 +191,7 @@ export default function ConnectionManager() {
             </h3>
             <button
               onClick={handleCancel}
+              data-testid="close-connection-form-button"
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               <RiCloseLine className="text-xl" />
@@ -221,6 +207,7 @@ export default function ConnectionManager() {
                 <select
                   required
                   value={formData.fromNodeId}
+                  data-testid="from-node-select"
                   onChange={(e) => setFormData(prev => ({ ...prev, fromNodeId: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
@@ -240,6 +227,7 @@ export default function ConnectionManager() {
                 <select
                   required
                   value={formData.toNodeId}
+                  data-testid="to-node-select"
                   onChange={(e) => setFormData(prev => ({ ...prev, toNodeId: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
@@ -295,6 +283,7 @@ export default function ConnectionManager() {
               <button
                 type="button"
                 onClick={handleCancel}
+                data-testid="cancel-connection-form-button"
                 className="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
               >
                 Cancelar
@@ -302,6 +291,7 @@ export default function ConnectionManager() {
               <button
                 type="submit"
                 disabled={!isValidConnection()}
+                data-testid="submit-connection-form-button"
                 className={`px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
                   isValidConnection()
                     ? 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
@@ -351,6 +341,7 @@ export default function ConnectionManager() {
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleEdit(connection)}
+                      data-testid={`edit-connection-${connection.id}-button`}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                       title="Editar conexão"
                     >
@@ -359,6 +350,7 @@ export default function ConnectionManager() {
                     
                     <button
                       onClick={() => deleteConnection(connection.id)}
+                      data-testid={`delete-connection-${connection.id}-button`}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                       title="Excluir conexão"
                     >
@@ -388,6 +380,7 @@ export default function ConnectionManager() {
             {state.nodes.length >= 2 && !searchTerm && (
               <button
                 onClick={() => setShowCreateForm(true)}
+                data-testid="create-first-connection-button"
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors whitespace-nowrap"
               >
                 Criar Primeira Conexão
@@ -396,6 +389,21 @@ export default function ConnectionManager() {
           </div>
         )}
       </div>
+
+      
+      {/* Workflow Output */}
+      {exportWorkflowJSON && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Workflow Gerado
+            </h3>
+          </div>
+          <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
+            {exportWorkflowJSON()}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
