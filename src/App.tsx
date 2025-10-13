@@ -3,17 +3,20 @@ import Home from './Home'
 import './App.css'
 import Dashboard from './Dashboard'
 import { ThemeProvider } from "./components/common/theme-provider"
+import { WorkflowProvider } from './context/WorkflowContext'
 
 function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="app-theme">
-      <Router>
-        <Routes>
-          <Route path="/home" element={<Home />} />
-          <Route path="/" element={<Dashboard />} />
-          {/* Adicione outras rotas conforme necessário */}
-        </Routes>
-      </Router>
+      <WorkflowProvider>
+        <Router>
+          <Routes>
+            <Route path="/home" element={<Home />} />
+            <Route path="/" element={<Dashboard />} />
+            {/* Adicione outras rotas conforme necessário */}
+          </Routes>
+        </Router>
+      </WorkflowProvider>
     </ThemeProvider>
   )
 }

@@ -1,12 +1,9 @@
 import ThemeToggle from '@/components/common/ThemeToggle';
+import { useWorkflow } from '@/context/WorkflowContext';
 import { RiFlowChart } from '@remixicon/react'
 
-interface HeaderProps {
-    nodeCount: number;
-    connectionCount: number;
-}
-
-export default function Header({ nodeCount, connectionCount }: HeaderProps) {
+export default function Header() {
+  const { state } = useWorkflow();
     return (
         <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -23,7 +20,7 @@ export default function Header({ nodeCount, connectionCount }: HeaderProps) {
 
                     <div className="flex items-center space-x-4">
                         <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {nodeCount} nós • {connectionCount} conexões
+                            Nós: {state.nodes.length} | Conexões: {state.connections.length}
                         </div>
                         <ThemeToggle />
                     </div>
