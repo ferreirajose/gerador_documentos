@@ -37,9 +37,6 @@ export default function NodeManager() {
     createNode,
     updateNode,
     deleteNode,
-
-    addNodeDocument, // ← NOVO
-    deleteNodeDocument, // ← NOVO
     buildCompleteWorkflow
   } = useWorkFlow();
 
@@ -47,7 +44,6 @@ export default function NodeManager() {
   const [editingNode, setEditingNode] = useState<Node | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
-  const [setUploadingFiles] = useState<{[nodeId: string]: File[]}>({});
 
   const [formData, setFormData] = useState({
     name: '',
@@ -100,35 +96,6 @@ export default function NodeManager() {
     setShowCreateForm(false);
     setEditingNode(null);
     resetForm();
-  };
-
-   // Função para lidar com upload de arquivos para um nó
-  const handleFileUpload = (nodeId: string, files: FileList | null) => {
-    if (!files) return;
-    
-    const fileArray = Array.from(files);
-    setUploadingFiles(prev => ({
-      ...prev,
-      [nodeId]: [...(prev[nodeId] || []), ...fileArray]
-    }));
-
-    // Adicionar cada arquivo ao contexto
-    fileArray.forEach(file => {
-      addNodeDocument(nodeId, file);
-    });
-  };
-
-  // Função para remover arquivo de um nó @TODO ajustar para funcionar junto com a remoção do node no metodo deleteNode
-  const handleRemoveFile = (nodeId: string, documentId: string) => {
-    deleteNodeDocument(documentId);
-    setUploadingFiles(prev => ({
-      ...prev,
-      [nodeId]: (prev[nodeId] || []).filter((_, index) => {
-        // Aqui você precisaria mapear documentId para o índice correto
-        // Esta é uma simplificação - você pode precisar ajustar
-        return true; // Lógica de remoção precisa ser implementada
-      })
-    }));
   };
 
   const filteredNodes = state.nodes.filter(node => {
@@ -278,24 +245,6 @@ export default function NodeManager() {
                 </select>
               </div>
             </div>
-
-            {formData.type === 'entry' && (
-              <div data-testid="node-files">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Arquivos do Nó de Entrada
-                </label>
-                <input
-                  type="file"
-                  multiple
-                  data-testid="node-files-input"
-                  onChange={(e) => handleFileUpload(editingNode ? editingNode.id : 'new-node', e.target.files)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Apenas para nós de entrada. Os arquivos ficarão associados a este nó.
-                </p>
-              </div>
-            )}
 
             <div className="flex justify-end space-x-3 pt-4">
               <button

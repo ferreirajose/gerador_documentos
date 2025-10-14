@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { WorkflowBuilder } from '../application/builders/WorkflowBuilder';
 import { Node } from '@/types/nodes';
+import { formatAgentName } from '@/libs/util';
+import { InputType } from '@/domain/entities/NodeEntitie';
 
 export interface NodeDocument {
   id: string;
@@ -24,7 +26,7 @@ export interface WorkflowState {
   isExecuting: boolean;
   executionResults: any;
   executionLogs: any[];
-  nodeDocuments: NodeDocument[]; // ← NOVO: documentos específicos por nó
+  selectedFile: []
 }
 
 // Ações
@@ -40,10 +42,8 @@ type WorkflowAction =
   | { type: 'ADD_EXECUTION_LOG'; payload: any }
   | { type: 'CLEAR_EXECUTION_LOGS' }
   | { type: 'RESET_WORKFLOW' }
-  | { type: 'ADD_NODE_DOCUMENT'; payload: { nodeId: string; file: File } }
-  | { type: 'DELETE_NODE_DOCUMENT'; payload: string }
-  | { type: 'DELETE_NODE_DOCUMENTS'; payload: string }
-  | { type: 'CLEAR_NODE_DOCUMENTS' }
+  | { type: 'SET_SELECTED_FILE'; payload: File | null } // ← NOVA ação
+
 
 // Estado inicial
 const initialState: WorkflowState = {
@@ -52,8 +52,7 @@ const initialState: WorkflowState = {
   isExecuting: false,
   executionResults: null,
   executionLogs: [],
-  nodeDocuments: [], // ← NOVO
-
+  selectedFile: []
 };
 
 // Reducer
@@ -140,36 +139,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...initialState,
       };
-
-    case 'ADD_NODE_DOCUMENT':
-      const newDocument: NodeDocument = {
-        id: `doc_${Date.now()}`,
-        name: action.payload.file.name,
-        file: action.payload.file,
-        nodeId: action.payload.nodeId,
-        uploadedAt: new Date(),
-      };
+    case 'SET_SELECTED_FILE':
       return {
         ...state,
-        nodeDocuments: [...state.nodeDocuments, newDocument],
-      };
-
-    case 'DELETE_NODE_DOCUMENT':
-      return {
-        ...state,
-        nodeDocuments: state.nodeDocuments.filter(doc => doc.id !== action.payload),
-      };
-
-    case 'DELETE_NODE_DOCUMENTS':
-      return {
-        ...state,
-        nodeDocuments: state.nodeDocuments.filter(doc => doc.nodeId !== action.payload),
-      };
-
-    case 'CLEAR_NODE_DOCUMENTS':
-      return {
-        ...state,
-        nodeDocuments: [],
+        selectedFile: action.payload ? [action.payload] : null,
       };
 
     default:
@@ -192,7 +165,6 @@ const WorkflowContext = createContext<{
   setResults: (results: any) => void;
   addLog: (log: any) => void;
   clearLogs: () => void;
-  setFiles: (files: File[]) => void;
   resetWorkflow: () => void;
   // Métodos do WorkflowBuilder
   buildCompleteWorkflow: () => any;
@@ -200,12 +172,9 @@ const WorkflowContext = createContext<{
   getConnectionWorkflowData: (connectionId: string) => any;
   exportWorkflowJSON: () => string;
 
-  // Novos métodos para documentos dos nós
-  addNodeDocument: (nodeId: string, file: File) => void;
-  deleteNodeDocument: (documentId: string) => void;
-  deleteNodeDocuments: (nodeId: string) => void;
-  clearNodeDocuments: () => void;
-  getNodeDocuments: (nodeId: string) => NodeDocument[];
+  // NOVOS métodos para arquivo selecionado
+  setSelectedFile: (objFile: []) => void;
+  clearSelectedFile: () => void;
 } | null>(null);
 
 // Provider
@@ -261,32 +230,25 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     dispatch({ type: 'RESET_WORKFLOW' });
   };
 
-  // Métodos para documentos dos nós
-  const addNodeDocument = (nodeId: string, file: File) => {
-    dispatch({ type: 'ADD_NODE_DOCUMENT', payload: { nodeId, file } });
+  // NOVOS métodos para arquivo selecionado
+  const setSelectedFile = (file: File | null) => {
+    dispatch({ type: 'SET_SELECTED_FILE', payload: file });
   };
 
-  const deleteNodeDocument = (documentId: string) => {
-    dispatch({ type: 'DELETE_NODE_DOCUMENT', payload: documentId });
+  const clearSelectedFile = () => {
+    dispatch({ type: 'SET_SELECTED_FILE', payload: null });
   };
 
-  const deleteNodeDocuments = (nodeId: string) => {
-    dispatch({ type: 'DELETE_NODE_DOCUMENTS', payload: nodeId });
-  };
-
-  const clearNodeDocuments = () => {
-    dispatch({ type: 'CLEAR_NODE_DOCUMENTS' });
-  };
-
-  const getNodeDocuments = (nodeId: string): NodeDocument[] => {
-    return state.nodeDocuments.filter(doc => doc.nodeId === nodeId);
+  // Função auxiliar para validar tipos de entrada
+  const isValidInputType = (type: string): type is InputType => {
+    return ['buscar_documento', 'id_da_defesa', 'do_estado'].includes(type);
   };
 
   // Métodos do WorkflowBuilder
   // WorkflowContext.tsx - método buildCompleteWorkflow
   const buildCompleteWorkflow = () => {
     const builder = new WorkflowBuilder();
-
+    // Configurar ponto de entrada
     // Configurar documentos baseados nos nós de entrada
     const entryNodes = state.nodes.filter(node => node.type === 'entry');
     
@@ -294,9 +256,10 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
       const documentos: Record<string, any> = {};
       
       entryNodes.forEach(entryNode => {
-        const nodeDocuments = getNodeDocuments(entryNode.id);
-        if (nodeDocuments.length > 0) {
-          documentos[entryNode.name] = nodeDocuments[0].file;
+        const nodeName = formatAgentName(entryNode.name);
+
+        if (state.selectedFile) {
+          documentos[nodeName] = state.selectedFile.map((item: any) => item.uuid)
         }
       });
 
@@ -313,13 +276,29 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     // Adicionar todos os nós
     state.nodes.forEach(node => {
       const nodeData = node.workflowData || {};
+      const agentName = formatAgentName(node.name);
+      const nodeName = formatAgentName(node.name);
+
+      const nodeBuilder = builder.addNode(nodeName)
+        .setAgent(agentName)
+        .setModel(node.llmModel || 'claude-3.7-sonnet@20250219')
+        .setPrompt(node.prompt || '')
+        .setOutputKey(`workflow_data.${nodeName}`);
       
-      builder.addNode(node.name)
-            .setAgent(node.name.toLocaleLowerCase())
-            .setModel(node.llmModel || 'claude-3.7-sonnet@20250219')
-            .setPrompt(node.prompt || '')
-            .setOutputKey(`workflow_data.${node.name}`)
-            .endNode();
+      // Adicionar entradas se existirem no nodeData
+      if (nodeData.entradas && typeof nodeData.entradas === 'object') {
+        Object.entries(nodeData.entradas).forEach(([nomeCampo, definicao]) => {
+          if (definicao && typeof definicao === 'object') {
+            Object.entries(definicao).forEach(([tipo, referencia]) => {
+              if (isValidInputType(tipo) && referencia) {
+                nodeBuilder.addEntrada(formatAgentName(nomeCampo), tipo as InputType, referencia as string);
+              }
+            });
+          }
+        });
+      }
+
+      nodeBuilder.endNode();
     });
     
     // Adicionar todas as conexões usando NOMES dos nós
@@ -369,16 +348,14 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     setResults,
     addLog,
     clearLogs,
-    setFiles,
     resetWorkflow,
     buildCompleteWorkflow,
     getNodeWorkflowData,
     getConnectionWorkflowData,
     exportWorkflowJSON,
 
-    addNodeDocument, // ← NOVO
-    deleteNodeDocument, // ← NOVO
-    getNodeDocuments, // ← NOVO
+    setSelectedFile, // ← NOVO
+    clearSelectedFile , // ← NOVO
   };
 
   return (
