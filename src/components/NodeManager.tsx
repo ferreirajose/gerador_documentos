@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
-import { 
-  RiNodeTree, 
+import {
+  RiNodeTree,
   RiAddLine,
   RiSearchLine,
   RiCloseLine,
@@ -15,8 +15,7 @@ import {
   RiLoginCircleLine
 } from '@remixicon/react';
 
-import { WorkflowBuilder } from '@/application/builders/WorkflowBuilder';
-import { useWorkflow } from '@/context/WorkflowContext';
+import { useWorkFlow } from '@/context/WorkflowContext';
 
 const nodeTypes = [
   { value: 'entry', label: 'Entrada', icon: RiLoginCircleLine, color: 'bg-green-500' },
@@ -32,11 +31,17 @@ const llmModels = [
 ];
 
 export default function NodeManager() {
-  // const { nodes, handleNodeCreate, handleNodeUpdate, handleNodeDelete } = useWorkflow();
-  const { state, createNode, updateNode, deleteNode } = useWorkflow();
+
+  const {
+    state,
+    createNode,
+    updateNode,
+    deleteNode,
+    buildCompleteWorkflow
+  } = useWorkFlow();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingNode, setEditingNode] = useState<any>(null);
+  const [editingNode, setEditingNode] = useState<Node | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
 
@@ -59,51 +64,15 @@ export default function NodeManager() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validar se o nome já existe
-    const nameExists = state.nodes.some(node => 
-      node.name === formData.name && node.id !== editingNode?.id
-    );
-
-    if (nameExists) {
-      alert('Já existe um nó com este nome. Por favor, escolha um nome único.');
-      return;
-    }
-
-    // Criar nó usando WorkflowBuilder
-    const builder = new WorkflowBuilder();
-    builder.addNode(formData.name)
-          .setAgent(getAgentByType(formData.type))
-          .setModel(formData.llmModel)
-          .setPrompt(formData.prompt)
-          .setOutputKey(`workflow_data.${formData.name}`)
-          .endNode();
-
-    const nodeData = {
-      name: formData.name,
-      type: formData.type,
-      llmModel: formData.llmModel,
-      prompt: formData.prompt,
-      workflowData: builder.toJSON()
-    };
-
     if (editingNode) {
-      updateNode(editingNode.id, nodeData);
+      updateNode(editingNode.id, formData);
       setEditingNode(null);
     } else {
-      createNode(nodeData);
+      createNode(formData);
       setShowCreateForm(false);
     }
 
     resetForm();
-  };
-
-  const getAgentByType = (type: string): string => {
-    const agentMap: Record<string, string> = {
-      'entry': 'info_extractor',
-      'process': 'financial_analyst',
-      'end': 'strategic_advisor'
-    };
-    return agentMap[type] || 'financial_analyst';
   };
 
   const handleEdit = (node: any) => {
@@ -322,11 +291,10 @@ export default function NodeManager() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{node.name}</h4>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            node.type === 'entry' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                            node.type === 'process' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                            'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          }`}>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${node.type === 'entry' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                              node.type === 'process' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}>
                             {typeInfo.label}
                           </span>
                         </div>
@@ -399,6 +367,20 @@ export default function NodeManager() {
           </div>
         )}
       </div>
+
+      {/* Workflow Output */}
+      {buildCompleteWorkflow && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Workflow Gerado
+            </h3>
+          </div>
+          <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
+            {buildCompleteWorkflow()}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
