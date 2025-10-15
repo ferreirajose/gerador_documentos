@@ -127,6 +127,7 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
   }
 
   private dispatchEvent(eventData: any, callbacks: GerarDocCallbacks): void {
+    console.log(eventData, 'eventData')
     if (!eventData || !eventData.type) {
       console.warn("Evento sem tipo:", eventData);
       return;
@@ -141,8 +142,8 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
         callbacks.onProgress?.(eventData.nodes);
         break;
       
-      case "data":
-        callbacks.onData?.(eventData.data);
+      case "resultado_final":
+        callbacks.onData?.(eventData.payload);
         break;
       
       case "error":

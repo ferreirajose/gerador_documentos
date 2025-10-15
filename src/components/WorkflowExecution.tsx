@@ -258,6 +258,9 @@ export default function WorkflowExecution() {
           console.log('message:', message)
         },
         onNodeStatus: (node, status) => {
+          
+          console.log('node:', node)
+          console.log('status:', status)
           if (status === 'finalizado') {
             setProgressState(prev => ({
               ...prev,
@@ -271,15 +274,19 @@ export default function WorkflowExecution() {
 
         },
         onData: (data) => {
-          console.log('data:', data)
-
+            console.log("data:", data);
+            setProgressState( (prev) => ({
+                ...prev,
+                relatorioFinal: JSON.stringify(data)
+            }));
         },
         onComplete: (result) => {
+          console.log("result:", result);
+
           setProgressState(prev => ({
             ...prev,
             isLoading: false,
-            progresso: 100,
-            relatorioFinal: JSON.stringify(result, null, 2)
+            progresso: 100
           }));
         },
         onError: (error) => {
