@@ -2,31 +2,42 @@ import { useState } from 'react';
 import WorkflowHttpGateway from '../gateway/WorkflowHttpGateway';
 import AxiosAdapter from '../infra/AxiosAdapter';
 import { useWorkFlow } from '@/context/WorkflowContext';
+import { GerarDocCallbacks } from '@/types/nodes';
+import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
+import FetchAdapter from '@/infra/FetchAdapter';
+import { WorkflowBuilder } from '@/application/builders/WorkflowBuilder';
+import { AuditorPrompt, DefensePrompt, RelatorPrompt, InfoExtractorPrompt } from '@/data/mock_prompt';
+import { ExecuteProgress } from './common/ExecuteProgress';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const BASE_URL_MINUTA = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
 console.log("BASE_URL:", BASE_URL);
-console.log("BASE_URL_MINUTA:", BASE_URL_MINUTA); 
+console.log("BASE_URL_MINUTA:", BASE_URL_MINUTA);
 
 export default function WorkflowExecution() {
-  const { 
-    state, 
-    setExecuting, 
-    setResults, 
-    addLog, 
-    clearLogs, 
+  const {
+    state,
+    setExecuting,
+    setResults,
+    addLog,
+    clearLogs,
     buildCompleteWorkflow,
     setSelectedFile,
     clearSelectedFile
   } = useWorkFlow();
-  
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const getEntryNodes = () => {
-    return state.nodes.filter(node => node.type === 'entry');
-  };
+  const [progressState, setProgressState] = useState({
+    etapasConcluidas: 0,
+    totalEtapas: 0,
+    progresso: 0,
+    isLoading: false,
+    erroCritico: null as string | null,
+    relatorioFinal: null as string | null,
+  });
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -61,7 +72,7 @@ export default function WorkflowExecution() {
       if (response.success && response.data) {
         // Pegar o valor da propriedade uuid_documento e passar para setSelectedFile
         const { uuid_documento } = response.data;
-        
+
         // Criar um objeto file-like com as informações do documento processado
         const processedFile = {
           name: response.data.titulo_arquivo || response.data.arquivo_original,
@@ -98,14 +109,14 @@ export default function WorkflowExecution() {
       console.error('Erro ao processar arquivo:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao processar arquivo';
       setUploadError(errorMessage);
-      
+
       addLog({
         id: `log_${Date.now()}_error`,
         message: 'Erro ao processar arquivo',
         timestamp: new Date(),
         data: { error: errorMessage }
       });
-      setResults({ 
+      setResults({
         error: errorMessage
       });
     } finally {
@@ -129,9 +140,103 @@ export default function WorkflowExecution() {
     setUploadError(null);
   };
 
-  const executeWorkflow = async () => {
-    if (state.nodes.length === 0) return;
+  const teste = () => {
     
+    const builder = new WorkflowBuilder();
+    
+             // Configurar documentos
+            builder.setDocumentos({
+                auditoria_especial: '10831034617427640767',
+                defesas_do_caso: [
+                    '13333786561136215878',
+                    '7065879860948131635',
+                    '11529010421945660908',
+                    '691210388070956173'
+                ]
+            });
+    
+            // Configurar ponto de entrada
+            builder
+                .setPontoDeEntrada(['AuditorNode', 'DefenseNode']);
+    
+            // Configurar nós
+            builder
+                .addNode('AuditorNode')
+                .setAgent('audit')
+                .setModel('claude-3-7-sonnet@20250219')
+                .setPrompt(AuditorPrompt)
+                .setOutputKey('workflow_data.analise_auditoria')
+                .addEntrada('conteudo_auditoria', 'buscar_documento', 'doc.auditoria_especial')
+                .endNode();
+    
+            builder
+                .addNode('DefenseNode')
+                .setAgent('defense')
+                .setModel('claude-3-7-sonnet@20250219')
+                .setPrompt(DefensePrompt)
+                .setOutputKey('workflow_data.analises_defesas')
+                .addEntrada('lista_de_origem', 'id_da_defesa', 'doc.defesas_do_caso')
+                .addEntrada('conteudo_defesa', 'buscar_documento', '{id_da_defesa}')
+                .endNode();
+    
+            // 5) RelatorNode
+            builder
+                .addNode('RelatorNode')
+                .setAgent('relator')
+                .setModel('gpt-4.1')
+                .setPrompt(RelatorPrompt)
+                .setOutputKey('workflow_data.voto_relator')
+                .addEntrada('relatorio_da_auditoria', 'do_estado', 'workflow_data.analise_auditoria')
+                .addEntrada('pareceres_das_defesas', 'do_estado', 'workflow_data.analises_defesas')
+                .endNode();
+    
+            // 6) InfoExtractorNode
+            builder
+                .addNode('InfoExtractorNode')
+                .setAgent('info_extractor')
+                .setModel('gemini-2.5-pro')
+                .setPrompt(InfoExtractorPrompt)
+                .setOutputKey('workflow_data.dados_estruturados')
+                .addEntrada('relatorio_da_auditoria', 'do_estado', 'workflow_data.analise_auditoria')
+                .addEntrada('pareceres_das_defesas', 'do_estado', 'workflow_data.analises_defesas')
+                .addEntrada('voto_relator', 'do_estado', 'workflow_data.voto_relator')
+                .endNode();
+    
+            // Configurar arestas
+            // builder
+            //     .addEdge('AuditorNode', 'DefenseNode');
+            builder
+                .addEdge('AuditorNode', 'RelatorNode')
+                .addEdge('DefenseNode', 'RelatorNode')
+                .addEdge('RelatorNode', 'InfoExtractorNode')
+                .addEdge('InfoExtractorNode', 'END');
+    
+            // Configurar template de saída
+            builder.setModificarSaida(
+                'relatorio_final',
+                '{workflow_data.analise_auditoria}' +
+                '{workflow_data.analises_defesas}' +
+                '{workflow_data.voto_relator}'
+            );
+    
+            
+            return builder.toJSON();
+        };
+  
+
+  const executeWorkflow = async () => {
+    //if (state.nodes.length === 0) return; // @TODO descomentar essa linha
+
+    setProgressState({
+    etapasConcluidas: 0,
+    totalEtapas: 5, // Total de nós no seu workflow @TODO SERA USADO A QUANTIDADE DE NOS state.nodes.length
+    progresso: 0,
+    isLoading: true,
+    erroCritico: null,
+    relatorioFinal: null,
+  });
+
+
     setExecuting(true);
     setIsExecuting(true);
     setResults(null);
@@ -139,51 +244,63 @@ export default function WorkflowExecution() {
 
     try {
       // Construir workflow completo usando o método do context
-      const workflowJson = buildCompleteWorkflow();
-      
+      const workflowJson = teste();
+
       // Configurar serviço
-      const httpClient = new AxiosAdapter();
-      const workFlowGateway = new WorkflowHttpGateway(httpClient, BASE_URL, AUTH_TOKEN);
-      //const service = new WorkflowRelatorioService(workFlowGateway);
+      // const httpClient = new AxiosAdapter();
+      // const workFlowGateway = new WorkflowHttpGateway(httpClient, BASE_URL, AUTH_TOKEN);
+
+      const httpClient = new FetchAdapter();
+      const workFlowGateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL, AUTH_TOKEN);
+
+      const handleOnEvent: GerarDocCallbacks = {
+        onInfo: (message) => {
+          console.log('message:', message)
+        },
+        onNodeStatus: (node, status) => {
+          if (status === 'finalizado') {
+            setProgressState(prev => ({
+              ...prev,
+              etapasConcluidas: prev.etapasConcluidas + 1,
+              progresso: Math.round(((prev.etapasConcluidas + 1) / prev.totalEtapas) * 100)
+            }));
+          }
+        },
+        onProgress: (nodes) => {
+          console.log('nodes:', nodes)
+
+        },
+        onData: (data) => {
+          console.log('data:', data)
+
+        },
+        onComplete: (result) => {
+          setProgressState(prev => ({
+            ...prev,
+            isLoading: false,
+            progresso: 100,
+            relatorioFinal: JSON.stringify(result, null, 2)
+          }));
+        },
+        onError: (error) => {
+          setProgressState(prev => ({
+            ...prev,
+            isLoading: false,
+            erroCritico: error
+          }));
+        },
+      };
 
       // Executar workflow
-      const streaming = await workFlowGateway.gerarRelatorioComStreaming(workflowJson);
+      await workFlowGateway.gerarRelatorio(workflowJson, handleOnEvent);
 
-      streaming.onData((data) => {
-        console.log("Dados recebidos:", data);
-        addLog({
-          id: `log_${Date.now()}`,
-          message: data.status || 'Processando...',
-          timestamp: new Date(),
-          data: data
-        });
-      });
-
-      streaming.onError((error) => {
-        console.error("Erro no streaming:", error);
-        setExecuting(false);
-        setIsExecuting(false);
-        setResults({ error: error.message });
-      });
-
-      streaming.onComplete(() => {
-        console.log("Streaming completado");
-        setExecuting(false);
-        setIsExecuting(false);
-        setResults({ 
-          success: true, 
-          message: 'Workflow executado com sucesso',
-          nodesExecuted: state.nodes.length,
-          connectionsUsed: state.connections.length
-        });
-      });
 
     } catch (error) {
       console.error('Erro ao executar workflow:', error);
       setExecuting(false);
       setIsExecuting(false);
-      setResults({ 
-        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+      setResults({
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     }
   };
@@ -197,7 +314,7 @@ export default function WorkflowExecution() {
     setUploadError(null);
   };
 
-  const canExecute = state.nodes.length > 0 && !state.isExecuting;
+  const canExecute = true //state.nodes.length > 0 && !state.isExecuting;
 
   // Lógica ajustada: mostrar seção de upload SEMPRE (para poder anexar arquivos)
   const shouldShowUploadSection = true;
@@ -210,7 +327,7 @@ export default function WorkflowExecution() {
           <h2 className="text-2xl font-bold text-gray-900">Executar Workflow</h2>
           <p className="text-gray-600">Execute e monitore o processamento do seu workflow</p>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           {(state.executionLogs.length > 0 || state.selectedFile) && (
             <button
@@ -223,7 +340,7 @@ export default function WorkflowExecution() {
               Resetar
             </button>
           )}
-          
+
           <button
             onClick={executeWorkflow}
             data-testid="execute-workflow-button"
@@ -251,7 +368,7 @@ export default function WorkflowExecution() {
               <p className="text-gray-600">Selecione um arquivo para processar no workflow</p>
             </div>
           </div>
-          
+
           <div className="space-y-4">
             {/* Arquivo selecionado */}
             {!state.selectedFile ? (
@@ -298,9 +415,8 @@ export default function WorkflowExecution() {
                 />
                 <label
                   htmlFor="file-upload"
-                  className={`cursor-pointer flex flex-col items-center space-y-2 ${
-                    state.isExecuting ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className={`cursor-pointer flex flex-col items-center space-y-2 ${state.isExecuting ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                 >
                   <i className="ri-upload-cloud-2-line text-3xl text-gray-400"></i>
                   <span className="text-gray-600">
@@ -333,157 +449,14 @@ export default function WorkflowExecution() {
         </div>
       )}
 
-      {/* Resto do código permanece igual */}
-      {/* Workflow Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <i className="ri-node-tree text-blue-600 text-xl"></i>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Total de Nós</h3>
-              <p className="text-2xl font-bold text-blue-600" data-testid="text-nodes-length">
-                {state.nodes.length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <i className="ri-link text-green-600 text-xl"></i>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Conexões</h3>
-              <p className="text-2xl font-bold text-green-600" data-testid="text-connections-length">
-                {state.connections.length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <i className="ri-login-circle-line text-purple-600 text-xl"></i>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Nós de Entrada</h3>
-              <p className="text-2xl font-bold text-purple-600">{getEntryNodes().length}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Execution Status with Streaming */}
-      {state.executionLogs.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Status da Execução</h3>
-              {state.isExecuting && (
-                <div className="flex items-center space-x-2 text-sm text-blue-600">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                  <span>Executando em tempo real</span>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Logs */}
-          <div className="p-6">
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {state.executionLogs.map((log) => (
-                <div key={log.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium text-gray-900">{log.message}</p>
-                      <span className="text-sm text-gray-500">
-                        {new Date(log.timestamp).toLocaleTimeString()}
-                      </span>
-                    </div>
-                    {log.data && (
-                      <pre className="mt-2 text-sm text-gray-600 bg-white p-2 rounded border">
-                        {JSON.stringify(log.data, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Results */}
-      {state.executionResults && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-              state.executionResults.success ? 'bg-green-100' : 'bg-red-100'
-            }`}>
-              <i className={`text-xl ${
-                state.executionResults.success ? 'ri-check-circle-line text-green-600' : 'ri-error-warning-line text-red-600'
-              }`}></i>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {state.executionResults.success ? 'Execução Concluída' : 'Erro na Execução'}
-              </h3>
-              <p className="text-gray-600">{state.executionResults.message}</p>
-            </div>
-          </div>
-          
-          {state.executionResults.success && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="text-sm text-blue-600 font-medium">Nós Executados</div>
-                <div className="text-2xl font-bold text-blue-800">
-                  {state.executionResults.nodesExecuted || state.nodes.length}
-                </div>
-              </div>
-              
-              <div className="bg-green-50 rounded-lg p-4">
-                <div className="text-sm text-green-600 font-medium">Conexões Utilizadas</div>
-                <div className="text-2xl font-bold text-green-800">
-                  {state.executionResults.connectionsUsed || state.connections.length}
-                </div>
-              </div>
-              
-              <div className="bg-purple-50 rounded-lg p-4">
-                <div className="text-sm text-purple-600 font-medium">Arquivo Processado</div>
-                <div className="text-2xl font-bold text-purple-800">
-                  {state.selectedFile ? 'Sim' : 'Não'}
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {state.executionResults.error && (
-            <div className="bg-red-50 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-red-700 mb-2">Erro</h4>
-              <p className="text-red-800">{state.executionResults.error}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {state.nodes.length === 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i className="ri-play-circle-line text-2xl text-gray-400"></i>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum workflow para executar</h3>
-          <p className="text-gray-600 mb-4">
-            Crie nós e conexões primeiro para poder executar um workflow.
-          </p>
-        </div>
-      )}
-
+      <ExecuteProgress 
+        etapasConcluidas={progressState.etapasConcluidas}
+        totalEtapas={progressState.totalEtapas}
+        progresso={progressState.progresso}
+        isLoading={progressState.isLoading}
+        erroCritico={progressState.erroCritico}
+        relatorioFinal={progressState.relatorioFinal}
+      />
       {/* Workflow Output */}
       {buildCompleteWorkflow && state.nodes.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">

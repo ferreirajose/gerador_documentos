@@ -1,7 +1,7 @@
 import { DataResponse } from "@/types/process-docs";
 import HttpClient from "@/infra/HttpClient";
-import { StreamingResponse } from "@/application/services/WorkflowRelatorioService";
 import WorkflowGateway from "./WorkflowGateway";
+import { GerarDocCallbacks } from "@/types/nodes";
 
 export default class WorkflowHttpGateway implements WorkflowGateway {
   constructor(
@@ -10,92 +10,106 @@ export default class WorkflowHttpGateway implements WorkflowGateway {
     readonly token: string
   ) {}
 
-
-  async gerarRelatorioComStreaming(data: any): Promise<StreamingResponse> {
-    return this.createStreamingConnection(data);
-  }
-
-  private createStreamingConnection(data: any): StreamingResponse {
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    let isCancelled = false;
-    let errorCallback: ((error: Error) => void) | null = null;
-    let completeCallback: (() => void) | null = null;
-
-    const streamingResponse: StreamingResponse = {
-      onData: (callback: (data: any) => void) => {
-        this.executeStreamingRequest(data, callback, signal)
-          .then(() => {
-            if (completeCallback && !isCancelled) {
-              completeCallback();
-            }
-          })
-          .catch((error) => {
-            if (errorCallback && !isCancelled) {
-              errorCallback(error);
-            }
-          });
-      },
-      onError: (callback: (error: Error) => void) => {
-        errorCallback = callback;
-      },
-      onComplete: (callback: () => void) => {
-        completeCallback = callback;
-      },
-      cancel: () => {
-        isCancelled = true;
-        controller.abort();
-      }
-    };
-
-    return streamingResponse;
-  }
-
-  private async executeStreamingRequest(
-    data: any, 
-    onData: (data: any) => void,
-    signal: AbortSignal
-  ): Promise<void> {
+  async gerarRelatorio(
+    requestData: any,
+    callbacks: GerarDocCallbacks
+  ): Promise<any> {
     try {
-      const response = await this.httpClient.post(
+      await this.geraStreaming(requestData, callbacks);
+    } catch (error) {
+      console.error("Erro ao gerar minuta:", error);
+      callbacks.onError?.(
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
+
+  private async geraStreaming(requestData: any, callbacks: GerarDocCallbacks) {
+    try {
+      const response = await this.httpClient.post<any>(
         `${this.baseUrl}/gerar_relatorio_stream/`,
-        data,
+        requestData,
         {
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.token}`,
-            'Accept': 'text/event-stream',
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.token}`,
+            Accept: "text/event-stream",
           },
-          responseType: 'text',
-          signal // Passando o AbortSignal para o HttpClient
+          responseType: "stream", // AxiosAdapter vai converter para 'text'
         }
       );
 
-      // Processa a resposta como texto (formato Server-Sent Events)
-      if (typeof response === 'string') {
-        const lines = response.split('\n');
+      // Agora response.data é uma string com todo o conteúdo
+      await this.processRealTimeStream(response.data, callbacks);
+    } catch (error) {
+      console.error("Erro ao iniciar streaming:", error);
+      callbacks.onError?.(
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
+
+  private async processRealTimeStream(
+    data: string, // ← AGORA É UMA STRING, não um stream
+    callbacks: GerarDocCallbacks
+  ) {
+    try {
+      const lines = data.split('\n');
+      let buffer = '';
+
+      for (const line of lines) {
+        buffer += line + '\n';
         
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const parsedData = JSON.parse(line.slice(6));
-              onData(parsedData);
-            } catch (e) {
-              console.warn('Failed to parse stream data:', e);
-            }
+        // Processa cada linha completa IMEDIATAMENTE
+        if (line.startsWith('data: ') && line.trim().length > 6) {
+          try {
+            const eventData = JSON.parse(line.slice(6));
+            this.processEventData(eventData, callbacks); // ← Processa IMEDIATAMENTE
+          } catch (e) {
+            console.warn('Erro ao parsear evento:', e, 'Linha:', line);
+            callbacks.onInfo?.(`Dado recebido: ${line}`);
           }
+        } else if (line.trim() && !line.startsWith('data: ')) {
+          // Linhas de informação
+          callbacks.onInfo?.(line);
         }
       }
-    } catch (error: any) {
-      // Verifica se o erro foi por cancelamento
-      if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
-        console.log('Request cancelado pelo usuário');
-        return;
-      }
-      
-      console.error("Erro no streaming:", error);
-      throw error;
+
+      callbacks.onComplete?.({
+        success: true,
+        message: "Processamento concluído",
+      });
+
+    } catch (error) {
+      console.error("Erro ao processar stream:", error);
+      callbacks.onError?.(
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
+
+  // NOVO MÉTODO para processar dados do evento
+  private processEventData(eventData: any, callbacks: GerarDocCallbacks) {
+    if (!eventData || !eventData.type) return;
+
+    switch (eventData.type) {
+      case 'status':
+        callbacks.onNodeStatus?.(eventData.node, eventData.status);
+        break;
+      case 'progress':
+        callbacks.onProgress?.(eventData.nodes);
+        break;
+      case 'data':
+        callbacks.onData?.(eventData.data);
+        break;
+      case 'error':
+        callbacks.onError?.(eventData.message);
+        break;
+      case 'info':
+        callbacks.onInfo?.(eventData.message);
+        break;
+      default:
+        console.log('Evento não tratado:', eventData);
     }
   }
 
@@ -126,8 +140,7 @@ export default class WorkflowHttpGateway implements WorkflowGateway {
   }
 
   private handleError(error: any) {
-    // Verifica se é um erro de cancelamento
-    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+    if (error.name === "AbortError" || error.code === "ERR_CANCELED") {
       return {
         success: false,
         message: "Request cancelado",
