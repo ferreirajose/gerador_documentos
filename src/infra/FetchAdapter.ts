@@ -70,12 +70,13 @@ export default class FetchAdapter implements HttpClient {
     try {
       const response = await fetch(finalUrl, requestConfig);
 
-      // Para responseType 'stream', retorna o Response completo
+      // Para SSE/streaming, não processamos a resposta aqui - deixe o caller lidar
       if (config?.responseType === 'stream') {
+        // Retorna a resposta completa para o caller processar o stream
         return response as any;
       }
 
-      // Processa a resposta baseado no content-type
+      // Processa a resposta baseado no content-type para outros tipos
       const contentType = response.headers.get("content-type");
       
       if (!response.ok) {

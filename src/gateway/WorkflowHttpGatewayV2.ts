@@ -16,26 +16,21 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
     callbacks: GerarDocCallbacks
   ): Promise<any> {
     try {
-      await this.geraStreamingComFetch(requestData, callbacks);
-    } catch (error) {
-      console.error("Erro ao gerar relatório:", error);
-      callbacks.onError?.(
-        error instanceof Error ? error.message : String(error)
+      // Use o HttpClient para fazer a requisição com responseType: 'stream'
+      const response = await this.httpClient.post<Response>(
+        `${this.baseUrl}/gerar_relatorio_stream/`,
+        requestData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.token}`,
+            Accept: "text/event-stream",
+          },
+          responseType: 'stream' as const,
+        }
       );
-    }
-  }
 
-  private async geraStreamingComFetch(requestData: any, callbacks: GerarDocCallbacks) {
-    try {
-      const response = await fetch(`${this.baseUrl}/gerar_relatorio_stream/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.token}`,
-          Accept: "text/event-stream",
-        },
-        body: requestData,
-      });
+      console.log("Response received:", response);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -48,7 +43,7 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
       await this.processStream(response.body, callbacks);
 
     } catch (error) {
-      console.error("Erro ao iniciar streaming:", error);
+      console.error("Erro ao gerar relatório:", error);
       callbacks.onError?.(
         error instanceof Error ? error.message : String(error)
       );
@@ -127,7 +122,7 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
   }
 
   private dispatchEvent(eventData: any, callbacks: GerarDocCallbacks): void {
-    console.log(eventData, 'eventData')
+    console.log('Event data:', eventData);
     if (!eventData || !eventData.type) {
       console.warn("Evento sem tipo:", eventData);
       return;
