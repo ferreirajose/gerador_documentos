@@ -43,7 +43,11 @@ export default class AxiosAdapter implements HttpClient {
       responseType: config.responseType || 'json',
     };
 
-    // Adiciona o signal do AbortController se existir
+    // NO BROWSER, use 'text' em vez de 'stream'
+    if (config.responseType === 'stream') {
+      adaptedConfig.responseType = 'text'; // ← CORREÇÃO PARA BROWSER
+    }
+
     if (config.signal) {
       adaptedConfig.signal = config.signal;
     }
@@ -52,12 +56,11 @@ export default class AxiosAdapter implements HttpClient {
   }
 
   private handleResponse<T>(response: AxiosResponse<T>, config?: HttpConfig): T {
-    // Se responseType for 'stream', retorna o stream diretamente
-    if (config?.responseType === 'stream') {
-      return response.data;
+    // Para responseType 'stream' (agora 'text'), retorna a resposta completa
+    if (config?.responseType === 'stream' || config?.responseType === 'text') {
+      return response as any;
     }
     
-    // Para outros tipos, retorna os dados processados
     return response.data;
   }
 }

@@ -270,7 +270,7 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
 
     // Configurar ponto de entrada
     if (entryNodes.length > 0) {
-      builder.setPontoDeEntrada(entryNodes.map(node => node.name));
+      builder.setPontoDeEntrada(entryNodes.map(node => formatAgentName(node.name)));
     }
 
     // Adicionar todos os nós
@@ -291,7 +291,7 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
           if (definicao && typeof definicao === 'object') {
             Object.entries(definicao).forEach(([tipo, referencia]) => {
               if (isValidInputType(tipo) && referencia) {
-                nodeBuilder.addEntrada(formatAgentName(nomeCampo), tipo as InputType, referencia as string);
+                nodeBuilder.addEntrada(nomeCampo, tipo as InputType, referencia as string);
               }
             });
           }
@@ -307,7 +307,7 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
       const toNode = state.nodes.find(n => n.id === connection.toNodeId);
       
       if (fromNode && toNode) {
-        builder.addEdge(fromNode.name, toNode.name);
+        builder.addEdge(formatAgentName(fromNode.name), formatAgentName(toNode.name));
       }
     });
 
