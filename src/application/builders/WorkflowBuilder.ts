@@ -1,5 +1,5 @@
 import Edge from '@/domain/entities/Edge';
-import NodeEntitie from '@/domain/entities/NodeEntitie';
+import NodeEntitie, { InputType } from '@/domain/entities/NodeEntitie';
 import Workflow from '@/domain/entities/Workflow';
 
 export class WorkflowBuilder {
@@ -119,6 +119,20 @@ export class WorkflowBuilder {
     public setModificarSaida(key: string, template: string): WorkflowBuilder {
         this.modificar_saida[key] = template;
         return this;
+    }
+
+    public getInputRelations() {
+        return this.nos.flatMap(node =>
+            Object.entries(node.entradas).map(([field, def]) => {
+                const [[type, ref]] = Object.entries(def) as [ [InputType, string] ];
+                return {
+                    node: node.nome,
+                    field,
+                    type,
+                    reference: ref
+                };
+            })
+        );
     }
 
     public build(): Workflow {

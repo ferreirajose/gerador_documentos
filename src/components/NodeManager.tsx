@@ -50,7 +50,17 @@ export default function NodeManager() {
     type: 'process' as 'entry' | 'process' | 'end',
     llmModel: 'claude-3.7-sonnet',
     prompt: '',
+     workflowData: {
+      entradas: {} as Record<string, Record<string, string>>
+    }
   });
+
+   // ✅ NOVO: Estado para gerenciar entradas
+  const [entradas, setEntradas] = useState<Array<{
+    campo: string;
+    tipo: 'buscar_documento' | 'id_da_defesa' | 'do_estado';
+    referencia: string;
+  }>>([]);
 
   const resetForm = () => {
     setFormData({
@@ -58,17 +68,51 @@ export default function NodeManager() {
       type: 'process',
       llmModel: 'claude-3.7-sonnet',
       prompt: '',
+      workflowData: { entradas: {} }
     });
+    setEntradas([]);
+  };
+
+  // ✅ NOVO: Função para adicionar entrada
+  const adicionarEntrada = () => {
+    setEntradas(prev => [...prev, { campo: '', tipo: 'buscar_documento', referencia: '' }]);
+  };
+
+  // ✅ NOVO: Função para remover entrada
+  const removerEntrada = (index: number) => {
+    setEntradas(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // ✅ NOVO: Função para atualizar entrada
+  const atualizarEntrada = (index: number, field: string, value: string) => {
+    setEntradas(prev => prev.map((entrada, i) => 
+      i === index ? { ...entrada, [field]: value } : entrada
+    ));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // ✅ Montar workflowData com as entradas configuradas
+    const workflowData = {
+      entradas: entradas.reduce((acc, entrada) => {
+        if (entrada.campo && entrada.referencia) {
+          acc[entrada.campo] = { [entrada.tipo]: entrada.referencia };
+        }
+        return acc;
+      }, {} as Record<string, Record<string, string>>)
+    };
+
+    const nodeData = {
+      ...formData,
+      workflowData
+    };
+
     if (editingNode) {
-      updateNode(editingNode.id, formData);
+      updateNode(editingNode.id, nodeData);
       setEditingNode(null);
     } else {
-      createNode(formData);
+      createNode(nodeData);
       setShowCreateForm(false);
     }
 
@@ -82,7 +126,20 @@ export default function NodeManager() {
       type: node.type,
       llmModel: node.llmModel || 'claude-3.7-sonnet',
       prompt: node.prompt || '',
+      workflowData: node.workflowData || { entradas: {} }
     });
+
+    // ✅ Carregar entradas existentes para edição
+    if (node.workflowData?.entradas) {
+      const entradasArray = Object.entries(node.workflowData.entradas).map(([campo, def]) => {
+        const [[tipo, referencia]] = Object.entries(def as Record<string, string>);
+        return { campo, tipo: tipo as any, referencia };
+      });
+      setEntradas(entradasArray);
+    } else {
+      setEntradas([]);
+    }
+
     setShowCreateForm(true);
   };
 
@@ -212,6 +269,83 @@ export default function NodeManager() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* ✅ NOVA SEÇÃO: Configuração de Entradas - POSICIONADA CORRETAMENTE */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-md font-semibold text-gray-900 dark:text-white">
+                  Configurar Entradas do Nó
+                </h4>
+                <button
+                  type="button"
+                  onClick={adicionarEntrada}
+                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
+                >
+                  + Adicionar Entrada
+                </button>
+              </div>
+
+              {entradas.map((entrada, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Nome do Campo
+                    </label>
+                    <input
+                      type="text"
+                      value={entrada.campo}
+                      onChange={(e) => atualizarEntrada(index, 'campo', e.target.value)}
+                      placeholder="Ex: conteudo_auditoria"
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Tipo
+                    </label>
+                    <select
+                      value={entrada.tipo}
+                      onChange={(e) => atualizarEntrada(index, 'tipo', e.target.value)}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    >
+                      <option value="buscar_documento">Buscar Documento</option>
+                      <option value="id_da_defesa">ID da Defesa</option>
+                      <option value="do_estado">Do Estado</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Referência
+                    </label>
+                    <input
+                      type="text"
+                      value={entrada.referencia}
+                      onChange={(e) => atualizarEntrada(index, 'referencia', e.target.value)}
+                      placeholder="Ex: doc.auditoria_especial"
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => removerEntrada(index)}
+                      className="w-full bg-red-600 text-white px-2 py-1 text-sm rounded hover:bg-red-700 transition-colors"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {entradas.length === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                  Nenhuma entrada configurada. Clique em "Adicionar Entrada" para começar.
+                </p>
+              )}
             </div>
 
             <div data-testid="node-prompt">

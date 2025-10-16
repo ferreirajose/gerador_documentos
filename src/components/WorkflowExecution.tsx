@@ -12,8 +12,6 @@ import { ExecuteProgress } from './common/ExecuteProgress';
 const BASE_URL = import.meta.env.VITE_API_URL;
 const BASE_URL_MINUTA = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
-console.log("BASE_URL:", BASE_URL);
-console.log("BASE_URL_MINUTA:", BASE_URL_MINUTA);
 
 export default function WorkflowExecution() {
   const {
@@ -27,7 +25,6 @@ export default function WorkflowExecution() {
     clearSelectedFile
   } = useWorkFlow();
 
-  const [isExecuting, setIsExecuting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [progressState, setProgressState] = useState({
@@ -49,7 +46,6 @@ export default function WorkflowExecution() {
 
   const processFileUpload = async (file: File) => {
     setExecuting(true);
-    setIsExecuting(true);
     setUploadError(null);
     clearLogs();
     setResults(null);
@@ -121,7 +117,6 @@ export default function WorkflowExecution() {
       });
     } finally {
       setExecuting(false);
-      setIsExecuting(false);
     }
   };
 
@@ -225,11 +220,11 @@ export default function WorkflowExecution() {
   
 
   const executeWorkflow = async () => {
-    //if (state.nodes.length === 0) return; // @TODO descomentar essa linha
+    if (state.nodes.length === 0) return; // @TODO descomentar essa linha
 
     setProgressState({
     etapasConcluidas: 0,
-    totalEtapas: 5, // Total de nós no seu workflow @TODO SERA USADO A QUANTIDADE DE NOS state.nodes.length
+    totalEtapas: state.nodes.length, // Total de nós no seu workflow @TODO SERA USADO A QUANTIDADE DE NOS state.nodes.length
     progresso: 0,
     isLoading: true,
     erroCritico: null,
@@ -238,13 +233,12 @@ export default function WorkflowExecution() {
 
 
     setExecuting(true);
-    setIsExecuting(true);
     setResults(null);
     clearLogs();
 
     try {
       // Construir workflow completo usando o método do context
-      const workflowJson = teste();
+      const workflowJson = buildCompleteWorkflow() //teste();
 
       // Configurar serviço
       // const httpClient = new AxiosAdapter();
@@ -305,7 +299,6 @@ export default function WorkflowExecution() {
     } catch (error) {
       console.error('Erro ao executar workflow:', error);
       setExecuting(false);
-      setIsExecuting(false);
       setResults({
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
@@ -314,14 +307,13 @@ export default function WorkflowExecution() {
 
   const resetExecution = () => {
     setExecuting(false);
-    setIsExecuting(false);
     setResults(null);
     clearLogs();
     clearSelectedFile();
     setUploadError(null);
   };
 
-  const canExecute = true //state.nodes.length > 0 && !state.isExecuting;
+  const canExecute = state.nodes.length > 0 && !state.isExecuting;
 
   // Lógica ajustada: mostrar seção de upload SEMPRE (para poder anexar arquivos)
   const shouldShowUploadSection = true;
@@ -456,14 +448,17 @@ export default function WorkflowExecution() {
         </div>
       )}
 
-      <ExecuteProgress 
-        etapasConcluidas={progressState.etapasConcluidas}
-        totalEtapas={progressState.totalEtapas}
-        progresso={progressState.progresso}
-        isLoading={progressState.isLoading}
-        erroCritico={progressState.erroCritico}
-        relatorioFinal={progressState.relatorioFinal}
-      />
+      { state.isExecuting && (
+        <ExecuteProgress 
+          etapasConcluidas={progressState.etapasConcluidas}
+          totalEtapas={progressState.totalEtapas}
+          progresso={progressState.progresso}
+          isLoading={progressState.isLoading}
+          erroCritico={progressState.erroCritico}
+          relatorioFinal={progressState.relatorioFinal}
+        />
+      )}
+
       {/* Workflow Output */}
       {buildCompleteWorkflow && state.nodes.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">

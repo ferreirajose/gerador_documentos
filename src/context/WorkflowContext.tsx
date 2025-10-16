@@ -4,13 +4,6 @@ import { Node } from '@/types/nodes';
 import { formatAgentName } from '@/libs/util';
 import { InputType } from '@/domain/entities/NodeEntitie';
 
-export interface NodeDocument {
-  id: string;
-  name: string;
-  file: File;
-  nodeId: string;
-  uploadedAt: Date;
-}
 
 export interface Connection {
   id: string;
@@ -313,13 +306,19 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
 
     // Configurar template de saída
     const outputTemplate = state.nodes.map(node => 
-      `## ${node.name}\n{workflow_data.${node.name}}\n\n`
+      `## ${formatAgentName(node.name)}\n{workflow_data.${formatAgentName(node.name)}}\n\n`
     ).join('');
 
     builder.setModificarSaida('relatorio_final', outputTemplate);
 
-    return builder.toJSON();
-  };
+    // **NOVIDADE: Extrair as relações de entrada antes de fazer o build**
+    const inputRelations = builder.getInputRelations();
+    console.log(inputRelations)
+    // Gerar o workflow JSON
+    const workflowJson = builder.toJSON();
+
+    return workflowJson
+};
   
   const getNodeWorkflowData = (nodeId: string) => {
     const node = state.nodes.find(n => n.id === nodeId);

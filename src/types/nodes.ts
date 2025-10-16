@@ -5,6 +5,10 @@ export type Node = {
   llmModel?: string;
   prompt?: string;
   createdAt: Date;
+  // ✅ ADICIONAR esta propriedade
+  workflowData?: {
+    entradas?: Record<string, Record<string, string>>;
+  };
 }
 
 export type Connection = {
