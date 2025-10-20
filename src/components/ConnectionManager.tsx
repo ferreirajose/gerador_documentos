@@ -91,6 +91,12 @@ export default function ConnectionManager() {
     return state.nodes.filter(node => node.id !== excludeId);
   };
 
+  // Função auxiliar para obter tipo do nó
+  const getNodeType = (nodeId: string) => {
+    const node = state.nodes.find(n => n.id === nodeId);
+    return node ? node.type : null;
+  };
+
   const filteredConnections = state.connections.filter(connection => {
     const fromNodeName = getNodeName(connection.fromNodeId);
     const toNodeName = getNodeName(connection.toNodeId);
@@ -109,6 +115,14 @@ export default function ConnectionManager() {
   const isValidConnection = () => {
     if (!formData.fromNodeId || !formData.toNodeId) return false;
     if (formData.fromNodeId === formData.toNodeId) return false;
+    
+    // ✅ NOVA VALIDAÇÃO: Impedir conexão entre nós de entrada
+    const fromNodeType = getNodeType(formData.fromNodeId);
+    const toNodeType = getNodeType(formData.toNodeId);
+    
+    if (fromNodeType === 'entry' && toNodeType === 'entry') {
+      return false;
+    }
     
     if (!editingConnection) {
       // Verificar apenas por IDs (não precisa verificar por nomes)
@@ -250,6 +264,18 @@ export default function ConnectionManager() {
                       <RiErrorWarningLine className="text-red-600 dark:text-red-500" />
                       <span className="text-sm text-red-700 dark:text-red-300">
                         Um nó não pode se conectar a si mesmo
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* ✅ NOVA VALIDAÇÃO: Conexão entrada→entrada */}
+                {getNodeType(formData.fromNodeId) === 'entry' && getNodeType(formData.toNodeId) === 'entry' && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                    <div className="flex items-center space-x-2">
+                      <RiErrorWarningLine className="text-red-600 dark:text-red-500" />
+                      <span className="text-sm text-red-700 dark:text-red-300">
+                        Nós de entrada não podem se conectar entre si
                       </span>
                     </div>
                   </div>

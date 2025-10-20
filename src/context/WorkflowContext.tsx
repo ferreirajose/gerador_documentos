@@ -319,9 +319,6 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
 
     builder.setModificarSaida('relatorio_final', outputTemplate);
 
-    // **NOVIDADE: Extrair as relações de entrada antes de fazer o build**
-    const inputRelations = builder.getInputRelations();
-    console.log(inputRelations)
     // Gerar o workflow JSON
     const workflowJson = builder.toJSON();
 
