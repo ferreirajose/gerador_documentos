@@ -314,8 +314,8 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
 
     // Configurar template de saída
     const outputTemplate = state.nodes.map(node => 
-      `## ${formatAgentName(node.name)}\n{workflow_data.${formatAgentName(node.name)}}\n\n`
-    ).join('');
+      `{workflow_data.${formatAgentName(node.name)}}\n\n`
+    ).join('').trimEnd();
 
     builder.setModificarSaida('relatorio_final', outputTemplate);
 

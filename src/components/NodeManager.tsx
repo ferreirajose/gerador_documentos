@@ -10,7 +10,6 @@ import {
   RiFileTextLine,
   RiEditLine,
   RiDeleteBinLine,
-  RiRecordCircleLine,
   RiCpuLine,
   RiLoginCircleLine
 } from '@remixicon/react';
@@ -22,7 +21,6 @@ import AxiosAdapter from '@/infra/AxiosAdapter';
 const nodeTypes = [
   { value: 'entry', label: 'Entrada', icon: RiLoginCircleLine, color: 'bg-green-500' },
   { value: 'process', label: 'Processamento', icon: RiCpuLine, color: 'bg-blue-500' },
-  { value: 'end', label: 'Fim', icon: RiRecordCircleLine, color: 'bg-red-500' },
 ];
 
 const llmModels = [
@@ -66,7 +64,7 @@ export default function NodeManager() {
 
   const [formData, setFormData] = useState({
     name: '',
-    type: 'process' as 'entry' | 'process' | 'end',
+    type: 'process' as 'entry' | 'process',
     llmModel: 'claude-3.7-sonnet',
     prompt: '',
      workflowData: {
@@ -445,7 +443,7 @@ const handleEdit = (node: any) => {
                   data-testid="node-type-select"
                   required
                   value={formData.type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'entry' | 'process' | 'end' }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'entry' | 'process' }))}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   {nodeTypes.map(type => (

@@ -20,7 +20,7 @@ export default function ConnectionManager() {
     createConnection, 
     updateConnection, 
     deleteConnection,
-    exportWorkflowJSON
+    buildCompleteWorkflow
 
   } = useWorkFlow();
   
@@ -392,7 +392,7 @@ export default function ConnectionManager() {
 
       
       {/* Workflow Output */}
-      {exportWorkflowJSON && (
+      {buildCompleteWorkflow && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -400,7 +400,7 @@ export default function ConnectionManager() {
             </h3>
           </div>
           <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
-            {exportWorkflowJSON()}
+            {buildCompleteWorkflow()}
           </pre>
         </div>
       )}

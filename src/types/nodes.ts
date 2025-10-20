@@ -1,7 +1,7 @@
 export type Node = {
   id: string;
   name: string;
-  type: 'entry' | 'process' | 'end';
+  type: 'entry' | 'process';
   llmModel?: string;
   prompt?: string;
   createdAt: Date;
