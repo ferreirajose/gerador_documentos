@@ -163,8 +163,9 @@ const WorkflowContext = createContext<{
   buildCompleteWorkflow: () => any;
   getNodeWorkflowData: (nodeId: string) => any;
   getConnectionWorkflowData: (connectionId: string) => any;
-  exportWorkflowJSON: () => string;
 
+  getAvailableDocumentKeys: () => any;
+  getAvailableOutputKeys: () => any;
   // NOVOS métodos para arquivo selecionado
   setSelectedFile: (objFile: []) => void;
   clearSelectedFile: () => void;
@@ -248,11 +249,18 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     if (entryNodes.length > 0) {
       const documentos: Record<string, any> = {};
       
-      entryNodes.forEach(entryNode => {
+      entryNodes.forEach((entryNode, index) => {
         const nodeName = formatAgentName(entryNode.name);
 
         if (state.selectedFile) {
-          documentos[nodeName] = state.selectedFile.map((item: any) => item.uuid)
+          // Primeiro valor: string (chave: valor)
+          if (index === 0) {
+            documentos[nodeName] = state.selectedFile[0]?.uuid || '';
+          } 
+          // Próximos valores: array de string (chave: [valor1, valor2, ...])
+          else {
+            documentos[nodeName] = state.selectedFile.map((item: any) => item.uuid);
+          }
         }
       });
 
@@ -284,7 +292,7 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
           if (definicao && typeof definicao === 'object') {
             Object.entries(definicao).forEach(([tipo, referencia]) => {
               if (isValidInputType(tipo) && referencia) {
-                nodeBuilder.addEntrada(nomeCampo, tipo as InputType, referencia as string);
+                nodeBuilder.addEntrada(nomeCampo, tipo as InputType, `doc.${referencia}` as string);
               }
             });
           }
@@ -330,9 +338,30 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     return connection?.workflowData || null;
   };
 
-  const exportWorkflowJSON = (): string => {
-    return buildCompleteWorkflow();
-  };
+  // Método para obter as chaves disponíveis dos documentos
+const getAvailableDocumentKeys = () => {
+  const entryNodes = state.nodes.filter(node => node.type === 'entry');
+  const documentKeys: string[] = [];
+  
+  entryNodes.forEach((entryNode) => {
+    const nodeName = formatAgentName(entryNode.name);
+    documentKeys.push(nodeName);
+  });
+  
+  return documentKeys;
+};
+
+const getAvailableOutputKeys = () => {
+  const outputKeys: string[] = [];
+  
+  state.nodes.forEach(node => {
+    const nodeName = formatAgentName(node.name);
+    outputKeys.push(`workflow_data.${nodeName}`);
+  });
+  
+  return outputKeys;
+};
+
 
   const value = {
     state,
@@ -351,10 +380,12 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     buildCompleteWorkflow,
     getNodeWorkflowData,
     getConnectionWorkflowData,
-    exportWorkflowJSON,
 
     setSelectedFile, // ← NOVO
     clearSelectedFile , // ← NOVO
+
+    getAvailableDocumentKeys,
+    getAvailableOutputKeys
   };
 
   return (

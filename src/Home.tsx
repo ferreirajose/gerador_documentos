@@ -150,7 +150,7 @@ export default function Home() {
             .setModel('claude-3-7-sonnet@20250219')
             .setPrompt(AuditorPrompt)
             .setOutputKey('workflow_data.analise_auditoria')
-            .addEntrada('conteudo_auditoria', 'buscar_documento', 'doc.auditoria_especial')
+            .addEntrada('conteudo_auditoria', 'buscar_documento', 'doc.auditoria_especial') // Deve referenciar o primeiro objeto da lista {auditoria_especial: "", defesas_do_caso: ""}
             .endNode();
 
         builder
@@ -159,8 +159,8 @@ export default function Home() {
             .setModel('claude-3-7-sonnet@20250219')
             .setPrompt(DefensePrompt)
             .setOutputKey('workflow_data.analises_defesas')
-            .addEntrada('lista_de_origem', 'id_da_defesa', 'doc.defesas_do_caso')
-            .addEntrada('conteudo_defesa', 'buscar_documento', '{id_da_defesa}')
+            .addEntrada('lista_de_origem', 'id_da_defesa', 'doc.defesas_do_caso') // Deve referenciar o segundo objeto da lista  {auditoria_especial: "", defesas_do_caso: ""}
+            .addEntrada('conteudo_defesa', 'buscar_documento', '{id_da_defesa}') // // Deve referencia 
             .endNode();
 
         // 5) RelatorNode
