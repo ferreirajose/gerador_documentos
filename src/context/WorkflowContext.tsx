@@ -4,13 +4,6 @@ import { Node } from '@/types/nodes';
 import { formatAgentName } from '@/libs/util';
 import { InputType } from '@/domain/entities/NodeEntitie';
 
-export interface NodeDocument {
-  id: string;
-  name: string;
-  file: File;
-  nodeId: string;
-  uploadedAt: Date;
-}
 
 export interface Connection {
   id: string;
@@ -170,8 +163,9 @@ const WorkflowContext = createContext<{
   buildCompleteWorkflow: () => any;
   getNodeWorkflowData: (nodeId: string) => any;
   getConnectionWorkflowData: (connectionId: string) => any;
-  exportWorkflowJSON: () => string;
 
+  getAvailableDocumentKeys: () => any;
+  getAvailableOutputKeys: () => any;
   // NOVOS métodos para arquivo selecionado
   setSelectedFile: (objFile: []) => void;
   clearSelectedFile: () => void;
@@ -255,11 +249,18 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     if (entryNodes.length > 0) {
       const documentos: Record<string, any> = {};
       
-      entryNodes.forEach(entryNode => {
+      entryNodes.forEach((entryNode, index) => {
         const nodeName = formatAgentName(entryNode.name);
 
         if (state.selectedFile) {
-          documentos[nodeName] = state.selectedFile.map((item: any) => item.uuid)
+          // Primeiro valor: string (chave: valor)
+          if (index === 0) {
+            documentos[nodeName] = state.selectedFile[0]?.uuid || '';
+          } 
+          // Próximos valores: array de string (chave: [valor1, valor2, ...])
+          else {
+            documentos[nodeName] = state.selectedFile.map((item: any) => item.uuid);
+          }
         }
       });
 
@@ -291,7 +292,7 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
           if (definicao && typeof definicao === 'object') {
             Object.entries(definicao).forEach(([tipo, referencia]) => {
               if (isValidInputType(tipo) && referencia) {
-                nodeBuilder.addEntrada(nomeCampo, tipo as InputType, referencia as string);
+                nodeBuilder.addEntrada(nomeCampo, tipo as InputType, `doc.${referencia}` as string);
               }
             });
           }
@@ -313,13 +314,19 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
 
     // Configurar template de saída
     const outputTemplate = state.nodes.map(node => 
-      `## ${node.name}\n{workflow_data.${node.name}}\n\n`
+      `## ${formatAgentName(node.name)}\n{workflow_data.${formatAgentName(node.name)}}\n\n`
     ).join('');
 
     builder.setModificarSaida('relatorio_final', outputTemplate);
 
-    return builder.toJSON();
-  };
+    // **NOVIDADE: Extrair as relações de entrada antes de fazer o build**
+    const inputRelations = builder.getInputRelations();
+    console.log(inputRelations)
+    // Gerar o workflow JSON
+    const workflowJson = builder.toJSON();
+
+    return workflowJson
+};
   
   const getNodeWorkflowData = (nodeId: string) => {
     const node = state.nodes.find(n => n.id === nodeId);
@@ -331,9 +338,30 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     return connection?.workflowData || null;
   };
 
-  const exportWorkflowJSON = (): string => {
-    return buildCompleteWorkflow();
-  };
+  // Método para obter as chaves disponíveis dos documentos
+const getAvailableDocumentKeys = () => {
+  const entryNodes = state.nodes.filter(node => node.type === 'entry');
+  const documentKeys: string[] = [];
+  
+  entryNodes.forEach((entryNode) => {
+    const nodeName = formatAgentName(entryNode.name);
+    documentKeys.push(nodeName);
+  });
+  
+  return documentKeys;
+};
+
+const getAvailableOutputKeys = () => {
+  const outputKeys: string[] = [];
+  
+  state.nodes.forEach(node => {
+    const nodeName = formatAgentName(node.name);
+    outputKeys.push(`workflow_data.${nodeName}`);
+  });
+  
+  return outputKeys;
+};
+
 
   const value = {
     state,
@@ -352,10 +380,12 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     buildCompleteWorkflow,
     getNodeWorkflowData,
     getConnectionWorkflowData,
-    exportWorkflowJSON,
 
     setSelectedFile, // ← NOVO
     clearSelectedFile , // ← NOVO
+
+    getAvailableDocumentKeys,
+    getAvailableOutputKeys
   };
 
   return (

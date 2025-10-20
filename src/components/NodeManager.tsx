@@ -16,6 +16,8 @@ import {
 } from '@remixicon/react';
 
 import { useWorkFlow } from '@/context/WorkflowContext';
+import WorkflowHttpGateway from '@/gateway/WorkflowHttpGateway';
+import AxiosAdapter from '@/infra/AxiosAdapter';
 
 const nodeTypes = [
   { value: 'entry', label: 'Entrada', icon: RiLoginCircleLine, color: 'bg-green-500' },
@@ -30,15 +32,32 @@ const llmModels = [
   { value: 'gemini-pro', label: 'Gemini Pro' },
 ];
 
+
+const BASE_URL_MINUTA = import.meta.env.VITE_API_URL_MINUTA;
+const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
+
 export default function NodeManager() {
 
   const {
     state,
+    
     createNode,
     updateNode,
     deleteNode,
+    setSelectedFile,
+    clearSelectedFile,
+    getAvailableDocumentKeys,
+    getAvailableOutputKeys,
     buildCompleteWorkflow
   } = useWorkFlow();
+
+  const availableDocumentKeys = getAvailableDocumentKeys();
+  const availableOutputKeys = getAvailableOutputKeys();
+
+
+   // ✅ NOVO: Estado para arquivo selecionado
+  const [selectedFile, setLocalSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingNode, setEditingNode] = useState<Node | null>(null);
@@ -50,7 +69,17 @@ export default function NodeManager() {
     type: 'process' as 'entry' | 'process' | 'end',
     llmModel: 'claude-3.7-sonnet',
     prompt: '',
+     workflowData: {
+      entradas: {} as Record<string, Record<string, string>>
+    }
   });
+
+   // ✅ NOVO: Estado para gerenciar entradas
+  const [entradas, setEntradas] = useState<Array<{
+    campo: string;
+    tipo: 'lista_de_origem' | 'buscar_documento' | 'id_da_defesa' | 'do_estado';
+    referencia: string;
+  }>>([]);
 
   const resetForm = () => {
     setFormData({
@@ -58,33 +87,88 @@ export default function NodeManager() {
       type: 'process',
       llmModel: 'claude-3.7-sonnet',
       prompt: '',
+      workflowData: { entradas: {} }
     });
+    setEntradas([]);
+  };
+
+  // ✅ NOVO: Função para adicionar entrada
+  const adicionarEntrada = () => {
+    // Define o tipo padrão baseado no tipo do nó
+    const tipoPadrao = formData.type === 'process' ? 'lista_de_origem' : 'buscar_documento';
+    
+    setEntradas(prev => [...prev, { campo: '', tipo: tipoPadrao, referencia: '' }]);
+  };
+
+  // ✅ NOVO: Função para remover entrada
+  const removerEntrada = (index: number) => {
+    setEntradas(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // ✅ NOVO: Função para atualizar entrada
+  const atualizarEntrada = (index: number, field: string, value: string) => {
+    setEntradas(prev => prev.map((entrada, i) => 
+      i === index ? { ...entrada, [field]: value } : entrada
+    ));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // ✅ Montar workflowData com as entradas configuradas
+    const workflowData = {
+      entradas: entradas.reduce((acc, entrada) => {
+        if (entrada.campo && entrada.referencia) {
+          acc[entrada.campo] = { [entrada.tipo]: entrada.referencia };
+        }
+        return acc;
+      }, {} as Record<string, Record<string, string>>)
+    };
+
+    const nodeData = {
+      ...formData,
+      workflowData
+    };
+
     if (editingNode) {
-      updateNode(editingNode.id, formData);
+      updateNode(editingNode.id, nodeData);
       setEditingNode(null);
     } else {
-      createNode(formData);
+      createNode(nodeData);
       setShowCreateForm(false);
     }
 
     resetForm();
   };
 
-  const handleEdit = (node: any) => {
-    setEditingNode(node);
-    setFormData({
-      name: node.name,
-      type: node.type,
-      llmModel: node.llmModel || 'claude-3.7-sonnet',
-      prompt: node.prompt || '',
+  // NodeManager.tsx - na função handleEdit, atualize a conversão de entradas
+const handleEdit = (node: any) => {
+  setEditingNode(node);
+  setFormData({
+    name: node.name,
+    type: node.type,
+    llmModel: node.llmModel || 'claude-3.7-sonnet',
+    prompt: node.prompt || '',
+    workflowData: node.workflowData || { entradas: {} }
+  });
+
+  // ✅ Carregar entradas existentes para edição
+  if (node.workflowData?.entradas) {
+    const entradasArray = Object.entries(node.workflowData.entradas).map(([campo, def]) => {
+      const [[tipo, referencia]] = Object.entries(def as Record<string, string>);
+      return { 
+        campo, 
+        tipo: tipo as any, // Mantém o tipo salvo
+        referencia 
+      };
     });
-    setShowCreateForm(true);
-  };
+    setEntradas(entradasArray);
+  } else {
+    setEntradas([]);
+  }
+
+  setShowCreateForm(true);
+};
 
   const onDelete = (id: string) => {
     if (confirm('Tem certeza que deseja excluir este nó?')) {
@@ -97,6 +181,61 @@ export default function NodeManager() {
     setEditingNode(null);
     resetForm();
   };
+
+   // ✅ NOVO: Método para processar arquivo
+  const processFile = async (file: File) => {
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      // Configurar serviço
+      const httpClient = new AxiosAdapter();
+      const workFlowGateway = new WorkflowHttpGateway(httpClient, BASE_URL_MINUTA, AUTH_TOKEN);
+
+       // Executar upload e processamento
+      const response = await workFlowGateway.uploadAndProcess(file);
+
+      if (response.success && response.data) {
+        // Pegar o valor da propriedade uuid_documento e passar para setSelectedFile
+        const { uuid_documento } = response.data;
+
+        // Criar um objeto file-like com as informações do documento processado
+        const processedFile = {
+          name: response.data.titulo_arquivo || response.data.arquivo_original,
+          size: 0, // Não temos o tamanho do arquivo processado
+          type: `application/${response.data.extensao}`,
+          uuid: uuid_documento,
+          data: response.data
+        };
+
+        setSelectedFile(processedFile as any);
+        console.log('Arquivo processado com sucesso:', response);
+      }
+      
+      
+    } catch (error) {
+      console.error('Erro ao processar arquivo:', error);
+      alert('Erro ao processar arquivo. Tente novamente.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // ✅ NOVO: Handler para seleção de arquivo
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setLocalSelectedFile(file);
+      processFile(file);
+    }
+  };
+
+  // ✅ NOVO: Handler para remover arquivo
+  const handleRemoveFile = () => {
+    setLocalSelectedFile(null);
+    clearSelectedFile();
+  };
+
 
   const filteredNodes = state.nodes.filter(node => {
     const matchesSearch = node.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -164,6 +303,108 @@ export default function NodeManager() {
         </div>
       </div>
 
+       {/* ✅ NOVA SEÇÃO: Upload de Arquivo - APENAS para Entry Nodes */}
+      {state.nodes.some(node => node.type === 'entry') && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Upload de Arquivo para Nós de Entrada
+            </h3>
+          </div>
+
+          <div className="space-y-4">
+            {!selectedFile ? (
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                <input
+                  type="file"
+                  id="file-upload"
+                  onChange={handleFileSelect}
+                  accept=".pdf,.doc,.docx,.txt,.json"
+                  className="hidden"
+                  disabled={isUploading}
+                />
+                <label
+                  htmlFor="file-upload"
+                  className={`cursor-pointer inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
+                    isUploading 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } text-white`}
+                >
+                  {isUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <RiFileTextLine className="mr-2" />
+                      Selecionar Arquivo
+                    </>
+                  )}
+                </label>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                  Formatos suportados: PDF, DOC, DOCX, TXT, JSON
+                </p>
+              </div>
+            ) : (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <RiFileTextLine className="text-green-600 dark:text-green-400 text-xl" />
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {selectedFile.name}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleRemoveFile}
+                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                    disabled={isUploading}
+                  >
+                    <RiDeleteBinLine className="text-xl" />
+                  </button>
+                </div>
+                {isUploading && (
+                  <div className="mt-2">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div className="bg-blue-600 h-2 rounded-full animate-pulse"></div>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
+                      Processando arquivo...
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Informação sobre nós de entrada */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <div className="flex items-start space-x-2">
+                <RiBrainLine className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                    Nós de Entrada Configurados
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    Este arquivo será usado como entrada para: {
+                      state.nodes
+                        .filter(node => node.type === 'entry')
+                        .map(node => node.name)
+                        .join(', ') || 'Nenhum nó de entrada configurado'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create/Edit Form */}
       {showCreateForm && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -212,6 +453,141 @@ export default function NodeManager() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* ✅ NOVA SEÇÃO: Configuração de Entradas */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-md font-semibold text-gray-900 dark:text-white">
+                  Configurar Entradas do Nó
+                </h4>
+                <button
+                  type="button"
+                  onClick={adicionarEntrada}
+                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
+                >
+                  + Adicionar Entrada
+                </button>
+              </div>
+
+              {entradas.map((entrada, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Nome do Campo *
+                    </label>
+                    <input
+                      type="text"
+                      value={entrada.campo}
+                      onChange={(e) => atualizarEntrada(index, 'campo', e.target.value)}
+                      placeholder="Ex: conteudo_auditoria"
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Tipo
+                    </label>
+                    <select
+                      value={entrada.tipo}
+                      onChange={(e) => atualizarEntrada(index, 'tipo', e.target.value)}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    >
+                      <option value="lista_de_origem">Lista de Origem</option>
+                      <option value="buscar_documento">Buscar Documento</option>
+                      <option value="id_da_defesa">ID da Defesa</option>
+                      <option value="do_estado">Do Estado</option>
+                    </select>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {formData.type === 'process' ? 'Chave de Saída *' : 'Documento de Referência *'}
+                      </label>
+                      {formData.type === 'process' ? (
+                        // Select para Chaves de Saída (nós de processamento)
+                        <select
+                          value={entrada.referencia}
+                          onChange={(e) => atualizarEntrada(index, 'referencia', e.target.value)}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          required
+                        >
+                          <option value="">Selecione uma chave de saída...</option>
+                          {availableOutputKeys.map((key) => (
+                            <option key={key} value={key}>
+                              {key}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        // Select para Documentos (nós de entrada)
+                        <select
+                          value={entrada.referencia}
+                          onChange={(e) => atualizarEntrada(index, 'referencia', e.target.value)}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          required
+                        >
+                          <option value="">Selecione um documento...</option>
+                          {availableDocumentKeys.map((key) => (
+                            <option key={key} value={key}>
+                              {key}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => removerEntrada(index)}
+                        className="bg-red-600 text-white px-3 py-1 text-sm rounded hover:bg-red-700 transition-colors whitespace-nowrap"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {entradas.length === 0 && (
+                <div className="text-center py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                  <RiFileTextLine className="mx-auto text-gray-400 text-2xl mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    Nenhuma entrada configurada
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                    Adicione entradas para conectar este nó aos documentos disponíveis
+                  </p>
+                  <button
+                    type="button"
+                    onClick={adicionarEntrada}
+                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                  >
+                    Adicionar Primeira Entrada
+                  </button>
+                </div>
+              )}
+
+              {/* Informação sobre documentos disponíveis */}
+              {availableDocumentKeys.length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-4">
+                  <div className="flex items-start space-x-2">
+                    <RiBrainLine className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                        Documentos Disponíveis
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        {availableDocumentKeys.join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div data-testid="node-prompt">

@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import WorkflowHttpGateway from '../gateway/WorkflowHttpGateway';
-import AxiosAdapter from '../infra/AxiosAdapter';
 import { useWorkFlow } from '@/context/WorkflowContext';
 import { GerarDocCallbacks } from '@/types/nodes';
 import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
@@ -10,25 +8,18 @@ import { AuditorPrompt, DefensePrompt, RelatorPrompt, InfoExtractorPrompt } from
 import { ExecuteProgress } from './common/ExecuteProgress';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
-const BASE_URL_MINUTA = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
-console.log("BASE_URL:", BASE_URL);
-console.log("BASE_URL_MINUTA:", BASE_URL_MINUTA);
 
 export default function WorkflowExecution() {
   const {
     state,
     setExecuting,
     setResults,
-    addLog,
     clearLogs,
     buildCompleteWorkflow,
-    setSelectedFile,
     clearSelectedFile
   } = useWorkFlow();
 
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [progressState, setProgressState] = useState({
     etapasConcluidas: 0,
@@ -39,106 +30,6 @@ export default function WorkflowExecution() {
     relatorioFinal: null as string | null,
   });
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    await processFileUpload(file);
-    event.target.value = '';
-  };
-
-  const processFileUpload = async (file: File) => {
-    setExecuting(true);
-    setIsExecuting(true);
-    setUploadError(null);
-    clearLogs();
-    setResults(null);
-
-    try {
-      // Configurar serviço
-      const httpClient = new AxiosAdapter();
-      const workFlowGateway = new WorkflowHttpGateway(httpClient, BASE_URL_MINUTA, AUTH_TOKEN);
-
-      addLog({
-        id: `log_${Date.now()}`,
-        message: 'Iniciando upload e processamento do arquivo...',
-        timestamp: new Date(),
-        data: { fileName: file.name, size: file.size }
-      });
-
-      // Executar upload e processamento
-      const response = await workFlowGateway.uploadAndProcess(file);
-
-      if (response.success && response.data) {
-        // Pegar o valor da propriedade uuid_documento e passar para setSelectedFile
-        const { uuid_documento } = response.data;
-
-        // Criar um objeto file-like com as informações do documento processado
-        const processedFile = {
-          name: response.data.titulo_arquivo || response.data.arquivo_original,
-          size: 0, // Não temos o tamanho do arquivo processado
-          type: `application/${response.data.extensao}`,
-          uuid: uuid_documento,
-          data: response.data
-        };
-
-        setSelectedFile(processedFile as any);
-
-        addLog({
-          id: `log_${Date.now()}_success`,
-          message: 'Arquivo processado com sucesso!',
-          timestamp: new Date(),
-          data: {
-            uuid_documento,
-            arquivo_original: response.data.arquivo_original,
-            total_paginas: response.data.total_paginas,
-            total_tokens: response.data.total_tokens
-          }
-        });
-
-        setResults({
-          success: true,
-          message: 'Arquivo processado com sucesso',
-          data: response.data
-        });
-      } else {
-        throw new Error(response.message || 'Erro ao processar arquivo');
-      }
-
-    } catch (error) {
-      console.error('Erro ao processar arquivo:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao processar arquivo';
-      setUploadError(errorMessage);
-
-      addLog({
-        id: `log_${Date.now()}_error`,
-        message: 'Erro ao processar arquivo',
-        timestamp: new Date(),
-        data: { error: errorMessage }
-      });
-      setResults({
-        error: errorMessage
-      });
-    } finally {
-      setExecuting(false);
-      setIsExecuting(false);
-    }
-  };
-
-  const handleRetryUpload = () => {
-    if (state.selectedFile) {
-      // Criar um File object a partir do arquivo selecionado para reenviar
-      const file = new File([], state.selectedFile.name, {
-        type: state.selectedFile.type,
-      });
-      processFileUpload(file);
-    }
-  };
-
-  const handleRemoveFile = () => {
-    clearSelectedFile();
-    setUploadError(null);
-  };
 
   const teste = () => {
     
@@ -225,11 +116,11 @@ export default function WorkflowExecution() {
   
 
   const executeWorkflow = async () => {
-    //if (state.nodes.length === 0) return; // @TODO descomentar essa linha
+    if (state.nodes.length === 0) return; // @TODO descomentar essa linha
 
     setProgressState({
     etapasConcluidas: 0,
-    totalEtapas: 5, // Total de nós no seu workflow @TODO SERA USADO A QUANTIDADE DE NOS state.nodes.length
+    totalEtapas: state.nodes.length, // Total de nós no seu workflow @TODO SERA USADO A QUANTIDADE DE NOS state.nodes.length
     progresso: 0,
     isLoading: true,
     erroCritico: null,
@@ -238,13 +129,12 @@ export default function WorkflowExecution() {
 
 
     setExecuting(true);
-    setIsExecuting(true);
     setResults(null);
     clearLogs();
 
     try {
       // Construir workflow completo usando o método do context
-      const workflowJson = teste();
+      const workflowJson = buildCompleteWorkflow() //teste();
 
       // Configurar serviço
       // const httpClient = new AxiosAdapter();
@@ -258,6 +148,9 @@ export default function WorkflowExecution() {
           console.log('message:', message)
         },
         onNodeStatus: (node, status) => {
+          
+          console.log('node:', node)
+          console.log('status:', status)
           if (status === 'finalizado') {
             setProgressState(prev => ({
               ...prev,
@@ -271,15 +164,19 @@ export default function WorkflowExecution() {
 
         },
         onData: (data) => {
-          console.log('data:', data)
-
+            console.log("data:", data);
+            setProgressState( (prev) => ({
+                ...prev,
+                relatorioFinal: JSON.stringify(data)
+            }));
         },
         onComplete: (result) => {
+          console.log("result:", result);
+
           setProgressState(prev => ({
             ...prev,
             isLoading: false,
-            progresso: 100,
-            relatorioFinal: JSON.stringify(result, null, 2)
+            progresso: 100
           }));
         },
         onError: (error) => {
@@ -298,7 +195,6 @@ export default function WorkflowExecution() {
     } catch (error) {
       console.error('Erro ao executar workflow:', error);
       setExecuting(false);
-      setIsExecuting(false);
       setResults({
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
@@ -307,17 +203,12 @@ export default function WorkflowExecution() {
 
   const resetExecution = () => {
     setExecuting(false);
-    setIsExecuting(false);
     setResults(null);
     clearLogs();
     clearSelectedFile();
-    setUploadError(null);
   };
 
-  const canExecute = true //state.nodes.length > 0 && !state.isExecuting;
-
-  // Lógica ajustada: mostrar seção de upload SEMPRE (para poder anexar arquivos)
-  const shouldShowUploadSection = true;
+  const canExecute = state.nodes.length > 0 && !state.isExecuting;
 
   return (
     <div className="space-y-6">
@@ -359,104 +250,17 @@ export default function WorkflowExecution() {
         </div>
       </div>
 
-      {/* File Upload Section - MOSTRAR SEMPRE */}
-      {shouldShowUploadSection && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Upload de Documento</h3>
-              <p className="text-gray-600">Selecione um arquivo para processar no workflow</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {/* Arquivo selecionado */}
-            {!state.selectedFile ? (
-              <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <i className="ri-file-text-line text-green-600 text-xl"></i>
-                  <div>
-                    <p className="font-medium text-green-800">{state.selectedFile.name}</p>
-                    <p className="text-sm text-green-600">
-                      {state.selectedFile.size > 0 ? `${(state.selectedFile.size / 1024 / 1024).toFixed(2)} MB` : 'Arquivo processado'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {uploadError && (
-                    <button
-                      onClick={handleRetryUpload}
-                      disabled={state.isExecuting}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-                      title="Tentar novamente"
-                    >
-                      <i className="ri-refresh-line"></i>
-                    </button>
-                  )}
-                  <button
-                    onClick={handleRemoveFile}
-                    disabled={state.isExecuting}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    <i className="ri-delete-bin-line"></i>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* Área de upload */
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                <input
-                  type="file"
-                  id="file-upload"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  accept=".pdf,.doc,.docx,.txt"
-                  disabled={state.isExecuting}
-                />
-                <label
-                  htmlFor="file-upload"
-                  className={`cursor-pointer flex flex-col items-center space-y-2 ${state.isExecuting ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                >
-                  <i className="ri-upload-cloud-2-line text-3xl text-gray-400"></i>
-                  <span className="text-gray-600">
-                    {state.isExecuting ? 'Upload desabilitado durante execução' : 'Clique para fazer upload'}
-                  </span>
-                  <span className="text-sm text-gray-500">PDF, DOC, DOCX, TXT</span>
-                </label>
-              </div>
-            )}
-
-            {/* Mensagem de erro */}
-            {uploadError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <i className="ri-error-warning-line text-red-600"></i>
-                    <span className="text-red-800">{uploadError}</span>
-                  </div>
-                  <button
-                    onClick={handleRetryUpload}
-                    disabled={state.isExecuting}
-                    className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
-                  >
-                    Tentar Novamente
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      { state.isExecuting && (
+        <ExecuteProgress 
+          etapasConcluidas={progressState.etapasConcluidas}
+          totalEtapas={progressState.totalEtapas}
+          progresso={progressState.progresso}
+          isLoading={progressState.isLoading}
+          erroCritico={progressState.erroCritico}
+          relatorioFinal={progressState.relatorioFinal}
+        />
       )}
 
-      <ExecuteProgress 
-        etapasConcluidas={progressState.etapasConcluidas}
-        totalEtapas={progressState.totalEtapas}
-        progresso={progressState.progresso}
-        isLoading={progressState.isLoading}
-        erroCritico={progressState.erroCritico}
-        relatorioFinal={progressState.relatorioFinal}
-      />
       {/* Workflow Output */}
       {buildCompleteWorkflow && state.nodes.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
