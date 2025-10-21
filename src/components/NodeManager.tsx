@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   RiNodeTree,
@@ -53,9 +52,10 @@ export default function NodeManager() {
   const availableOutputKeys = getAvailableOutputKeys();
 
 
-   // ✅ NOVO: Estado para arquivo selecionado
-  const [selectedFile, setLocalSelectedFile] = useState<File | null>(null);
+   // NOVO: Estado para arquivo selecionado
+  const [selectedFiles, setLocalSelectedFiles] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isMultipleFiles, setIsMultipleFiles] = useState(false);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingNode, setEditingNode] = useState<Node | null>(null);
@@ -88,6 +88,8 @@ export default function NodeManager() {
       workflowData: { entradas: {} }
     });
     setEntradas([]);
+    setLocalSelectedFiles([]); // LIMPAR ARQUIVOS
+    setIsMultipleFiles(false);
   };
 
   // ✅ NOVO: Função para adicionar entrada
@@ -110,17 +112,22 @@ export default function NodeManager() {
     ));
   };
 
+  // No NodeManager.tsx - no handleSubmit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ✅ Montar workflowData com as entradas configuradas
+    // Montar workflowData com as entradas configuradas E informação de múltiplos arquivos
     const workflowData = {
       entradas: entradas.reduce((acc, entrada) => {
         if (entrada.campo && entrada.referencia) {
           acc[entrada.campo] = { [entrada.tipo]: entrada.referencia };
         }
         return acc;
-      }, {} as Record<string, Record<string, string>>)
+      }, {} as Record<string, Record<string, string>>),
+      // ADICIONAR: informação sobre múltiplos arquivos (apenas para nós de entrada)
+      ...(formData.type === 'entry' && {
+        isMultipleFiles: isMultipleFiles
+      })
     };
 
     const nodeData = {
@@ -139,34 +146,39 @@ export default function NodeManager() {
     resetForm();
   };
 
-  // NodeManager.tsx - na função handleEdit, atualize a conversão de entradas
-const handleEdit = (node: any) => {
-  setEditingNode(node);
-  setFormData({
-    name: node.name,
-    type: node.type,
-    llmModel: node.llmModel || 'claude-3.7-sonnet',
-    prompt: node.prompt || '',
-    workflowData: node.workflowData || { entradas: {} }
-  });
-
-  // ✅ Carregar entradas existentes para edição
-  if (node.workflowData?.entradas) {
-    const entradasArray = Object.entries(node.workflowData.entradas).map(([campo, def]) => {
-      const [[tipo, referencia]] = Object.entries(def as Record<string, string>);
-      return { 
-        campo, 
-        tipo: tipo as any, // Mantém o tipo salvo
-        referencia 
-      };
+  // E no handleEdit, carregar o estado do checkbox
+  const handleEdit = (node: any) => {
+    setEditingNode(node);
+    setFormData({
+      name: node.name,
+      type: node.type,
+      llmModel: node.llmModel || 'claude-3.7-sonnet',
+      prompt: node.prompt || '',
+      workflowData: node.workflowData || { entradas: {} }
     });
-    setEntradas(entradasArray);
-  } else {
-    setEntradas([]);
-  }
 
-  setShowCreateForm(true);
-};
+    // ✅ Carregar entradas existentes para edição
+    if (node.workflowData?.entradas) {
+      const entradasArray = Object.entries(node.workflowData.entradas).map(([campo, def]) => {
+        const [[tipo, referencia]] = Object.entries(def as Record<string, string>);
+        return { 
+          campo, 
+          tipo: tipo as any,
+          referencia 
+        };
+      });
+      setEntradas(entradasArray);
+    } else {
+      setEntradas([]);
+    }
+
+    // CARREGAR: estado do checkbox de múltiplos arquivos
+    if (node.type === 'entry') {
+      setIsMultipleFiles(node.workflowData?.isMultipleFiles || false);
+    }
+
+    setShowCreateForm(true);
+  };
 
   const onDelete = (id: string) => {
     if (confirm('Tem certeza que deseja excluir este nó?')) {
@@ -180,57 +192,86 @@ const handleEdit = (node: any) => {
     resetForm();
   };
 
-   // ✅ NOVO: Método para processar arquivo
-  const processFile = async (file: File) => {
-    if (!file) return;
+  // MUDANÇA: Função para processar múltiplos arquivos
+  const processFiles = async (files: File[]) => {
+    if (!files || files.length === 0) return;
 
     setIsUploading(true);
     try {
-      // Configurar serviço
       const httpClient = new AxiosAdapter();
       const workFlowGateway = new WorkflowHttpGateway(httpClient, BASE_URL_MINUTA, AUTH_TOKEN);
 
-       // Executar upload e processamento
-      const response = await workFlowGateway.uploadAndProcess(file);
+      const processedFiles: any[] = [];
 
-      if (response.success && response.data) {
-        // Pegar o valor da propriedade uuid_documento e passar para setSelectedFile
-        const { uuid_documento } = response.data;
+      // PROCESSAR CADA ARQUIVO INDIVIDUALMENTE
+      for (const file of files) {
+        const response = await workFlowGateway.uploadAndProcess(file);
 
-        // Criar um objeto file-like com as informações do documento processado
-        const processedFile = {
-          name: response.data.titulo_arquivo || response.data.arquivo_original,
-          size: 0, // Não temos o tamanho do arquivo processado
-          type: `application/${response.data.extensao}`,
-          uuid: uuid_documento,
-          data: response.data
-        };
+        if (response.success && response.data) {
+          const { uuid_documento } = response.data;
 
-        setSelectedFile(processedFile as any);
-        console.log('Arquivo processado com sucesso:', response);
+          const processedFile = {
+            name: response.data.titulo_arquivo || response.data.arquivo_original,
+            size: file.size,
+            type: file.type,
+            uuid: uuid_documento,
+            data: response.data
+          };
+
+          processedFiles.push(processedFile);
+          console.log(`Arquivo processado: ${file.name} -> UUID: ${uuid_documento}`);
+        }
+      }
+
+      // ATUALIZAR STATE COM TODOS OS ARQUIVOS PROCESSADOS
+      if (processedFiles.length > 0) {
+        setLocalSelectedFiles(processedFiles);
+        setSelectedFile(processedFiles); // MUDANÇA: Agora passa array completo
+        console.log('Todos os arquivos processados:', processedFiles);
       }
       
-      
     } catch (error) {
-      console.error('Erro ao processar arquivo:', error);
-      alert('Erro ao processar arquivo. Tente novamente.');
+      console.error('Erro ao processar arquivos:', error);
+      alert('Erro ao processar arquivos. Tente novamente.');
     } finally {
       setIsUploading(false);
     }
   };
 
-  // ✅ NOVO: Handler para seleção de arquivo
+  // MUDANÇA: Handler para seleção de arquivo
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setLocalSelectedFile(file);
-      processFile(file);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      const filesArray = Array.from(files);
+      
+      if (isMultipleFiles) {
+        // ✅ MÚLTIPLOS ARQUIVOS: Processar todos
+        setLocalSelectedFiles(filesArray.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          uuid: '', // Será preenchido após processamento
+          data: null
+        })));
+        processFiles(filesArray);
+      } else {
+        // ✅ ÚNICO ARQUIVO: Processar apenas o primeiro
+        const file = filesArray[0];
+        setLocalSelectedFiles([{
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          uuid: '', // Será preenchido após processamento
+          data: null
+        }]);
+        processFiles([file]);
+      }
     }
   };
 
-  // ✅ NOVO: Handler para remover arquivo
-  const handleRemoveFile = () => {
-    setLocalSelectedFile(null);
+  // MUDANÇA: Handler para remover arquivos
+  const handleRemoveFiles = () => {
+    setLocalSelectedFiles([]);
     clearSelectedFile();
   };
 
@@ -301,108 +342,6 @@ const handleEdit = (node: any) => {
         </div>
       </div>
 
-       {/* ✅ NOVA SEÇÃO: Upload de Arquivo - APENAS para Entry Nodes */}
-      {state.nodes.some(node => node.type === 'entry') && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Upload de Arquivo para Nós de Entrada
-            </h3>
-          </div>
-
-          <div className="space-y-4">
-            {!selectedFile ? (
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  id="file-upload"
-                  onChange={handleFileSelect}
-                  accept=".pdf,.doc,.docx,.txt,.json"
-                  className="hidden"
-                  disabled={isUploading}
-                />
-                <label
-                  htmlFor="file-upload"
-                  className={`cursor-pointer inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
-                    isUploading 
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  } text-white`}
-                >
-                  {isUploading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Processando...
-                    </>
-                  ) : (
-                    <>
-                      <RiFileTextLine className="mr-2" />
-                      Selecionar Arquivo
-                    </>
-                  )}
-                </label>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  Formatos suportados: PDF, DOC, DOCX, TXT, JSON
-                </p>
-              </div>
-            ) : (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <RiFileTextLine className="text-green-600 dark:text-green-400 text-xl" />
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleRemoveFile}
-                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                    disabled={isUploading}
-                  >
-                    <RiDeleteBinLine className="text-xl" />
-                  </button>
-                </div>
-                {isUploading && (
-                  <div className="mt-2">
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full animate-pulse"></div>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
-                      Processando arquivo...
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Informação sobre nós de entrada */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <div className="flex items-start space-x-2">
-                <RiBrainLine className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                    Nós de Entrada Configurados
-                  </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    Este arquivo será usado como entrada para: {
-                      state.nodes
-                        .filter(node => node.type === 'entry')
-                        .map(node => node.name)
-                        .join(', ') || 'Nenhum nó de entrada configurado'
-                    }
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Create/Edit Form */}
       {showCreateForm && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -453,7 +392,138 @@ const handleEdit = (node: any) => {
               </div>
             </div>
 
-            {/* ✅ NOVA SEÇÃO: Configuração de Entradas */}
+            {/* ✅ NOVA SEÇÃO: Upload de Arquivo - APENAS para Entry Nodes - AO LADO DO MODELO LLM */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div data-testid="node-llm-model">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Modelo LLM
+                </label>
+                <select
+                  data-testid="node-llm-model-select"
+                  value={formData.llmModel}
+                  onChange={(e) => setFormData(prev => ({ ...prev, llmModel: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  {llmModels.map(model => (
+                    <option key={model.value} value={model.value}>{model.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* ✅ SEÇÃO DE UPLOAD - APENAS PARA NÓS DE ENTRADA */}
+              {formData.type === 'entry' && (
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Upload de Arquivo
+                  </label>
+                  
+                  {/* Checkbox para múltiplos arquivos */}
+                  <div className="flex items-center mb-2">
+                    <input
+                      type="checkbox"
+                      id="multiple-files"
+                      checked={isMultipleFiles}
+                      onChange={(e) => setIsMultipleFiles(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                    <label htmlFor="multiple-files" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                      Upload como lista de múltiplos arquivos
+                    </label>
+                  </div>
+
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
+                    <input
+                      type="file"
+                      id="file-upload"
+                      onChange={handleFileSelect}
+                      accept=".pdf,.doc,.docx,.txt,.json"
+                      className="hidden"
+                      disabled={isUploading}
+                      multiple={isMultipleFiles}
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className={`cursor-pointer inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
+                        isUploading 
+                          ? 'bg-gray-400 cursor-not-allowed' 
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      } text-white`}
+                    >
+                      {isUploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Processando...
+                        </>
+                      ) : (
+                        <>
+                          <RiFileTextLine className="mr-2" />
+                          {isMultipleFiles ? 'Selecionar Arquivos' : 'Selecionar Arquivo'}
+                        </>
+                      )}
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                      Formatos suportados: PDF, DOC, DOCX, TXT, JSON
+                      {isMultipleFiles && ' (Selecione múltiplos arquivos)'}
+                    </p>
+                  </div>
+
+                  {/* ✅ MUDANÇA: Exibir múltiplos arquivos */}
+                  {selectedFiles.length > 0 && (
+                    <div className="space-y-2">
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <RiFileTextLine className="text-green-600 dark:text-green-400" />
+                              <div>
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {file.name}
+                                </span>
+                                {file.uuid && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    UUID: {file.uuid}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            {!isUploading && (
+                              <button
+                                onClick={() => {
+                                  const newFiles = selectedFiles.filter((_, i) => i !== index);
+                                  setLocalSelectedFiles(newFiles);
+                                  setSelectedFile(newFiles);
+                                }}
+                                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                              >
+                                <RiCloseLine className="text-lg" />
+                              </button>
+                            )}
+                          </div>
+                          {isUploading && !file.uuid && (
+                            <div className="mt-2">
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div className="bg-blue-600 h-2 rounded-full animate-pulse"></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      
+                      {selectedFiles.length > 1 && !isUploading && (
+                        <button
+                          onClick={handleRemoveFiles}
+                          className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
+                        >
+                          Remover Todos os Arquivos
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ✅ SEÇÃO: Configuração de Entradas */}
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-md font-semibold text-gray-900 dark:text-white">
@@ -600,24 +670,6 @@ const handleEdit = (node: any) => {
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div data-testid="node-llm-model">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Modelo LLM
-                </label>
-                <select
-                  data-testid="node-llm-model-select"
-                  value={formData.llmModel}
-                  onChange={(e) => setFormData(prev => ({ ...prev, llmModel: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  {llmModels.map(model => (
-                    <option key={model.value} value={model.value}>{model.label}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">

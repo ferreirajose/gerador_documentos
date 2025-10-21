@@ -19,7 +19,7 @@ export interface WorkflowState {
   isExecuting: boolean;
   executionResults: any;
   executionLogs: any[];
-  selectedFile: []
+  selectedFile: any[]
 }
 
 // Ações
@@ -35,7 +35,7 @@ type WorkflowAction =
   | { type: 'ADD_EXECUTION_LOG'; payload: any }
   | { type: 'CLEAR_EXECUTION_LOGS' }
   | { type: 'RESET_WORKFLOW' }
-  | { type: 'SET_SELECTED_FILE'; payload: File | null } // ← NOVA ação
+  | { type: 'SET_SELECTED_FILE'; payload: any[] | null } // ✅ MUDANÇA: Agora aceita array
 
 
 // Estado inicial
@@ -135,7 +135,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'SET_SELECTED_FILE':
       return {
         ...state,
-        selectedFile: action.payload ? [action.payload] : null,
+        selectedFile: action.payload || [],
       };
 
     default:
@@ -238,28 +238,32 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     return ['buscar_documento', 'id_da_defesa', 'do_estado'].includes(type);
   };
 
-  // Métodos do WorkflowBuilder
   // WorkflowContext.tsx - método buildCompleteWorkflow
   const buildCompleteWorkflow = () => {
     const builder = new WorkflowBuilder();
+    
     // Configurar ponto de entrada
-    // Configurar documentos baseados nos nós de entrada
     const entryNodes = state.nodes.filter(node => node.type === 'entry');
     
     if (entryNodes.length > 0) {
       const documentos: Record<string, any> = {};
       
-      entryNodes.forEach((entryNode, index) => {
+      entryNodes.forEach((entryNode) => {
         const nodeName = formatAgentName(entryNode.name);
 
-        if (state.selectedFile) {
-          // Primeiro valor: string (chave: valor)
-          if (index === 0) {
+        if (state.selectedFile && state.selectedFile.length > 0) {
+          // NOVA LÓGICA: Verificar configuração de múltiplos arquivos do nó
+          const shouldUseAsList = entryNode.workflowData?.isMultipleFiles === true;
+          
+          if (shouldUseAsList) {
+            // LISTA: Para múltiplos arquivos - pega TODOS os UUIDs
+            documentos[nodeName] = state.selectedFile
+              .map((item: any) => item.uuid)
+              .filter((uuid: string) => uuid); // Filtra UUIDs válidos
+            
+          } else {
+            // ÚNICO: Para arquivo único - pega apenas o PRIMEIRO UUID
             documentos[nodeName] = state.selectedFile[0]?.uuid || '';
-          } 
-          // Próximos valores: array de string (chave: [valor1, valor2, ...])
-          else {
-            documentos[nodeName] = state.selectedFile.map((item: any) => item.uuid);
           }
         }
       });
@@ -322,8 +326,8 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     // Gerar o workflow JSON
     const workflowJson = builder.toJSON();
 
-    return workflowJson
-};
+    return workflowJson;
+  };
   
   const getNodeWorkflowData = (nodeId: string) => {
     const node = state.nodes.find(n => n.id === nodeId);
