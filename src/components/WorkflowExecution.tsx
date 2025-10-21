@@ -120,7 +120,7 @@ export default function WorkflowExecution() {
 
     setProgressState({
     etapasConcluidas: 0,
-    totalEtapas: state.nodes.length, // Total de nós no seu workflow @TODO SERA USADO A QUANTIDADE DE NOS state.nodes.length
+    totalEtapas: state.nodes.length + 1, // Total de nós no seu workflow @TODO SERA USADO A QUANTIDADE DE NOS state.nodes.length
     progresso: 0,
     isLoading: true,
     erroCritico: null,

@@ -20,7 +20,7 @@ export default function ConnectionManager() {
     createConnection, 
     updateConnection, 
     deleteConnection,
-    exportWorkflowJSON
+    buildCompleteWorkflow
 
   } = useWorkFlow();
   
@@ -91,6 +91,12 @@ export default function ConnectionManager() {
     return state.nodes.filter(node => node.id !== excludeId);
   };
 
+  // Função auxiliar para obter tipo do nó
+  const getNodeType = (nodeId: string) => {
+    const node = state.nodes.find(n => n.id === nodeId);
+    return node ? node.type : null;
+  };
+
   const filteredConnections = state.connections.filter(connection => {
     const fromNodeName = getNodeName(connection.fromNodeId);
     const toNodeName = getNodeName(connection.toNodeId);
@@ -109,6 +115,14 @@ export default function ConnectionManager() {
   const isValidConnection = () => {
     if (!formData.fromNodeId || !formData.toNodeId) return false;
     if (formData.fromNodeId === formData.toNodeId) return false;
+    
+    // ✅ NOVA VALIDAÇÃO: Impedir conexão entre nós de entrada
+    const fromNodeType = getNodeType(formData.fromNodeId);
+    const toNodeType = getNodeType(formData.toNodeId);
+    
+    if (fromNodeType === 'entry' && toNodeType === 'entry') {
+      return false;
+    }
     
     if (!editingConnection) {
       // Verificar apenas por IDs (não precisa verificar por nomes)
@@ -254,6 +268,18 @@ export default function ConnectionManager() {
                     </div>
                   </div>
                 )}
+
+                {/* ✅ NOVA VALIDAÇÃO: Conexão entrada→entrada */}
+                {getNodeType(formData.fromNodeId) === 'entry' && getNodeType(formData.toNodeId) === 'entry' && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                    <div className="flex items-center space-x-2">
+                      <RiErrorWarningLine className="text-red-600 dark:text-red-500" />
+                      <span className="text-sm text-red-700 dark:text-red-300">
+                        Nós de entrada não podem se conectar entre si
+                      </span>
+                    </div>
+                  </div>
+                )}
                 
                 {!editingConnection && connectionExists(formData.fromNodeId, formData.toNodeId) && (
                   <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
@@ -392,7 +418,7 @@ export default function ConnectionManager() {
 
       
       {/* Workflow Output */}
-      {exportWorkflowJSON && (
+      {buildCompleteWorkflow && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -400,7 +426,7 @@ export default function ConnectionManager() {
             </h3>
           </div>
           <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
-            {exportWorkflowJSON()}
+            {buildCompleteWorkflow()}
           </pre>
         </div>
       )}

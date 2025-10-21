@@ -135,9 +135,32 @@ export class WorkflowBuilder {
         );
     }
 
+        // WorkflowBuilder.ts - Mantemos a lógica de conectar nós finais ao END
+    public getFinalNodes(): string[] {
+        const allSources = new Set(this.arestas.map(edge => edge.origem));
+        
+        // Nós finais são aqueles que não são origem de nenhuma aresta
+        return this.nos
+            .map(node => node.nome)
+            .filter(nodeName => !allSources.has(nodeName));
+    }
+
     public build(): Workflow {
         if (this.currentNode) {
             throw new Error('There is an unclosed node. Call endNode() before building.');
+        }
+
+        // Conectar nós finais automaticamente ao END
+        const finalNodes = this.getFinalNodes();
+        for (const finalNode of finalNodes) {
+            // Verificar se já não existe uma conexão para END
+            const alreadyConnectedToEnd = this.arestas.some(
+                edge => edge.origem === finalNode && edge.destino === 'END'
+            );
+            
+            if (!alreadyConnectedToEnd) {
+                this.arestas.push(new Edge(finalNode, 'END'));
+            }
         }
 
         return new Workflow(
