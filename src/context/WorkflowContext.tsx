@@ -235,7 +235,7 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
 
   // Função auxiliar para validar tipos de entrada
   const isValidInputType = (type: string): type is InputType => {
-    return ['buscar_documento', 'id_da_defesa', 'do_estado'].includes(type);
+    return ['buscar_documento', 'id_da_defesa', 'do_estado', 'lista_de_origem'].includes(type);
   };
 
   // WorkflowContext.tsx - método buildCompleteWorkflow
@@ -286,7 +286,7 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
 
       const nodeBuilder = builder.addNode(nodeName)
         .setAgent(agentName)
-        .setModel(node.llmModel || 'claude-3.7-sonnet@20250219')
+        .setModel(node.llmModel || 'o3')
         .setPrompt(node.prompt || '')
         .setOutputKey(`workflow_data.${nodeName}`);
       
