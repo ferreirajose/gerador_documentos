@@ -4,13 +4,14 @@ import {
   RiAddLine,
   RiSearchLine,
   RiCloseLine,
-  RiBrainLine,
   RiTimeLine,
   RiFileTextLine,
   RiEditLine,
   RiDeleteBinLine,
   RiCpuLine,
-  RiLoginCircleLine
+  RiLoginCircleLine,
+
+  RiOpenaiFill, RiGoogleFill, RiBrainLine 
 } from '@remixicon/react';
 
 import { useWorkFlow } from '@/context/WorkflowContext';
@@ -22,13 +23,39 @@ const nodeTypes = [
   { value: 'process', label: 'Processamento', icon: RiCpuLine, color: 'bg-blue-500' },
 ];
 
-const llmModels = [
-  { value: 'claude-3.7-sonnet', label: 'Claude 3.7 Sonnet' },
-  { value: 'gpt-4', label: 'GPT-4' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
-  { value: 'gemini-pro', label: 'Gemini Pro' },
-];
-
+const llmModelsByProvider = {
+  openai: {
+    name: "OpenAI",
+    models: [
+      { value: 'gpt-4o', label: 'CursoLLM' },
+      { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+      { value: 'gpt-4.1', label: 'GPT-4.1' },
+      { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+      { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
+      { value: 'gpt-5-chat', label: 'GPT-5 Chat' },
+      { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
+      { value: 'gpt-5', label: 'GPT-5' },
+      { value: 'o3', label: 'O3' },
+      { value: 'o4-mini', label: 'O4 Mini' }
+    ]
+  },
+  google: {
+    name: "Google",
+    models: [
+      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+      { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' }
+    ]
+  },
+  anthropic: {
+    name: "Anthropic",
+    models: [
+      { value: 'claude-3.5-sonnet@20240620', label: 'Claude 3.5 Sonnet' },
+      { value: 'claude-3.7-sonnet@20250219', label: 'Claude 3.7 Sonnet' },
+      { value: 'claude-sonnet-4@20250514', label: 'Claude Sonnet 4' }
+    ]
+  }
+};
 
 const BASE_URL_MINUTA = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
@@ -65,7 +92,7 @@ export default function NodeManager() {
   const [formData, setFormData] = useState({
     name: '',
     type: 'process' as 'entry' | 'process',
-    llmModel: 'claude-3.7-sonnet',
+    llmModel: 'claude-3.5-sonnet@20240620',
     prompt: '',
      workflowData: {
       entradas: {} as Record<string, Record<string, string>>
@@ -83,7 +110,7 @@ export default function NodeManager() {
     setFormData({
       name: '',
       type: 'process',
-      llmModel: 'claude-3.7-sonnet',
+      llmModel: 'claude-3.5-sonnet@20240620',
       prompt: '',
       workflowData: { entradas: {} }
     });
@@ -152,7 +179,7 @@ export default function NodeManager() {
     setFormData({
       name: node.name,
       type: node.type,
-      llmModel: node.llmModel || 'claude-3.7-sonnet',
+      llmModel: node.llmModel || 'claude-3.5-sonnet@20240620',
       prompt: node.prompt || '',
       workflowData: node.workflowData || { entradas: {} }
     });
@@ -286,6 +313,14 @@ export default function NodeManager() {
     return nodeTypes.find(nt => nt.value === type) || nodeTypes[1];
   };
 
+  
+
+const providerIcons = {
+  openai: <RiOpenaiFill className="w-4 h-4 text-green-600" />,
+  google: <RiGoogleFill className="w-4 h-4 text-blue-600" />,
+  anthropic: <RiBrainLine className="w-4 h-4 text-purple-600" />
+};
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -395,20 +430,58 @@ export default function NodeManager() {
             {/* ✅ NOVA SEÇÃO: Upload de Arquivo - APENAS para Entry Nodes - AO LADO DO MODELO LLM */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div data-testid="node-llm-model">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Modelo LLM
-                </label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Modelo LLM
+              </label>
+              
+              <div className="relative">
                 <select
                   data-testid="node-llm-model-select"
                   value={formData.llmModel}
                   onChange={(e) => setFormData(prev => ({ ...prev, llmModel: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white appearance-none cursor-pointer transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-500 shadow-sm"
                 >
-                  {llmModels.map(model => (
-                    <option key={model.value} value={model.value}>{model.label}</option>
+                  {Object.entries(llmModelsByProvider).map(([providerKey, provider]) => (
+                    <optgroup 
+                      key={providerKey}
+                      label={provider.name} 
+                      className="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800"
+                    >
+                      {provider.models.map(model => (
+                        <option key={model.value} value={model.value} className="py-2">
+                          {model.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
+                
+                {/* Ícone de seta */}
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400 dark:text-gray-500">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
+
+              {/* Badge do modelo selecionado */}
+              <div className="mt-2 flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                <span>Selecionado:</span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  {(() => {
+                    let selectedLabel = formData.llmModel;
+                    Object.values(llmModelsByProvider).forEach(provider => {
+                      provider.models.forEach(model => {
+                        if (model.value === formData.llmModel) {
+                          selectedLabel = model.label;
+                        }
+                      });
+                    });
+                    return selectedLabel;
+                  })()}
+                </span>
+              </div>
+            </div>
 
               {/* ✅ SEÇÃO DE UPLOAD - APENAS PARA NÓS DE ENTRADA */}
               {formData.type === 'entry' && (
@@ -729,7 +802,22 @@ export default function NodeManager() {
                           {node.llmModel && (
                             <div className="flex items-center space-x-1">
                               <RiBrainLine className="w-4" />
-                              <span>{llmModels.find(m => m.value === node.llmModel)?.label}</span>
+                              <span>
+                                {(() => {
+                                  // Buscar o label do modelo selecionado em todos os grupos
+                                  let modelLabel = node.llmModel; // Fallback para o valor se não encontrar
+                                  
+                                  // Verificar em cada provedor
+                                  Object.values(llmModelsByProvider).forEach(provider => {
+                                    const foundModel = provider.models.find(m => m.value === node.llmModel);
+                                    if (foundModel) {
+                                      modelLabel = foundModel.label;
+                                    }
+                                  });
+                                  
+                                  return modelLabel;
+                                })()}
+                              </span>
                             </div>
                           )}
 
