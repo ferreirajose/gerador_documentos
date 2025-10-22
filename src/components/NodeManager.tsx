@@ -10,52 +10,18 @@ import {
   RiDeleteBinLine,
   RiCpuLine,
   RiLoginCircleLine,
-
-  RiOpenaiFill, RiGoogleFill, RiBrainLine 
+  RiBrainLine 
 } from '@remixicon/react';
 
 import { useWorkFlow } from '@/context/WorkflowContext';
 import WorkflowHttpGateway from '@/gateway/WorkflowHttpGateway';
 import AxiosAdapter from '@/infra/AxiosAdapter';
+import { llmModelsByProvider } from '@/data/llmodels';
 
 const nodeTypes = [
   { value: 'entry', label: 'Entrada', icon: RiLoginCircleLine, color: 'bg-green-500' },
   { value: 'process', label: 'Processamento', icon: RiCpuLine, color: 'bg-blue-500' },
 ];
-
-const llmModelsByProvider = {
-  openai: {
-    name: "OpenAI",
-    models: [
-      { value: 'gpt-4o', label: 'CursoLLM' },
-      { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-      { value: 'gpt-4.1', label: 'GPT-4.1' },
-      { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
-      { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
-      { value: 'gpt-5-chat', label: 'GPT-5 Chat' },
-      { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
-      { value: 'gpt-5', label: 'GPT-5' },
-      { value: 'o3', label: 'O3' },
-      { value: 'o4-mini', label: 'O4 Mini' }
-    ]
-  },
-  google: {
-    name: "Google",
-    models: [
-      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-      { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' }
-    ]
-  },
-  anthropic: {
-    name: "Anthropic",
-    models: [
-      { value: 'claude-3.5-sonnet@20240620', label: 'Claude 3.5 Sonnet' },
-      { value: 'claude-3.7-sonnet@20250219', label: 'Claude 3.7 Sonnet' },
-      { value: 'claude-sonnet-4@20250514', label: 'Claude Sonnet 4' }
-    ]
-  }
-};
 
 const BASE_URL_MINUTA = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
@@ -64,7 +30,6 @@ export default function NodeManager() {
 
   const {
     state,
-    
     createNode,
     updateNode,
     deleteNode,
@@ -92,7 +57,7 @@ export default function NodeManager() {
   const [formData, setFormData] = useState({
     name: '',
     type: 'process' as 'entry' | 'process',
-    llmModel: 'claude-3.5-sonnet@20240620',
+    llmModel: 'o3',
     prompt: '',
      workflowData: {
       entradas: {} as Record<string, Record<string, string>>
@@ -110,7 +75,7 @@ export default function NodeManager() {
     setFormData({
       name: '',
       type: 'process',
-      llmModel: 'claude-3.5-sonnet@20240620',
+      llmModel: 'o3',
       prompt: '',
       workflowData: { entradas: {} }
     });
@@ -179,7 +144,7 @@ export default function NodeManager() {
     setFormData({
       name: node.name,
       type: node.type,
-      llmModel: node.llmModel || 'claude-3.5-sonnet@20240620',
+      llmModel: node.llmModel || 'o3',
       prompt: node.prompt || '',
       workflowData: node.workflowData || { entradas: {} }
     });
@@ -312,14 +277,6 @@ export default function NodeManager() {
   const getNodeTypeInfo = (type: string) => {
     return nodeTypes.find(nt => nt.value === type) || nodeTypes[1];
   };
-
-  
-
-const providerIcons = {
-  openai: <RiOpenaiFill className="w-4 h-4 text-green-600" />,
-  google: <RiGoogleFill className="w-4 h-4 text-blue-600" />,
-  anthropic: <RiBrainLine className="w-4 h-4 text-purple-600" />
-};
 
   return (
     <div className="space-y-6">

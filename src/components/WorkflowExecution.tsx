@@ -30,6 +30,9 @@ export default function WorkflowExecution() {
     relatorioFinal: null as string | null,
   });
 
+  const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'error'>('idle');
+
+
 
   const teste = () => {
     
@@ -116,17 +119,17 @@ export default function WorkflowExecution() {
   
 
   const executeWorkflow = async () => {
-    if (state.nodes.length === 0) return; // @TODO descomentar essa linha
+    if (state.nodes.length === 0) return;
 
+    setExecutionState('executing');
     setProgressState({
-    etapasConcluidas: 0,
-    totalEtapas: state.nodes.length + 1, // Total de nós no seu workflow @TODO SERA USADO A QUANTIDADE DE NOS state.nodes.length
-    progresso: 0,
-    isLoading: true,
-    erroCritico: null,
-    relatorioFinal: null,
-  });
-
+      etapasConcluidas: 0,
+      totalEtapas: state.nodes.length + 1,
+      progresso: 0,
+      isLoading: true,
+      erroCritico: null,
+      relatorioFinal: null,
+    });
 
     setExecuting(true);
     setResults(null);
@@ -172,7 +175,7 @@ export default function WorkflowExecution() {
         },
         onComplete: (result) => {
           console.log("result:", result);
-
+          setExecutionState('idle');
           setProgressState(prev => ({
             ...prev,
             isLoading: false,
@@ -180,6 +183,7 @@ export default function WorkflowExecution() {
           }));
         },
         onError: (error) => {
+          setExecutionState('error');
           setProgressState(prev => ({
             ...prev,
             isLoading: false,
@@ -191,9 +195,9 @@ export default function WorkflowExecution() {
       // Executar workflow
       await workFlowGateway.gerarRelatorio(workflowJson, handleOnEvent);
 
-
     } catch (error) {
       console.error('Erro ao executar workflow:', error);
+      setExecutionState('error');
       setExecuting(false);
       setResults({
         error: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -201,14 +205,44 @@ export default function WorkflowExecution() {
     }
   };
 
-  const resetExecution = () => {
+   const resetExecution = () => {
+    setExecutionState('idle');
     setExecuting(false);
     setResults(null);
     clearLogs();
     clearSelectedFile();
   };
 
-  const canExecute = state.nodes.length > 0 && !state.isExecuting;
+  const canExecute = state.nodes.length > 0 && executionState !== 'executing';
+
+  // Determinar texto e estilo do botão baseado no estado
+  const getButtonConfig = () => {
+    switch (executionState) {
+      case 'executing':
+        return {
+          text: 'Executando...',
+          icon: 'ri-loader-line animate-spin',
+          className: 'bg-blue-600 text-white hover:bg-blue-700',
+          disabled: true
+        };
+      case 'error':
+        return {
+          text: 'Tentar Novamente',
+          icon: 'ri-refresh-line',
+          className: 'bg-orange-600 text-white hover:bg-orange-700',
+          disabled: false
+        };
+      default: // idle
+        return {
+          text: 'Executar Workflow',
+          icon: 'ri-play-circle-line',
+          className: 'bg-green-600 text-white hover:bg-green-700',
+          disabled: !canExecute
+        };
+    }
+  };
+
+  const buttonConfig = getButtonConfig();
 
   return (
     <div className="space-y-6">
@@ -220,31 +254,29 @@ export default function WorkflowExecution() {
         </div>
 
         <div className="flex items-center space-x-3">
-          {(state.executionLogs.length > 0 || state.selectedFile) && (
+          {(state.executionLogs.length > 0 || state.selectedFile || executionState === 'error') && (
             <button
               onClick={resetExecution}
               data-testid="reset-execution-button"
-              disabled={state.isExecuting}
+              disabled={executionState === 'executing'}
               className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50"
             >
-              <i className="ri-refresh-line mr-2"></i>
-              Resetar
+              <i className="ri-close-line mr-2"></i>
+              Limpar
             </button>
           )}
 
           <button
             onClick={executeWorkflow}
             data-testid="execute-workflow-button"
-            disabled={!canExecute}
-            className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 whitespace-nowrap ${
-              canExecute
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            disabled={buttonConfig.disabled}
+            className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 whitespace-nowrap ${buttonConfig.className} ${
+              buttonConfig.disabled ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            <i className={`${state.isExecuting ? 'ri-loader-line animate-spin' : 'ri-play-circle-line'}`}></i>
+            <i className={buttonConfig.icon}></i>
             <span data-testid="text-executing">
-              {state.isExecuting ? 'Executando...' : 'Executar Workflow'}
+              {buttonConfig.text}
             </span>
           </button>
         </div>
