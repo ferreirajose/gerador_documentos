@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { WorkflowBuilder } from '../application/builders/WorkflowBuilder';
 import { Node } from '@/types/nodes';
-import { formatAgentName } from '@/libs/util';
+import { formatAgentName, substituirReferenciasEntradas } from '@/libs/util';
 import { InputType } from '@/domain/entities/NodeEntitie';
 
 
@@ -325,8 +325,9 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
 
     // Gerar o workflow JSON
     const workflowJson = builder.toJSON();
-
-    return workflowJson;
+    // ✅ FUNÇÃO AUXILIAR: Substituir referências
+    const workflowJson1 = substituirReferenciasEntradas(workflowJson);
+    return workflowJson1;
   };
   
   const getNodeWorkflowData = (nodeId: string) => {
