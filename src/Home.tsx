@@ -3,6 +3,7 @@ import { WorkflowBuilder } from "./application/builders/WorkflowBuilder";
 import { AccountingAnalystPrompt, AuditorPrompt, DefensePrompt, FinancialAnalystPrompt, FinancialConsolidatorPrompt, FinancialMetricsPrompt, InfoExtractorPrompt, RelatorPrompt, StrategicRecommendationsPrompt } from "./data/mock_prompt";
 import { RelatorioEvent } from "./relatorio.service";
 import { useRelatorioService } from "./hooks/useRelatorioService";
+import { renderMarkdown } from "./libs/util";
 
 interface Etapa {
     id: string;
@@ -41,176 +42,176 @@ export default function Home() {
     const createWorkflowData = () => {
         const builder = new WorkflowBuilder();
 
-    //     // Configurar documentos financeiros
-    //     builder.setDocumentos({
-            
-    //         relatorio_financeiro_anual: "10831034617427640767",
-    //         demonstracoes_contabeis: [
-    //             "13333786561136215878",
-    //   "7065879860948131635",
-    //   "11529010421945660908",
-    //   "691210388070956173"
-    //         ]
-    //     });
-
-    //     // Configurar ponto de entrada
-    //     builder.setPontoDeEntrada(['AnalistaFinanceiroNode', 'AnalistaContabilNode']);
-
-    //     // Configurar nós
-    //     builder
-    //         .addNode('AnalistaFinanceiroNode')
-    //         .setAgent('financial_analyst')
-    //         .setModel('claude-3-7-sonnet@20250219')
-    //         .setPrompt(FinancialAnalystPrompt)
-    //         .setOutputKey('workflow_data.analise_financeira')
-    //         .addEntrada('relatorio_financeiro', 'buscar_documento', 'doc.relatorio_financeiro_anual')
-    //         .endNode();
-
-    //     builder
-    //         .addNode('AnalistaContabilNode')
-    //         .setAgent('accounting_analyst')
-    //         .setModel('claude-3-7-sonnet@20250219')
-    //         .setPrompt(AccountingAnalystPrompt)
-    //         .setOutputKey('workflow_data.analises_contabeis')
-    //         .addEntrada('lista_documentos', 'id_documento', 'doc.demonstracoes_contabeis')
-    //         .addEntrada('conteudo_documento', 'buscar_documento', '{id_documento}')
-    //         .endNode();
-
-    //     builder
-    //         .addNode('ConsolidadorFinanceiroNode')
-    //         .setAgent('financial_consolidator')
-    //         .setModel('gpt-4.1')
-    //         .setPrompt(FinancialConsolidatorPrompt)
-    //         .setOutputKey('workflow_data.relatorio_consolidado')
-    //         .addEntrada('analise_financeira', 'do_estado', 'workflow_data.analise_financeira')
-    //         .addEntrada('analises_contabeis', 'do_estado', 'workflow_data.analises_contabeis')
-    //         .endNode();
-
-    //     builder
-    //         .addNode('MetricasFinanceirasNode')
-    //         .setAgent('financial_metrics')
-    //         .setModel('gemini-2.5-pro')
-    //         .setPrompt(FinancialMetricsPrompt)
-    //         .setOutputKey('workflow_data.metricas_estruturadas')
-    //         .addEntrada('analise_financeira', 'do_estado', 'workflow_data.analise_financeira')
-    //         .addEntrada('analises_contabeis', 'do_estado', 'workflow_data.analises_contabeis')
-    //         .addEntrada('relatorio_consolidado', 'do_estado', 'workflow_data.relatorio_consolidado')
-    //         .endNode();
-
-    //     builder
-    //         .addNode('RecomendacoesNode')
-    //         .setAgent('strategic_advisor')
-    //         .setModel('claude-3-7-sonnet@20250219')
-    //         .setPrompt(StrategicRecommendationsPrompt)
-    //         .setOutputKey('workflow_data.recomendacoes_estrategicas')
-    //         .addEntrada('relatorio_consolidado', 'do_estado', 'workflow_data.relatorio_consolidado')
-    //         .addEntrada('metricas_financeiras', 'do_estado', 'workflow_data.metricas_estruturadas')
-    //         .endNode();
-
-    //     // Configurar arestas
-    //     builder
-    //         .addEdge('AnalistaFinanceiroNode', 'ConsolidadorFinanceiroNode')
-    //         .addEdge('AnalistaContabilNode', 'ConsolidadorFinanceiroNode')
-    //         .addEdge('ConsolidadorFinanceiroNode', 'MetricasFinanceirasNode')
-    //         .addEdge('MetricasFinanceirasNode', 'RecomendacoesNode')
-    //         .addEdge('RecomendacoesNode', 'END');
-
-    //     // Configurar template de saída
-    //     builder.setModificarSaida(
-    //         'relatorio_financeiro_final',
-    //         'RELATÓRIO FINANCEIRO CONSOLIDADO\n\n' +
-    //         'ANÁLISE FINANCEIRA DETALHADA:\n{workflow_data.analise_financeira}\n\n' +
-    //         'ANÁLISES CONTÁBEIS:\n{workflow_data.analises_contabeis}\n\n' +
-    //         'RELATÓRIO CONSOLIDADO:\n{workflow_data.relatorio_consolidado}\n\n' +
-    //         'MÉTRICAS FINANCEIRAS:\n{workflow_data.metricas_estruturadas}\n\n' +
-    //         'RECOMENDAÇÕES ESTRATÉGICAS:\n{workflow_data.recomendacoes_estrategicas}'
-    //     );
-
-    //     return builder.toJSON();
-
-         // Configurar documentos
+        // Configurar documentos financeiros
         builder.setDocumentos({
-            auditoria_especial: '10831034617427640767',
-            defesas_do_caso: [
-                '13333786561136215878',
-                '7065879860948131635',
-                '11529010421945660908',
-                '691210388070956173'
+            
+            relatorio_financeiro_anual: "10831034617427640767",
+            demonstracoes_contabeis: [
+                "13333786561136215878",
+      "7065879860948131635",
+      "11529010421945660908",
+      "691210388070956173"
             ]
         });
 
         // Configurar ponto de entrada
-        builder
-            .setPontoDeEntrada(['AuditorNode', 'DefenseNode']);
+        builder.setPontoDeEntrada(['AnalistaFinanceiroNode', 'AnalistaContabilNode']);
 
         // Configurar nós
         builder
-            .addNode('AuditorNode')
-            .setAgent('audit')
-            .setModel('claude-3-7-sonnet@20250219')
-            .setPrompt(AuditorPrompt)
-            .setOutputKey('workflow_data.analise_auditoria')
-            .addEntrada('conteudo_auditoria', 'buscar_documento', 'doc.auditoria_especial') // Deve referenciar o primeiro objeto da lista {auditoria_especial: "", defesas_do_caso: ""}
+            .addNode('AnalistaFinanceiroNode')
+            .setAgent('financial_analyst')
+            .setModel('o3')
+            .setPrompt(FinancialAnalystPrompt)
+            .setOutputKey('workflow_data.analise_financeira')
+            .addEntrada('relatorio_financeiro', 'buscar_documento', 'doc.relatorio_financeiro_anual')
             .endNode();
 
         builder
-            .addNode('DefenseNode')
-            .setAgent('defense')
-            .setModel('claude-3-7-sonnet@20250219')
-            .setPrompt(DefensePrompt)
-            .setOutputKey('workflow_data.analises_defesas')
-            .addEntrada('lista_de_origem', 'id_da_defesa', 'doc.defesas_do_caso') // Deve referenciar o segundo objeto da lista  {auditoria_especial: "", defesas_do_caso: ""}
-            .addEntrada('conteudo_defesa', 'buscar_documento', '{id_da_defesa}') // // Deve referencia 
+            .addNode('AnalistaContabilNode')
+            .setAgent('accounting_analyst')
+            .setModel('o3')
+            .setPrompt(AccountingAnalystPrompt)
+            .setOutputKey('workflow_data.analises_contabeis')
+            .addEntrada('lista_documentos', 'id_documento', 'doc.demonstracoes_contabeis')
+            .addEntrada('conteudo_documento', 'buscar_documento', '{id_documento}')
             .endNode();
 
-        // 5) RelatorNode
         builder
-            .addNode('RelatorNode')
-            .setAgent('relator')
+            .addNode('ConsolidadorFinanceiroNode')
+            .setAgent('financial_consolidator')
             .setModel('gpt-4.1')
-            .setPrompt(RelatorPrompt)
-            .setOutputKey('workflow_data.voto_relator')
-            .addEntrada('relatorio_da_auditoria', 'do_estado', 'workflow_data.analise_auditoria')
-            .addEntrada('pareceres_das_defesas', 'do_estado', 'workflow_data.analises_defesas')
+            .setPrompt(FinancialConsolidatorPrompt)
+            .setOutputKey('workflow_data.relatorio_consolidado')
+            .addEntrada('analise_financeira', 'do_estado', 'workflow_data.analise_financeira')
+            .addEntrada('analises_contabeis', 'do_estado', 'workflow_data.analises_contabeis')
             .endNode();
 
-        // 6) InfoExtractorNode
         builder
-            .addNode('InfoExtractorNode')
-            .setAgent('info_extractor')
+            .addNode('MetricasFinanceirasNode')
+            .setAgent('financial_metrics')
             .setModel('gemini-2.5-pro')
-            .setPrompt(InfoExtractorPrompt)
-            .setOutputKey('workflow_data.dados_estruturados')
-            .addEntrada('relatorio_da_auditoria', 'do_estado', 'workflow_data.analise_auditoria')
-            .addEntrada('pareceres_das_defesas', 'do_estado', 'workflow_data.analises_defesas')
-            .addEntrada('voto_relator', 'do_estado', 'workflow_data.voto_relator')
+            .setPrompt(FinancialMetricsPrompt)
+            .setOutputKey('workflow_data.metricas_estruturadas')
+            .addEntrada('analise_financeira', 'do_estado', 'workflow_data.analise_financeira')
+            .addEntrada('analises_contabeis', 'do_estado', 'workflow_data.analises_contabeis')
+            .addEntrada('relatorio_consolidado', 'do_estado', 'workflow_data.relatorio_consolidado')
+            .endNode();
+
+        builder
+            .addNode('RecomendacoesNode')
+            .setAgent('strategic_advisor')
+            .setModel('o3')
+            .setPrompt(StrategicRecommendationsPrompt)
+            .setOutputKey('workflow_data.recomendacoes_estrategicas')
+            .addEntrada('relatorio_consolidado', 'do_estado', 'workflow_data.relatorio_consolidado')
+            .addEntrada('metricas_financeiras', 'do_estado', 'workflow_data.metricas_estruturadas')
             .endNode();
 
         // Configurar arestas
-        // builder
-        //     .addEdge('AuditorNode', 'DefenseNode');
         builder
-            .addEdge('AuditorNode', 'RelatorNode')
-            .addEdge('DefenseNode', 'RelatorNode')
-            .addEdge('RelatorNode', 'InfoExtractorNode')
-            .addEdge('InfoExtractorNode', 'END');
+            .addEdge('AnalistaFinanceiroNode', 'ConsolidadorFinanceiroNode')
+            .addEdge('AnalistaContabilNode', 'ConsolidadorFinanceiroNode')
+            .addEdge('ConsolidadorFinanceiroNode', 'MetricasFinanceirasNode')
+            .addEdge('MetricasFinanceirasNode', 'RecomendacoesNode')
+            .addEdge('RecomendacoesNode', 'END');
 
         // Configurar template de saída
         builder.setModificarSaida(
-            'relatorio_final',
-            '{workflow_data.analise_auditoria}' +
-            '{workflow_data.analises_defesas}' +
-            '{workflow_data.voto_relator}'
+            'relatorio_financeiro_final',
+            'RELATÓRIO FINANCEIRO CONSOLIDADO\n\n' +
+            'ANÁLISE FINANCEIRA DETALHADA:\n{workflow_data.analise_financeira}\n\n' +
+            'ANÁLISES CONTÁBEIS:\n{workflow_data.analises_contabeis}\n\n' +
+            'RELATÓRIO CONSOLIDADO:\n{workflow_data.relatorio_consolidado}\n\n' +
+            'MÉTRICAS FINANCEIRAS:\n{workflow_data.metricas_estruturadas}\n\n' +
+            'RECOMENDAÇÕES ESTRATÉGICAS:\n{workflow_data.recomendacoes_estrategicas}'
         );
 
-        setEtapas([
-           { id: 'START', nome: 'Inicialização do Sistema', status: 'aguardando' },
-        { id: 'AuditorNode', nome: 'Auditor Fiscal', status: 'aguardando' },
-        { id: 'DefenseNode', nome: 'Defesa', status: 'aguardando' },
-        { id: 'RelatorNode', nome: 'Relator', status: 'aguardando' },
-        { id: 'InfoExtractorNode', nome: 'Extrair Informações', status: 'aguardando' }]);
-
         return builder.toJSON();
+
+        //  // Configurar documentos
+        // builder.setDocumentos({
+        //     auditoria_especial: '10831034617427640767',
+        //     defesas_do_caso: [
+        //         '13333786561136215878',
+        //         '7065879860948131635',
+        //         '11529010421945660908',
+        //         '691210388070956173'
+        //     ]
+        // });
+
+        // // Configurar ponto de entrada
+        // builder
+        //     .setPontoDeEntrada(['AuditorNode', 'DefenseNode']);
+
+        // // Configurar nós
+        // builder
+        //     .addNode('AuditorNode')
+        //     .setAgent('audit')
+        //     .setModel('o3')
+        //     .setPrompt(AuditorPrompt)
+        //     .setOutputKey('workflow_data.analise_auditoria')
+        //     .addEntrada('conteudo_auditoria', 'buscar_documento', 'doc.auditoria_especial') // Deve referenciar o primeiro objeto da lista {auditoria_especial: "", defesas_do_caso: ""}
+        //     .endNode();
+
+        // builder
+        //     .addNode('DefenseNode')
+        //     .setAgent('defense')
+        //     .setModel('o3')
+        //     .setPrompt(DefensePrompt)
+        //     .setOutputKey('workflow_data.analises_defesas')
+        //     .addEntrada('lista_de_origem', 'id_da_defesa', 'doc.defesas_do_caso') // Deve referenciar o segundo objeto da lista  {auditoria_especial: "", defesas_do_caso: ""}
+        //     .addEntrada('conteudo_defesa', 'buscar_documento', '{id_da_defesa}') // // Deve referencia 
+        //     .endNode();
+
+        // // 5) RelatorNode
+        // builder
+        //     .addNode('RelatorNode')
+        //     .setAgent('relator')
+        //     .setModel('gpt-4.1')
+        //     .setPrompt(RelatorPrompt)
+        //     .setOutputKey('workflow_data.voto_relator')
+        //     .addEntrada('relatorio_da_auditoria', 'do_estado', 'workflow_data.analise_auditoria')
+        //     .addEntrada('pareceres_das_defesas', 'do_estado', 'workflow_data.analises_defesas')
+        //     .endNode();
+
+        // // 6) InfoExtractorNode
+        // builder
+        //     .addNode('InfoExtractorNode')
+        //     .setAgent('info_extractor')
+        //     .setModel('gemini-2.5-pro')
+        //     .setPrompt(InfoExtractorPrompt)
+        //     .setOutputKey('workflow_data.dados_estruturados')
+        //     .addEntrada('relatorio_da_auditoria', 'do_estado', 'workflow_data.analise_auditoria')
+        //     .addEntrada('pareceres_das_defesas', 'do_estado', 'workflow_data.analises_defesas')
+        //     .addEntrada('voto_relator', 'do_estado', 'workflow_data.voto_relator')
+        //     .endNode();
+
+        // // Configurar arestas
+        // // builder
+        // //     .addEdge('AuditorNode', 'DefenseNode');
+        // builder
+        //     .addEdge('AuditorNode', 'RelatorNode')
+        //     .addEdge('DefenseNode', 'RelatorNode')
+        //     .addEdge('RelatorNode', 'InfoExtractorNode')
+        //     .addEdge('InfoExtractorNode', 'END');
+
+        // // Configurar template de saída
+        // builder.setModificarSaida(
+        //     'relatorio_final',
+        //     '{workflow_data.analise_auditoria}' +
+        //     '{workflow_data.analises_defesas}' +
+        //     '{workflow_data.voto_relator}'
+        // );
+
+        // setEtapas([
+        //    { id: 'START', nome: 'Inicialização do Sistema', status: 'aguardando' },
+        // { id: 'AuditorNode', nome: 'Auditor Fiscal', status: 'aguardando' },
+        // { id: 'DefenseNode', nome: 'Defesa', status: 'aguardando' },
+        // { id: 'RelatorNode', nome: 'Relator', status: 'aguardando' },
+        // { id: 'InfoExtractorNode', nome: 'Extrair Informações', status: 'aguardando' }]);
+
+        // return builder.toJSON();
     };
 
     const atualizarEtapa = (nodeId: string, status: Etapa['status']) => {
@@ -457,10 +458,20 @@ export default function Home() {
                             <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">
                                 📊 Relatório Final Gerado
                             </h2>
-                            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                            {/* <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
                                 <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 font-mono">
                                     {relatorioFinal}
                                 </pre>
+                            </div> */}
+                              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                             <div className="bg-white p-8 min-h-[600px] max-h-[800px] overflow-y-auto">
+                                <div
+                                    className="prose prose-lg max-w-none"
+                                    dangerouslySetInnerHTML={{
+                                    __html: `<div class="mb-4 leading-relaxed text-gray-700">${renderMarkdown(relatorioFinal)}</div>`,
+                                    }}
+                                />
+                            </div>
                             </div>
                         </div>
                     )}

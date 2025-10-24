@@ -106,7 +106,7 @@ export default function WorkflowExecution() {
         console.log("data:", data);
         setProgressState((prev) => ({
           ...prev,
-          relatorioFinal: JSON.stringify(data, null, 2)
+        relatorioFinal: data.relatorio_final
         }));
       },
       onComplete: (result) => {

@@ -1,3 +1,4 @@
+import { renderMarkdown } from "@/libs/util";
 import { RiTimeLine, RiLoader4Line, RiCheckboxCircleLine, RiErrorWarningLine } from "@remixicon/react";
 
 // ExecuteProgress.tsx
@@ -56,9 +57,6 @@ export function ExecuteProgress({
   erroCritico, 
   relatorioFinal 
 }: ExecuteProgressProps) {
-  console.log(etapas, 'etapas');
-  console.log(nodeStatus, 'nodeStatus');
-  console.log(nodeTimers, 'nodeTimers');
 
   // Mapear nós do backend para etapas genéricas
   const backendToGenericMap: Record<string, number> = {
@@ -237,12 +235,23 @@ export function ExecuteProgress({
               <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">
                 📊 Relatório Final Gerado
               </h2>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+              {/* <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
                 <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 font-mono">
                   {relatorioFinal}
                 </pre>
 
                 
+              </div> */}
+
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                <div className="bg-white p-8 min-h-[600px] max-h-[800px] overflow-y-auto">
+                  <div
+                      className="prose prose-lg max-w-none"
+                      dangerouslySetInnerHTML={{
+                      __html: `<div class="mb-4 leading-relaxed text-gray-700">${renderMarkdown(relatorioFinal)}</div>`,
+                      }}
+                  />
+              </div>
               </div>
             </div>
           )}
