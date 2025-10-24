@@ -358,7 +358,7 @@ export default function ConnectionManager() {
                     
                     <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                       <div className="flex items-center space-x-1">
-                        <RiTimeLine />
+                        <RiTimeLine className="w-4" />
                         <span>Criada em {connection.createdAt.toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -371,7 +371,7 @@ export default function ConnectionManager() {
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                       title="Editar conexão"
                     >
-                      <RiEditLine />
+                      <RiEditLine className="w-4" />
                     </button>
                     
                     <button
@@ -380,7 +380,7 @@ export default function ConnectionManager() {
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                       title="Excluir conexão"
                     >
-                      <RiDeleteBinLine />
+                      <RiDeleteBinLine className="w-4" />
                     </button>
                   </div>
                 </div>
