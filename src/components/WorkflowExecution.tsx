@@ -3,8 +3,6 @@ import { useWorkFlow } from '@/context/WorkflowContext';
 import { GerarDocCallbacks } from '@/types/nodes';
 import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
 import FetchAdapter from '@/infra/FetchAdapter';
-import { WorkflowBuilder } from '@/application/builders/WorkflowBuilder';
-import { AuditorPrompt, DefensePrompt, RelatorPrompt, InfoExtractorPrompt } from '@/data/mock_prompt';
 import { ExecuteProgress } from './common/ExecuteProgress';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -31,179 +29,117 @@ export default function WorkflowExecution() {
   });
 
   const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'error'>('idle');
-
-
-
-  const teste = () => {
-    
-    const builder = new WorkflowBuilder();
-    
-             // Configurar documentos
-            builder.setDocumentos({
-                auditoria_especial: '10831034617427640767',
-                defesas_do_caso: [
-                    '13333786561136215878',
-                    '7065879860948131635',
-                    '11529010421945660908',
-                    '691210388070956173'
-                ]
-            });
-    
-            // Configurar ponto de entrada
-            builder
-                .setPontoDeEntrada(['AuditorNode', 'DefenseNode']);
-    
-            // Configurar nós
-            builder
-                .addNode('AuditorNode')
-                .setAgent('audit')
-                .setModel('claude-3-7-sonnet@20250219')
-                .setPrompt(AuditorPrompt)
-                .setOutputKey('workflow_data.analise_auditoria')
-                .addEntrada('conteudo_auditoria', 'buscar_documento', 'doc.auditoria_especial')
-                .endNode();
-    
-            builder
-                .addNode('DefenseNode')
-                .setAgent('defense')
-                .setModel('claude-3-7-sonnet@20250219')
-                .setPrompt(DefensePrompt)
-                .setOutputKey('workflow_data.analises_defesas')
-                .addEntrada('lista_de_origem', 'id_da_defesa', 'doc.defesas_do_caso')
-                .addEntrada('conteudo_defesa', 'buscar_documento', '{id_da_defesa}')
-                .endNode();
-    
-            // 5) RelatorNode
-            builder
-                .addNode('RelatorNode')
-                .setAgent('relator')
-                .setModel('gpt-4.1')
-                .setPrompt(RelatorPrompt)
-                .setOutputKey('workflow_data.voto_relator')
-                .addEntrada('relatorio_da_auditoria', 'do_estado', 'workflow_data.analise_auditoria')
-                .addEntrada('pareceres_das_defesas', 'do_estado', 'workflow_data.analises_defesas')
-                .endNode();
-    
-            // 6) InfoExtractorNode
-            builder
-                .addNode('InfoExtractorNode')
-                .setAgent('info_extractor')
-                .setModel('gemini-2.5-pro')
-                .setPrompt(InfoExtractorPrompt)
-                .setOutputKey('workflow_data.dados_estruturados')
-                .addEntrada('relatorio_da_auditoria', 'do_estado', 'workflow_data.analise_auditoria')
-                .addEntrada('pareceres_das_defesas', 'do_estado', 'workflow_data.analises_defesas')
-                .addEntrada('voto_relator', 'do_estado', 'workflow_data.voto_relator')
-                .endNode();
-    
-            // Configurar arestas
-            // builder
-            //     .addEdge('AuditorNode', 'DefenseNode');
-            builder
-                .addEdge('AuditorNode', 'RelatorNode')
-                .addEdge('DefenseNode', 'RelatorNode')
-                .addEdge('RelatorNode', 'InfoExtractorNode')
-                .addEdge('InfoExtractorNode', 'END');
-    
-            // Configurar template de saída
-            builder.setModificarSaida(
-                'relatorio_final',
-                '{workflow_data.analise_auditoria}' +
-                '{workflow_data.analises_defesas}' +
-                '{workflow_data.voto_relator}'
-            );
-    
-            
-            return builder.toJSON();
-        };
-  
+  const [nodeStatus, setNodeStatus] = useState<Record<string, string>>({});
+  const [nodeTimers, setNodeTimers] = useState<Record<string, { start: number; end?: number }>>({}); 
 
   const executeWorkflow = async () => {
-    if (state.nodes.length === 0) return;
+  if (state.nodes.length === 0) return;
 
-    setExecutionState('executing');
-    setProgressState({
-      etapasConcluidas: 0,
-      totalEtapas: state.nodes.length + 1,
-      progresso: 0,
-      isLoading: true,
-      erroCritico: null,
-      relatorioFinal: null,
+  // Resetar status dos nós
+  setNodeStatus({});
+
+  setExecutionState('executing');
+  setProgressState({
+    etapasConcluidas: 0,
+    totalEtapas: state.nodes.length, 
+    progresso: 0,
+    isLoading: true,
+    erroCritico: null,
+    relatorioFinal: '',
+  });
+
+  setExecuting(true);
+  setResults(null);
+  clearLogs();
+
+  try {
+    const workflowJson = buildCompleteWorkflow();
+
+    const httpClient = new FetchAdapter();
+    const workFlowGateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL, AUTH_TOKEN);
+
+    const handleOnEvent: GerarDocCallbacks = {
+      onInfo: (message) => {
+        console.log('message:', message);
+      },
+      onNodeStatus: (node, status) => {
+        console.log('node:', node);
+        console.log('status:', status);
+        
+        const currentTime = Date.now();
+        
+        // Atualizar o status do nó
+        setNodeStatus(prev => ({
+          ...prev,
+          [node]: status
+        }));
+
+        // Controlar timers
+        if (status === 'iniciado') {
+          setNodeTimers(prev => ({
+            ...prev,
+            [node]: { start: currentTime }
+          }));
+        } else if (status === 'finalizado') {
+          setNodeTimers(prev => ({
+            ...prev,
+            [node]: {
+              ...prev[node],
+              end: currentTime
+            }
+          }));
+        }
+
+        // Contar apenas as etapas que não são START para o progresso
+        if (status === 'finalizado' && node !== 'START') {
+          setProgressState(prev => ({
+            ...prev,
+            etapasConcluidas: prev.etapasConcluidas + 1,
+            progresso: Math.round(((prev.etapasConcluidas + 1) / prev.totalEtapas) * 100)
+          }));
+        }
+      },
+      onProgress: (nodes) => {
+        console.log('nodes:', nodes);
+      },
+      onData: (data) => {
+        console.log("data:", data);
+        setProgressState((prev) => ({
+          ...prev,
+          relatorioFinal: JSON.stringify(data, null, 2)
+        }));
+      },
+      onComplete: (result) => {
+        console.log("result:", result);
+        setExecutionState('idle');
+        setProgressState(prev => ({
+          ...prev,
+          isLoading: false,
+          progresso: 100
+        }));
+      },
+      onError: (error) => {
+        setExecutionState('error');
+        setProgressState(prev => ({
+          ...prev,
+          isLoading: false,
+          erroCritico: error
+        }));
+      },
+    };
+
+    await workFlowGateway.gerarRelatorio(workflowJson, handleOnEvent);
+
+  } catch (error) {
+    console.error('Erro ao executar workflow:', error);
+    setExecutionState('error');
+    setExecuting(false);
+    setResults({
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
+  }
+};
 
-    setExecuting(true);
-    setResults(null);
-    clearLogs();
-
-    try {
-      // Construir workflow completo usando o método do context
-      const workflowJson = buildCompleteWorkflow() //teste();
-
-      // Configurar serviço
-      // const httpClient = new AxiosAdapter();
-      // const workFlowGateway = new WorkflowHttpGateway(httpClient, BASE_URL, AUTH_TOKEN);
-
-      const httpClient = new FetchAdapter();
-      const workFlowGateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL, AUTH_TOKEN);
-
-      const handleOnEvent: GerarDocCallbacks = {
-        onInfo: (message) => {
-          console.log('message:', message)
-        },
-        onNodeStatus: (node, status) => {
-          
-          console.log('node:', node)
-          console.log('status:', status)
-          if (status === 'finalizado') {
-            setProgressState(prev => ({
-              ...prev,
-              etapasConcluidas: prev.etapasConcluidas + 1,
-              progresso: Math.round(((prev.etapasConcluidas + 1) / prev.totalEtapas) * 100)
-            }));
-          }
-        },
-        onProgress: (nodes) => {
-          console.log('nodes:', nodes)
-
-        },
-        onData: (data) => {
-            console.log("data:", data);
-            setProgressState( (prev) => ({
-                ...prev,
-                relatorioFinal: JSON.stringify(data)
-            }));
-        },
-        onComplete: (result) => {
-          console.log("result:", result);
-          setExecutionState('idle');
-          setProgressState(prev => ({
-            ...prev,
-            isLoading: false,
-            progresso: 100
-          }));
-        },
-        onError: (error) => {
-          setExecutionState('error');
-          setProgressState(prev => ({
-            ...prev,
-            isLoading: false,
-            erroCritico: error
-          }));
-        },
-      };
-
-      // Executar workflow
-      await workFlowGateway.gerarRelatorio(workflowJson, handleOnEvent);
-
-    } catch (error) {
-      console.error('Erro ao executar workflow:', error);
-      setExecutionState('error');
-      setExecuting(false);
-      setResults({
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      });
-    }
-  };
 
    const resetExecution = () => {
     setExecutionState('idle');
@@ -282,8 +218,10 @@ export default function WorkflowExecution() {
         </div>
       </div>
 
-      { state.isExecuting && (
         <ExecuteProgress 
+          etapas={state.nodes}
+          nodeStatus={nodeStatus}
+          nodeTimers={nodeTimers}
           etapasConcluidas={progressState.etapasConcluidas}
           totalEtapas={progressState.totalEtapas}
           progresso={progressState.progresso}
@@ -291,7 +229,6 @@ export default function WorkflowExecution() {
           erroCritico={progressState.erroCritico}
           relatorioFinal={progressState.relatorioFinal}
         />
-      )}
 
       {/* Workflow Output */}
       {buildCompleteWorkflow && state.nodes.length > 0 && (

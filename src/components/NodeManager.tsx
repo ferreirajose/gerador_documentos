@@ -17,6 +17,7 @@ import { useWorkFlow } from '@/context/WorkflowContext';
 import WorkflowHttpGateway from '@/gateway/WorkflowHttpGateway';
 import AxiosAdapter from '@/infra/AxiosAdapter';
 import { llmModelsByProvider } from '@/data/llmodels';
+import { formatAgentName } from '@/libs/util';
 
 const nodeTypes = [
   { value: 'entry', label: 'Entrada', icon: RiLoginCircleLine, color: 'bg-green-500' },
@@ -112,7 +113,9 @@ export default function NodeManager() {
     const workflowData = {
       entradas: entradas.reduce((acc, entrada) => {
         if (entrada.campo && entrada.referencia) {
-          acc[entrada.campo] = { [entrada.tipo]: entrada.referencia };
+          // ✅ USAR formatAgentName PARA NORMALIZAR O NOME DO CAMPO
+          const campoNormalizado = formatAgentName(entrada.campo);
+          acc[campoNormalizado] = { [entrada.tipo]: entrada.referencia };
         }
         return acc;
       }, {} as Record<string, Record<string, string>>),
@@ -554,7 +557,8 @@ export default function NodeManager() {
             </div>
 
             {/* ✅ SEÇÃO: Configuração de Entradas */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            { state.nodes.length > 0 && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-md font-semibold text-gray-900 dark:text-white">
                   Configurar Entradas do Nó
@@ -671,22 +675,10 @@ export default function NodeManager() {
               )}
 
               {/* Informação sobre documentos disponíveis */}
-              {availableDocumentKeys.length > 0 && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-4">
-                  <div className="flex items-start space-x-2">
-                    <RiBrainLine className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                        Documentos Disponíveis
-                      </p>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                        {availableDocumentKeys.join(', ')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+             
             </div>
+            )}
+            
 
             <div data-testid="node-prompt">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

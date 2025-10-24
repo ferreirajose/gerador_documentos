@@ -34,7 +34,7 @@ type NodeStatus = 'iniciado' | 'finalizado' | 'erro' | 'pendente';
   
   export interface GerarDocCallbacks {
     onInfo?: (message: string) => void
-      onNodeStatus?: (node: string, status: NodeStatus) => void;
+    onNodeStatus?: (node: string, status: NodeStatus) => void;
     onProgress?: (nodes: WorkflowNode[]) => void
     onComplete?: (result: any) => void
     onError?: (error: string) => void
