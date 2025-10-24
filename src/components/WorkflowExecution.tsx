@@ -218,17 +218,19 @@ export default function WorkflowExecution() {
         </div>
       </div>
 
-        <ExecuteProgress 
-          etapas={state.nodes}
-          nodeStatus={nodeStatus}
-          nodeTimers={nodeTimers}
-          etapasConcluidas={progressState.etapasConcluidas}
-          totalEtapas={progressState.totalEtapas}
-          progresso={progressState.progresso}
-          isLoading={progressState.isLoading}
-          erroCritico={progressState.erroCritico}
-          relatorioFinal={progressState.relatorioFinal}
-        />
+        { state.isExecuting && (
+          <ExecuteProgress 
+            etapas={state.nodes}
+            nodeStatus={nodeStatus}
+            nodeTimers={nodeTimers}
+            etapasConcluidas={progressState.etapasConcluidas}
+            totalEtapas={progressState.totalEtapas}
+            progresso={progressState.progresso}
+            isLoading={progressState.isLoading}
+            erroCritico={progressState.erroCritico}
+            relatorioFinal={progressState.relatorioFinal}
+          />
+      )}
 
       {/* Workflow Output */}
       {buildCompleteWorkflow && state.nodes.length > 0 && (
