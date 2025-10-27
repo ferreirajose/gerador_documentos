@@ -1,5 +1,13 @@
-import { renderMarkdown } from "@/libs/util";
-import { RiTimeLine, RiLoader4Line, RiCheckboxCircleLine, RiErrorWarningLine } from "@remixicon/react";
+import { downloadMarkdown, renderMarkdown } from "@/libs/util";
+import { 
+  RiTimeLine, 
+  RiLoader4Line, 
+  RiCheckboxCircleLine, 
+  RiErrorWarningLine,
+  RiClipboardLine,
+  RiDownloadLine 
+} from "@remixicon/react";
+import { useState } from "react";
 
 // ExecuteProgress.tsx
 interface ExecuteProgressProps {
@@ -60,6 +68,8 @@ export function ExecuteProgress({
   erroCritico, 
   relatorioFinal 
 }: ExecuteProgressProps) {
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
 
   // Mapear nós do backend para etapas genéricas
   const backendToGenericMap: Record<string, number> = {
@@ -67,6 +77,70 @@ export function ExecuteProgress({
     'defesa': 2,
     'relator': 3,
     'extrair_informacoes': 4
+  };
+
+  // Função para copiar o conteúdo
+  const handleCopyContent = async () => {
+    if (!relatorioFinal) return;
+    
+    setCopyError(null);
+    
+    try {
+      // Método 1: Clipboard API moderna (recomendado)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(relatorioFinal);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        return;
+      }
+      
+      // Método 2: Fallback para execCommand (suporte mais amplo)
+      const textArea = document.createElement("textarea");
+      textArea.value = relatorioFinal;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } else {
+        throw new Error("Falha ao copiar usando execCommand");
+      }
+      
+    } catch (err) {
+      console.error("Falha ao copiar conteúdo: ", err);
+      
+      // Método 3: Fallback para seleção manual
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = relatorioFinal;
+        document.body.appendChild(textArea);
+        textArea.select();
+        
+        setCopyError("Não foi possível copiar automaticamente. O texto foi selecionado - use Ctrl+C para copiar.");
+        setTimeout(() => {
+          setCopyError(null);
+          document.body.removeChild(textArea);
+        }, 5000);
+        
+      } catch (finalError) {
+        setCopyError("Erro ao copiar. Tente selecionar e copiar o texto manualmente." + finalError);
+        setTimeout(() => setCopyError(null), 5000);
+      }
+    }
+  };
+
+  // Função para baixar o markdown
+  const handleDownloadMarkdown = () => {
+    if (!relatorioFinal) return;
+    downloadMarkdown(relatorioFinal);
   };
 
   // Função para obter a duração de uma etapa genérica
@@ -233,29 +307,58 @@ export function ExecuteProgress({
             </div>
           )}
 
+          {/* Mensagem de erro de cópia */}
+          {copyError && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-700">{copyError}</p>
+            </div>
+          )}
+
           {/* Área do Relatório Final */}
           {relatorioFinal && (
             <div className="mt-6">
-              <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                📊 Relatório Final Gerado
-              </h2>
-              {/* <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
-                <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 font-mono">
-                  {relatorioFinal}
-                </pre>
-
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                  📊 Relatório Final Gerado
+                </h2>
                 
-              </div> */}
+                {/* Botões de Ação */}
+                <div className="flex gap-2">
+                  {/* Botão Copiar */}
+                  <button
+                    onClick={handleCopyContent}
+                    disabled={copied}
+                    className={`
+                      flex items-center gap-2 px-4 py-2 rounded-lg border transition-all
+                      ${copied 
+                        ? "bg-green-50 border-green-200 text-green-700" 
+                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600"
+                      }
+                    `}
+                  >
+                    <RiClipboardLine className="w-4 h-4" />
+                    {copied ? "Copiado!" : "Copiar"}
+                  </button>
 
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                  {/* Botão Baixar */}
+                  <button
+                    onClick={handleDownloadMarkdown}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <RiDownloadLine className="w-4 h-4" />
+                    Baixar Markdown
+                  </button>
+                </div>
+              </div>
+
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
                 <div className="bg-white p-8 min-h-[600px] max-h-[800px] overflow-y-auto">
                   <div
-                      className="prose prose-lg max-w-none"
-                      dangerouslySetInnerHTML={{
+                    className="prose prose-lg max-w-none"
+                    dangerouslySetInnerHTML={{
                       __html: `<div class="mb-4 leading-relaxed text-gray-700">${renderMarkdown(relatorioFinal)}</div>`,
-                      }}
+                    }}
                   />
-              </div>
+                </div>
               </div>
             </div>
           )}

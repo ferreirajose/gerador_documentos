@@ -374,3 +374,70 @@ export const renderMarkdown = (text: string): string => {
 
   return output;
 };
+
+
+// Função para baixar o markdown como arquivo
+export function downloadMarkdown(content: string, filename: string = "Documento.md") {
+  try {
+    // Método 1: Usando Blob e URL.createObjectURL (mais moderno)
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.style.display = "none";
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Liberar a URL após um tempo
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 100);
+    
+  } catch (error) {
+    console.error("Erro no método de download moderno:", error);
+    
+    // Método 2: Fallback para navegadores mais antigos
+    try {
+      const encodedContent = encodeURIComponent(content);
+      const dataUri = `data:text/markdown;charset=utf-8,${encodedContent}`;
+      
+      const link = document.createElement("a");
+      link.href = dataUri;
+      link.download = filename;
+      link.style.display = "none";
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (fallbackError) {
+      console.error("Erro no método de fallback:", fallbackError);
+      
+      // Método 3: Abertura em nova janela como último recurso
+      const newWindow = window.open("", "_blank");
+      if (newWindow) {
+        newWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>${filename}</title>
+              <meta charset="utf-8">
+            </head>
+            <body>
+              <pre>${content}</pre>
+              <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  alert('Use Ctrl+S para salvar o relatório como arquivo .md');
+                });
+              </script>
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+      }
+    }
+  }
+}

@@ -10,9 +10,7 @@ import {
   RiDeleteBinLine,
   RiCpuLine,
   RiLoginCircleLine,
-  RiBrainLine,
-  RiEyeLine,
-  RiEyeOffLine
+  RiBrainLine
 } from '@remixicon/react';
 
 import { useWorkFlow } from '@/context/WorkflowContext';
@@ -20,6 +18,7 @@ import WorkflowHttpGateway from '@/gateway/WorkflowHttpGateway';
 import AxiosAdapter from '@/infra/AxiosAdapter';
 import { llmModelsByProvider } from '@/data/llmodels';
 import { formatAgentName } from '@/libs/util';
+import WorkflowOutput from './common/WorkflowOutput';
 
 const nodeTypes = [
   { value: 'entry', label: 'Entrada', icon: RiLoginCircleLine, color: 'bg-green-500' },
@@ -47,7 +46,7 @@ export default function NodeManager() {
   const availableOutputKeys = getAvailableOutputKeys();
 
 
-   // NOVO: Estado para arquivo selecionado
+  // Estado para arquivo selecionado
   const [selectedFiles, setLocalSelectedFiles] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isMultipleFiles, setIsMultipleFiles] = useState(false);
@@ -835,35 +834,11 @@ export default function NodeManager() {
       </div>
 
       {/* Workflow Output */}
-      {buildCompleteWorkflow && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Workflow Gerado
-            </h3>
-            <button
-              onClick={() => setIsWorkflowVisible(!isWorkflowVisible)}
-              className="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md transition-colors">
-              {isWorkflowVisible ? (
-                <>
-                  <RiEyeLine className="w-4 h-4" />
-                  Ocultar
-                </>
-              ) : (
-                <>
-                  <RiEyeOffLine className="w-4 h-4" />
-                  Mostrar
-                </>
-              )}
-            </button>
-          </div>
-          {isWorkflowVisible && (
-            <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
-              {buildCompleteWorkflow()}
-            </pre>
-          )}
-        </div>
-      )}
+      <WorkflowOutput
+        buildCompleteWorkflow={buildCompleteWorkflow}
+        isWorkflowVisible={isWorkflowVisible}
+        setIsWorkflowVisible={setIsWorkflowVisible}
+      />
     </div>
   );
 }
