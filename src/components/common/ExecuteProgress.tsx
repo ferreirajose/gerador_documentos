@@ -17,10 +17,13 @@ interface ExecuteProgressProps {
 // Função auxiliar para formatar duração
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = seconds % 60;
   
-  if (minutes > 0) {
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${remainingSeconds}s`;
+  } else if (minutes > 0) {
     return `${minutes}m ${remainingSeconds}s`;
   }
   return `${remainingSeconds}s`;
@@ -105,7 +108,8 @@ export function ExecuteProgress({
       duration: null
     }
   ];
-
+  console.log(steps)
+  console.log(etapasConcluidas, 'etapasConcluidas')
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="mx-auto">

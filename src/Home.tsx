@@ -19,8 +19,12 @@ export default function Home() {
     const [relatorioFinal, setRelatorioFinal] = useState<string>('');
     const [erroCritico, setErroCritico] = useState<string>('');
     const [etapas, setEtapas] = useState<Etapa[]>([
-        
-    ]);
+           { id: 'START', nome: 'Inicialização do Sistema', status: 'aguardando' },
+        { id: 'AnalistaFinanceiroNode', nome: 'Auditor Financeiro', status: 'aguardando' },
+        { id: 'AnalistaContabilNode', nome: 'Analista Contabil', status: 'aguardando' },
+        { id: 'ConsolidadorFinanceiroNode', nome: 'Consolidador Financeiro', status: 'aguardando' },
+        { id: 'MetricasFinanceirasNode', nome: 'Metricas Financeiras', status: 'aguardando' },
+        { id: 'RecomendacoesNode', nome: 'Recomendações', status: 'aguardando' }]);
 
     // Timer para atualizar tempos decorridos
     useEffect(() => {
@@ -39,20 +43,41 @@ export default function Home() {
         return () => clearInterval(interval);
     }, [isLoading]);
 
+    const formatarTempoDecorrido = (segundos: number): string => {
+         if (segundos < 60) {
+            return `${segundos}s`;
+        } else if (segundos < 3600) {
+            const minutos = Math.floor(segundos / 60);
+            const segundosRestantes = segundos % 60;
+            return `${minutos}m ${segundosRestantes}s`;
+        } else if (segundos < 86400) {
+            const horas = Math.floor(segundos / 3600);
+            const minutos = Math.floor((segundos % 3600) / 60);
+            const segundosRestantes = segundos % 60;
+            return `${horas}h ${minutos}m ${segundosRestantes}s`;
+        } else {
+            const dias = Math.floor(segundos / 86400);
+            const horas = Math.floor((segundos % 86400) / 3600);
+            const minutos = Math.floor((segundos % 3600) / 60);
+            return `${dias}d ${horas}h ${minutos}m`;
+        }
+
+    };
+
     const createWorkflowData = () => {
         const builder = new WorkflowBuilder();
 
-        // Configurar documentos financeiros
-        builder.setDocumentos({
+        //Configurar documentos financeiros
+    //     builder.setDocumentos({
             
-            relatorio_financeiro_anual: "10831034617427640767",
-            demonstracoes_contabeis: [
-                "13333786561136215878",
-      "7065879860948131635",
-      "11529010421945660908",
-      "691210388070956173"
-            ]
-        });
+    //         relatorio_financeiro_anual: "10831034617427640767",
+    //         demonstracoes_contabeis: [
+    //             "13333786561136215878",
+    //   "7065879860948131635",
+    //   "11529010421945660908",
+    //   "691210388070956173"
+    //         ]
+    //     });
 
         // Configurar ponto de entrada
         builder.setPontoDeEntrada(['AnalistaFinanceiroNode', 'AnalistaContabilNode']);
@@ -64,7 +89,7 @@ export default function Home() {
             .setModel('o3')
             .setPrompt(FinancialAnalystPrompt)
             .setOutputKey('workflow_data.analise_financeira')
-            .addEntrada('relatorio_financeiro', 'buscar_documento', 'doc.relatorio_financeiro_anual')
+            //.addEntrada('relatorio_financeiro', 'buscar_documento', 'doc.relatorio_financeiro_anual')
             .endNode();
 
         builder
@@ -73,8 +98,8 @@ export default function Home() {
             .setModel('o3')
             .setPrompt(AccountingAnalystPrompt)
             .setOutputKey('workflow_data.analises_contabeis')
-            .addEntrada('lista_documentos', 'id_documento', 'doc.demonstracoes_contabeis')
-            .addEntrada('conteudo_documento', 'buscar_documento', '{id_documento}')
+            // .addEntrada('lista_documentos', 'id_documento', 'doc.demonstracoes_contabeis')
+            // .addEntrada('conteudo_documento', 'buscar_documento', '{id_documento}')
             .endNode();
 
         builder
@@ -83,8 +108,8 @@ export default function Home() {
             .setModel('gpt-4.1')
             .setPrompt(FinancialConsolidatorPrompt)
             .setOutputKey('workflow_data.relatorio_consolidado')
-            .addEntrada('analise_financeira', 'do_estado', 'workflow_data.analise_financeira')
-            .addEntrada('analises_contabeis', 'do_estado', 'workflow_data.analises_contabeis')
+            // .addEntrada('analise_financeira', 'do_estado', 'workflow_data.analise_financeira')
+            // .addEntrada('analises_contabeis', 'do_estado', 'workflow_data.analises_contabeis')
             .endNode();
 
         builder
@@ -93,9 +118,9 @@ export default function Home() {
             .setModel('gemini-2.5-pro')
             .setPrompt(FinancialMetricsPrompt)
             .setOutputKey('workflow_data.metricas_estruturadas')
-            .addEntrada('analise_financeira', 'do_estado', 'workflow_data.analise_financeira')
-            .addEntrada('analises_contabeis', 'do_estado', 'workflow_data.analises_contabeis')
-            .addEntrada('relatorio_consolidado', 'do_estado', 'workflow_data.relatorio_consolidado')
+            // .addEntrada('analise_financeira', 'do_estado', 'workflow_data.analise_financeira')
+            // .addEntrada('analises_contabeis', 'do_estado', 'workflow_data.analises_contabeis')
+            // .addEntrada('relatorio_consolidado', 'do_estado', 'workflow_data.relatorio_consolidado')
             .endNode();
 
         builder
@@ -104,8 +129,8 @@ export default function Home() {
             .setModel('o3')
             .setPrompt(StrategicRecommendationsPrompt)
             .setOutputKey('workflow_data.recomendacoes_estrategicas')
-            .addEntrada('relatorio_consolidado', 'do_estado', 'workflow_data.relatorio_consolidado')
-            .addEntrada('metricas_financeiras', 'do_estado', 'workflow_data.metricas_estruturadas')
+            // .addEntrada('relatorio_consolidado', 'do_estado', 'workflow_data.relatorio_consolidado')
+            // .addEntrada('metricas_financeiras', 'do_estado', 'workflow_data.metricas_estruturadas')
             .endNode();
 
         // Configurar arestas
@@ -126,6 +151,14 @@ export default function Home() {
             'MÉTRICAS FINANCEIRAS:\n{workflow_data.metricas_estruturadas}\n\n' +
             'RECOMENDAÇÕES ESTRATÉGICAS:\n{workflow_data.recomendacoes_estrategicas}'
         );
+
+        // setEtapas([
+        //    { id: 'START', nome: 'Inicialização do Sistema', status: 'aguardando' },
+        // { id: 'AnalistaFinanceiroNode', nome: 'Auditor Financeiro', status: 'aguardando' },
+        // { id: 'ConsolidadorFinanceiroNode', nome: 'Consolidador Financeiro', status: 'aguardando' },
+        // { id: 'AnalistaContabilNode', nome: 'Analista Contabil', status: 'aguardando' },
+        // { id: 'MetricasFinanceirasNode', nome: 'Metricas Financeiras', status: 'aguardando' },
+        // { id: 'RecomendacoesNode', nome: 'Recomendações', status: 'aguardando' }]);
 
         return builder.toJSON();
 
@@ -265,6 +298,11 @@ export default function Home() {
                     setRelatorioFinal(event.payload.relatorio_final);
                 }
                 
+                if (event.type === 'resultado_final') {
+                    setRelatorioFinal(event.payload.relatorio_financeiro_final);
+                }
+                
+
                 if (event.type === 'error') {
                     setErroCritico(event.message);
                     // Marcar etapa atual como erro
@@ -428,7 +466,7 @@ export default function Home() {
                                             
                                             {etapa.tempoDecorrido !== undefined && (
                                                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {etapa.tempoDecorrido}s
+                                                    {formatarTempoDecorrido(etapa.tempoDecorrido)}
                                                 </span>
                                             )}
                                         </div>
@@ -451,6 +489,10 @@ export default function Home() {
                             </div>
                         </div>
                     )}
+
+                    <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
+              {createWorkflowData()}
+            </pre>
 
                     {/* Área do Relatório Final */}
                     {relatorioFinal && (

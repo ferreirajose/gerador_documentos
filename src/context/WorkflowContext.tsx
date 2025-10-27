@@ -245,29 +245,29 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     // Configurar ponto de entrada
     const entryNodes = state.nodes.filter(node => node.type === 'entry');
     
-    if (entryNodes.length > 0) {
+    // ✅ NOVA LÓGICA: Criar objeto documentos apenas se houver arquivos selecionados
+    if (entryNodes.length > 0 && state.selectedFile && state.selectedFile.length > 0) {
       const documentos: Record<string, any> = {};
       
       entryNodes.forEach((entryNode) => {
         const nodeName = formatAgentName(entryNode.name);
 
-        if (state.selectedFile && state.selectedFile.length > 0) {
-          // NOVA LÓGICA: Verificar configuração de múltiplos arquivos do nó
-          const shouldUseAsList = entryNode.workflowData?.isMultipleFiles === true;
+        // NOVA LÓGICA: Verificar configuração de múltiplos arquivos do nó
+        const shouldUseAsList = entryNode.workflowData?.isMultipleFiles === true;
+        
+        if (shouldUseAsList) {
+          // LISTA: Para múltiplos arquivos - pega TODOS os UUIDs
+          documentos[nodeName] = state.selectedFile
+            .map((item: any) => item.uuid)
+            .filter((uuid: string) => uuid); // Filtra UUIDs válidos
           
-          if (shouldUseAsList) {
-            // LISTA: Para múltiplos arquivos - pega TODOS os UUIDs
-            documentos[nodeName] = state.selectedFile
-              .map((item: any) => item.uuid)
-              .filter((uuid: string) => uuid); // Filtra UUIDs válidos
-            
-          } else {
-            // ÚNICO: Para arquivo único - pega apenas o PRIMEIRO UUID
-            documentos[nodeName] = state.selectedFile[0]?.uuid || '';
-          }
+        } else {
+          // ÚNICO: Para arquivo único - pega apenas o PRIMEIRO UUID
+          documentos[nodeName] = state.selectedFile[0]?.uuid || '';
         }
       });
 
+      // ADICIONAR: Só seta documentos se houver conteúdo
       if (Object.keys(documentos).length > 0) {
         builder.setDocumentos(documentos);
       }
@@ -290,8 +290,8 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
         .setPrompt(node.prompt || '')
         .setOutputKey(`workflow_data.${nodeName}`);
       
-      // Adicionar entradas se existirem no nodeData
-      if (nodeData.entradas && typeof nodeData.entradas === 'object') {
+      // NOVA LÓGICA: Adicionar entradas apenas se existirem documentos
+      if (state.selectedFile && state.selectedFile.length > 0 && nodeData.entradas && typeof nodeData.entradas === 'object') {
         Object.entries(nodeData.entradas).forEach(([nomeCampo, definicao]) => {
           if (definicao && typeof definicao === 'object') {
             Object.entries(definicao).forEach(([tipo, referencia]) => {

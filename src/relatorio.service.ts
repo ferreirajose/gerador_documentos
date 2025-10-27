@@ -10,7 +10,7 @@ export interface ErrorEvent {
 }
 
 export interface ResultadoFinalEvent {
-  type: 'resultado_final';
+  type: 'resultado_final'  | 'relatorio_financeiro_final';
   payload: {
     relatorio_final: string;
   };
@@ -28,6 +28,9 @@ const BASE_URL = import.meta.env.VITE_API_URL;
 const BASE_URL_MINUTA = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
 
+console.log(BASE_URL, 'BASE_URL')
+console.log(BASE_URL_MINUTA, 'BASE_URL_MINUTA')
+console.log(AUTH_TOKEN, 'AUTH_TOKEN')
 
 class RelatorioServiceImpl implements RelatorioService {
   private controller: AbortController | null = null;
