@@ -182,8 +182,7 @@ export function ExecuteProgress({
       duration: null
     }
   ];
-  console.log(steps)
-  console.log(etapasConcluidas, 'etapasConcluidas')
+  
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="mx-auto">
@@ -242,11 +241,11 @@ export function ExecuteProgress({
                         <span className="font-medium text-gray-800 dark:text-gray-200">
                           {step.name}
                         </span>
-                        {step.duration !== null && step.status === "completed" && (
+                        {/* {step.duration !== null && step.status === "completed" && (
                           <span className="ml-2 text-xs text-gray-500">
                             ({formatDuration(step.duration)})
                           </span>
-                        )}
+                        )} */}
                       </div>
                     </div>
 

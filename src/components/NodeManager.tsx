@@ -19,6 +19,7 @@ import AxiosAdapter from '@/infra/AxiosAdapter';
 import { llmModelsByProvider } from '@/data/llmodels';
 import { formatAgentName } from '@/libs/util';
 import WorkflowOutput from './common/WorkflowOutput';
+import { Node } from '@/types/nodes';
 
 const nodeTypes = [
   { value: 'entry', label: 'Entrada', icon: RiLoginCircleLine, color: 'bg-green-500' },
@@ -225,7 +226,7 @@ export default function NodeManager() {
       // ATUALIZAR STATE COM TODOS OS ARQUIVOS PROCESSADOS
       if (processedFiles.length > 0) {
         setLocalSelectedFiles(processedFiles);
-        setSelectedFile(processedFiles); // MUDANÇA: Agora passa array completo
+        setSelectedFile(processedFiles as any); // MUDANÇA: Agora passa array completo // @TODO DEFINIR TIPO CORRETOR E REMOVE any
         console.log('Todos os arquivos processados:', processedFiles);
       }
       
@@ -528,7 +529,7 @@ export default function NodeManager() {
                                 onClick={() => {
                                   const newFiles = selectedFiles.filter((_, i) => i !== index);
                                   setLocalSelectedFiles(newFiles);
-                                  setSelectedFile(newFiles);
+                                  setSelectedFile(newFiles as any); // @TODO DEFINIR TIPO CORRETOR E REMOVE any
                                 }}
                                 className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                               >
@@ -623,7 +624,8 @@ export default function NodeManager() {
                             required
                           >
                             <option value="">Selecione uma chave de saída...</option>
-                            {availableOutputKeys.map((key) => (
+                            {/* // @TODO DEFINIR TIPO CORRETOR E REMOVE any */}
+                            {availableOutputKeys.map((key: any) => (
                               <option key={key} value={key}>
                                 {key}
                               </option>
@@ -638,7 +640,8 @@ export default function NodeManager() {
                             required
                           >
                             <option value="">Selecione um documento...</option>
-                            {availableDocumentKeys.map((key) => (
+                            {/* // @TODO DEFINIR TIPO CORRETOR E REMOVE any */}
+                            {availableDocumentKeys.map((key: any) => (
                               <option key={key} value={key}>
                                 {key}
                               </option>

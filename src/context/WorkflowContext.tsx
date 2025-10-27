@@ -225,7 +225,8 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
   };
 
   // NOVOS métodos para arquivo selecionado
-  const setSelectedFile = (file: File | null) => {
+  // @TODO DEFINIR TIPO CORRETOR E REMOVE any
+  const setSelectedFile = (file: any) => {
     dispatch({ type: 'SET_SELECTED_FILE', payload: file });
   };
 
