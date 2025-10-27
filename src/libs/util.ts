@@ -87,25 +87,89 @@ export const renderMarkdown = (text: string): string => {
   let tableRows: string[] = [];
   let tableHeaders: string[] = [];
 
+  // Função para detectar e formatar JSON
+  const formatJSON = (content: string): string => {
+    // Tenta encontrar objetos JSON completos no texto
+    const jsonRegex = /(\{[^{}]*\}|\[[^\[\]]*\])/g;
+    
+    return content.replace(jsonRegex, (match) => {
+      try {
+        // Tenta parsear para verificar se é JSON válido
+        const parsed = JSON.parse(match);
+        const formattedJSON = JSON.stringify(parsed, null, 2);
+        
+        // Aplica coloração Monokai Dimmed ao JSON formatado
+        return formatJSONSyntax(formattedJSON);
+      } catch {
+        // Se não for JSON válido, retorna o original
+        return match;
+      }
+    });
+  };
+
+  // Função para aplicar coloração Monokai Dimmed à sintaxe JSON
+  const formatJSONSyntax = (jsonString: string): string => {
+    // Cores Monokai Dimmed
+    const colors = {
+      key: 'text-[#78dce8]',        // Azul claro - chaves
+      string: 'text-[#a9dc76]',     // Verde - strings
+      number: 'text-[#ab9df2]',     // Roxo - números
+      boolean: 'text-[#ff6188]',    // Rosa - booleanos
+      null: 'text-[#ff6188]',       // Rosa - null
+      punctuation: 'text-[#f8f8f2]', // Branco - pontuação
+      background: 'bg-[#1e1e1e]'    // Fundo escuro
+    };
+
+    return jsonString
+      .split('\n')
+      .map(line => {
+        // Aplica coloração baseada no tipo de token
+        return line
+          // Chaves (propriedades)
+          .replace(/"([^"]+)":/g, `<span class="${colors.key}">"$1"</span><span class="${colors.punctuation}">:</span>`)
+          // Strings
+          .replace(/"([^"]*)"/g, `<span class="${colors.string}">"$1"</span>`)
+          // Números
+          .replace(/\b(-?\d+\.?\d*)\b/g, `<span class="${colors.number}">$1</span>`)
+          // Booleanos
+          .replace(/\b(true|false)\b/g, `<span class="${colors.boolean}">$1</span>`)
+          // Null
+          .replace(/\b(null)\b/g, `<span class="${colors.null}">$1</span>`)
+          // Colchetes e chaves
+          .replace(/[{}[\]]/g, `<span class="${colors.punctuation}">$&</span>`)
+          // Vírgulas
+          .replace(/,/g, `<span class="${colors.punctuation}">,</span>`);
+      })
+      .join('\n');
+  };
+
   const flushParagraph = () => {
     if (paragraphLines.length === 0) return;
     
-    const paragraphContent = paragraphLines.join('<br>')
+    let paragraphContent = paragraphLines.join('<br>')
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
       .replace(/\[([^\]]+)\]/g, '<span class="bg-yellow-100 px-2 py-1 rounded text-sm font-medium">[Campo: $1]</span>')
       .replace(/`(.*?)`/g, '<span class="bg-gray-200 px-1.5 py-1 rounded font-medium">$1</span>');
+
+    // Aplica formatação JSON se existir
+    paragraphContent = formatJSON(paragraphContent);
 
     output += `<p class="mb-4 leading-relaxed text-gray-700">${paragraphContent}</p>\n`;
     paragraphLines = [];
   };
 
   const formatInline = (content: string): string => {
-    return content
+    let formattedContent = content
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
       .replace(/\[([^\]]+)\]/g, '<span class="bg-yellow-100 px-2 py-1 rounded text-sm font-medium">[Campo: $1]</span>')
       .replace(/`(.*?)`/g, '<span class="bg-gray-200 px-1.5 py-1 rounded font-medium">$1</span>');
+
+    // Aplica formatação JSON se existir
+    formattedContent = formatJSON(formattedContent);
+
+    return formattedContent;
   };
 
   const flushTable = () => {
@@ -142,12 +206,29 @@ export const renderMarkdown = (text: string): string => {
     inTable = false;
   };
 
+  // Função para detectar blocos de código JSON
+  const detectAndFormatJSONBlocks = (line: string): string => {
+    // Detecta blocos de código que podem conter JSON
+    if (line.trim().startsWith('```json')) {
+      return '<pre class="bg-[#1e1e1e] p-4 rounded-lg overflow-x-auto my-4"><code class="text-sm font-mono">';
+    }
+    
+    if (line.trim() === '```') {
+      return '</code></pre>';
+    }
+    
+    return line;
+  };
+
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    let line = lines[i];
     const trimmedLine = line.trim();
 
+    // Processa blocos de código JSON
+    line = detectAndFormatJSONBlocks(line);
+
     // Detectar início de tabela (linha com pipes)
-    if (trimmedLine.includes('|') && !trimmedLine.startsWith('#')) {
+    if (trimmedLine.includes('|') && !trimmedLine.startsWith('#') && !trimmedLine.startsWith('```')) {
       if (!inTable) {
         flushParagraph();
         if (inList) {
@@ -175,7 +256,7 @@ export const renderMarkdown = (text: string): string => {
     }
 
     // Se estamos em uma tabela e encontramos uma linha que não é tabela
-    if (inTable && !trimmedLine.includes('|')) {
+    if (inTable && !trimmedLine.includes('|') && !trimmedLine.startsWith('```')) {
       flushTable();
     }
 
@@ -246,6 +327,36 @@ export const renderMarkdown = (text: string): string => {
       }
     }
     
+    // Blocos de código JSON
+    else if (trimmedLine.startsWith('```json')) {
+      flushParagraph();
+      flushTable();
+      if (inList) {
+        output += `</${inList}>\n`;
+        inList = false;
+      }
+      output += '<pre class="bg-[#1e1e1e] p-4 rounded-lg overflow-x-auto my-4"><code class="text-sm font-mono">';
+      
+      // Coleta todas as linhas até o fechamento do bloco
+      let jsonContent = '';
+      i++; // Pula a linha ```json
+      while (i < lines.length && lines[i].trim() !== '```') {
+        jsonContent += lines[i] + '\n';
+        i++;
+      }
+      
+      // Aplica formatação JSON
+      try {
+        const parsed = JSON.parse(jsonContent);
+        const formatted = JSON.stringify(parsed, null, 2);
+        output += formatJSONSyntax(formatted);
+      } catch {
+        output += jsonContent; // Se não for JSON válido, mostra como está
+      }
+      
+      output += '</code></pre>\n';
+    }
+    
     // Texto normal
     else {
       if (inList) {
@@ -263,3 +374,70 @@ export const renderMarkdown = (text: string): string => {
 
   return output;
 };
+
+
+// Função para baixar o markdown como arquivo
+export function downloadMarkdown(content: string, filename: string = "Documento.md") {
+  try {
+    // Método 1: Usando Blob e URL.createObjectURL (mais moderno)
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.style.display = "none";
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Liberar a URL após um tempo
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 100);
+    
+  } catch (error) {
+    console.error("Erro no método de download moderno:", error);
+    
+    // Método 2: Fallback para navegadores mais antigos
+    try {
+      const encodedContent = encodeURIComponent(content);
+      const dataUri = `data:text/markdown;charset=utf-8,${encodedContent}`;
+      
+      const link = document.createElement("a");
+      link.href = dataUri;
+      link.download = filename;
+      link.style.display = "none";
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (fallbackError) {
+      console.error("Erro no método de fallback:", fallbackError);
+      
+      // Método 3: Abertura em nova janela como último recurso
+      const newWindow = window.open("", "_blank");
+      if (newWindow) {
+        newWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>${filename}</title>
+              <meta charset="utf-8">
+            </head>
+            <body>
+              <pre>${content}</pre>
+              <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  alert('Use Ctrl+S para salvar o relatório como arquivo .md');
+                });
+              </script>
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+      }
+    }
+  }
+}

@@ -4,6 +4,7 @@ import { GerarDocCallbacks } from '@/types/nodes';
 import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
 import FetchAdapter from '@/infra/FetchAdapter';
 import { ExecuteProgress } from './common/ExecuteProgress';
+import WorkflowOutput from './common/WorkflowOutput';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
@@ -31,6 +32,7 @@ export default function WorkflowExecution() {
   const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'error'>('idle');
   const [nodeStatus, setNodeStatus] = useState<Record<string, string>>({});
   const [nodeTimers, setNodeTimers] = useState<Record<string, { start: number; end?: number }>>({}); 
+  const [isWorkflowVisible, setIsWorkflowVisible] = useState(true); // ou false se quiser iniciar oculto
 
   const executeWorkflow = async () => {
   if (state.nodes.length === 0) return;
@@ -233,18 +235,12 @@ export default function WorkflowExecution() {
       )}
 
       {/* Workflow Output */}
-      {buildCompleteWorkflow && state.nodes.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Workflow Gerado
-            </h3>
-          </div>
-          <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
-            {JSON.stringify(JSON.parse(buildCompleteWorkflow()), null, 2)}
-          </pre>
-        </div>
-      )}
+       {/* Workflow Output */}
+      <WorkflowOutput
+        buildCompleteWorkflow={buildCompleteWorkflow}
+        isWorkflowVisible={isWorkflowVisible}
+        setIsWorkflowVisible={setIsWorkflowVisible}
+      />        
     </div>
   );
 }

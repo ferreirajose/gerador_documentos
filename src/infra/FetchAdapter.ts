@@ -102,7 +102,8 @@ export default class FetchAdapter implements HttpClient {
       if (error instanceof HttpError) {
         throw error;
       }
-      if (error.name === "AbortError") {
+      // @TODO DEFINIR TIPO CORRETOR E REMOVE any
+      if ((error as any).name === "AbortError") {
         throw new HttpError("Request cancelado", 0, "", true);
       }
       throw new HttpError(

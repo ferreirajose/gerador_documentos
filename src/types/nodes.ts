@@ -8,6 +8,7 @@ export type Node = {
   // ✅ ADICIONAR esta propriedade
   workflowData?: {
     entradas?: Record<string, Record<string, string>>;
+    isMultipleFiles?: boolean;
   };
 }
 

@@ -10,7 +10,7 @@ import {
   RiDeleteBinLine,
   RiCpuLine,
   RiLoginCircleLine,
-  RiBrainLine 
+  RiBrainLine
 } from '@remixicon/react';
 
 import { useWorkFlow } from '@/context/WorkflowContext';
@@ -18,6 +18,8 @@ import WorkflowHttpGateway from '@/gateway/WorkflowHttpGateway';
 import AxiosAdapter from '@/infra/AxiosAdapter';
 import { llmModelsByProvider } from '@/data/llmodels';
 import { formatAgentName } from '@/libs/util';
+import WorkflowOutput from './common/WorkflowOutput';
+import { Node } from '@/types/nodes';
 
 const nodeTypes = [
   { value: 'entry', label: 'Entrada', icon: RiLoginCircleLine, color: 'bg-green-500' },
@@ -45,7 +47,7 @@ export default function NodeManager() {
   const availableOutputKeys = getAvailableOutputKeys();
 
 
-   // NOVO: Estado para arquivo selecionado
+  // Estado para arquivo selecionado
   const [selectedFiles, setLocalSelectedFiles] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isMultipleFiles, setIsMultipleFiles] = useState(false);
@@ -54,6 +56,9 @@ export default function NodeManager() {
   const [editingNode, setEditingNode] = useState<Node | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+
+  const [isWorkflowVisible, setIsWorkflowVisible] = useState(true); // ou false se quiser iniciar oculto
+
 
   const [formData, setFormData] = useState({
     name: '',
@@ -221,7 +226,7 @@ export default function NodeManager() {
       // ATUALIZAR STATE COM TODOS OS ARQUIVOS PROCESSADOS
       if (processedFiles.length > 0) {
         setLocalSelectedFiles(processedFiles);
-        setSelectedFile(processedFiles); // MUDANÇA: Agora passa array completo
+        setSelectedFile(processedFiles as any); // MUDANÇA: Agora passa array completo // @TODO DEFINIR TIPO CORRETOR E REMOVE any
         console.log('Todos os arquivos processados:', processedFiles);
       }
       
@@ -524,7 +529,7 @@ export default function NodeManager() {
                                 onClick={() => {
                                   const newFiles = selectedFiles.filter((_, i) => i !== index);
                                   setLocalSelectedFiles(newFiles);
-                                  setSelectedFile(newFiles);
+                                  setSelectedFile(newFiles as any); // @TODO DEFINIR TIPO CORRETOR E REMOVE any
                                 }}
                                 className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                               >
@@ -557,126 +562,126 @@ export default function NodeManager() {
             </div>
 
             {/* ✅ SEÇÃO: Configuração de Entradas */}
-            { state.nodes.length > 0 && (
+            {/* ✅ SEÇÃO: Configuração de Entradas - APENAS SE HOUVER DOCUMENTOS */}
+            {state.selectedFile && state.selectedFile.length > 0 && state.nodes.length > 0 && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-md font-semibold text-gray-900 dark:text-white">
-                  Configurar Entradas do Nó
-                </h4>
-                <button
-                  type="button"
-                  onClick={adicionarEntrada}
-                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
-                >
-                  + Adicionar Entrada
-                </button>
-              </div>
-
-              {entradas.map((entrada, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Nome do Campo *
-                    </label>
-                    <input
-                      type="text"
-                      value={entrada.campo}
-                      onChange={(e) => atualizarEntrada(index, 'campo', e.target.value)}
-                      placeholder="Ex: conteudo_auditoria"
-                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Tipo
-                    </label>
-                    <select
-                      value={entrada.tipo}
-                      onChange={(e) => atualizarEntrada(index, 'tipo', e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    >
-                      <option value="lista_de_origem">Lista de Origem</option>
-                      <option value="buscar_documento">Buscar Documento</option>
-                      <option value="id_da_defesa">ID da Defesa</option>
-                      <option value="do_estado">Do Estado</option>
-                    </select>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {formData.type === 'process' ? 'Chave de Saída *' : 'Documento de Referência *'}
-                      </label>
-                      {formData.type === 'process' ? (
-                        // Select para Chaves de Saída (nós de processamento)
-                        <select
-                          value={entrada.referencia}
-                          onChange={(e) => atualizarEntrada(index, 'referencia', e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                          required
-                        >
-                          <option value="">Selecione uma chave de saída...</option>
-                          {availableOutputKeys.map((key) => (
-                            <option key={key} value={key}>
-                              {key}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        // Select para Documentos (nós de entrada)
-                        <select
-                          value={entrada.referencia}
-                          onChange={(e) => atualizarEntrada(index, 'referencia', e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                          required
-                        >
-                          <option value="">Selecione um documento...</option>
-                          {availableDocumentKeys.map((key) => (
-                            <option key={key} value={key}>
-                              {key}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-
-                    <div className="flex items-end">
-                      <button
-                        type="button"
-                        onClick={() => removerEntrada(index)}
-                        className="bg-red-600 text-white px-3 py-1 text-sm rounded hover:bg-red-700 transition-colors whitespace-nowrap"
-                      >
-                        Remover
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {entradas.length === 0 && (
-                <div className="text-center py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-                  <RiFileTextLine className="mx-auto text-gray-400 text-2xl mb-2" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                    Nenhuma entrada configurada
-                  </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
-                    Adicione entradas para conectar este nó aos documentos disponíveis
-                  </p>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-md font-semibold text-gray-900 dark:text-white">
+                    Configurar Entradas do Nó
+                  </h4>
                   <button
                     type="button"
                     onClick={adicionarEntrada}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
                   >
-                    Adicionar Primeira Entrada
+                    + Adicionar Entrada
                   </button>
                 </div>
-              )}
 
-              {/* Informação sobre documentos disponíveis */}
-             
-            </div>
+                {entradas.map((entrada, index) => (
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Nome do Campo *
+                      </label>
+                      <input
+                        type="text"
+                        value={entrada.campo}
+                        onChange={(e) => atualizarEntrada(index, 'campo', e.target.value)}
+                        placeholder="Ex: conteudo_auditoria"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Tipo
+                      </label>
+                      <select
+                        value={entrada.tipo}
+                        onChange={(e) => atualizarEntrada(index, 'tipo', e.target.value)}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      >
+                        <option value="lista_de_origem">Lista de Origem</option>
+                        <option value="buscar_documento">Buscar Documento</option>
+                        <option value="id_da_defesa">ID da Defesa</option>
+                        <option value="do_estado">Do Estado</option>
+                      </select>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          {formData.type === 'process' ? 'Chave de Saída *' : 'Documento de Referência *'}
+                        </label>
+                        {formData.type === 'process' ? (
+                          // Select para Chaves de Saída (nós de processamento)
+                          <select
+                            value={entrada.referencia}
+                            onChange={(e) => atualizarEntrada(index, 'referencia', e.target.value)}
+                            className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            required
+                          >
+                            <option value="">Selecione uma chave de saída...</option>
+                            {/* // @TODO DEFINIR TIPO CORRETOR E REMOVE any */}
+                            {availableOutputKeys.map((key: any) => (
+                              <option key={key} value={key}>
+                                {key}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          // Select para Documentos (nós de entrada)
+                          <select
+                            value={entrada.referencia}
+                            onChange={(e) => atualizarEntrada(index, 'referencia', e.target.value)}
+                            className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            required
+                          >
+                            <option value="">Selecione um documento...</option>
+                            {/* // @TODO DEFINIR TIPO CORRETOR E REMOVE any */}
+                            {availableDocumentKeys.map((key: any) => (
+                              <option key={key} value={key}>
+                                {key}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => removerEntrada(index)}
+                          className="bg-red-600 text-white px-3 py-1 text-sm rounded hover:bg-red-700 transition-colors whitespace-nowrap"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {entradas.length === 0 && (
+                  <div className="text-center py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                    <RiFileTextLine className="mx-auto text-gray-400 text-2xl mb-2" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                      Nenhuma entrada configurada
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                      Adicione entradas para conectar este nó aos documentos disponíveis
+                    </p>
+                    <button
+                      type="button"
+                      onClick={adicionarEntrada}
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                    >
+                      Adicionar Primeira Entrada
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
             
 
@@ -832,18 +837,11 @@ export default function NodeManager() {
       </div>
 
       {/* Workflow Output */}
-      {buildCompleteWorkflow && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Workflow Gerado
-            </h3>
-          </div>
-          <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
-            {buildCompleteWorkflow()}
-          </pre>
-        </div>
-      )}
+      <WorkflowOutput
+        buildCompleteWorkflow={buildCompleteWorkflow}
+        isWorkflowVisible={isWorkflowVisible}
+        setIsWorkflowVisible={setIsWorkflowVisible}
+      />
     </div>
   );
 }

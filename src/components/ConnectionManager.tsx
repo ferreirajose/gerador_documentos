@@ -13,6 +13,7 @@ import {
   RiLink
 } from '@remixicon/react';
 import { useWorkFlow } from '@/context/WorkflowContext';
+import WorkflowOutput from './common/WorkflowOutput';
 
 export default function ConnectionManager() {
   const { 
@@ -27,7 +28,8 @@ export default function ConnectionManager() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingConnection, setEditingConnection] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [isWorkflowVisible, setIsWorkflowVisible] = useState(true); // ou false se quiser iniciar oculto
+
   const [formData, setFormData] = useState({
     fromNodeId: '',
     toNodeId: '',
@@ -416,20 +418,12 @@ export default function ConnectionManager() {
         )}
       </div>
 
-      
       {/* Workflow Output */}
-      {buildCompleteWorkflow && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Workflow Gerado
-            </h3>
-          </div>
-          <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
-            {buildCompleteWorkflow()}
-          </pre>
-        </div>
-      )}
+      <WorkflowOutput
+        buildCompleteWorkflow={buildCompleteWorkflow}
+        isWorkflowVisible={isWorkflowVisible}
+        setIsWorkflowVisible={setIsWorkflowVisible}
+      />
     </div>
   );
 }
