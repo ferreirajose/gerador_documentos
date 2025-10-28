@@ -236,7 +236,7 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
 
   // Função auxiliar para validar tipos de entrada
   const isValidInputType = (type: string): type is InputType => {
-    return ['buscar_documento', 'id_da_defesa', 'do_estado', 'lista_de_origem'].includes(type);
+    return ['lista_de_origem','buscar_documento', 'id_da_defesa', 'do_estado'].includes(type);
   };
 
   // WorkflowContext.tsx - método buildCompleteWorkflow

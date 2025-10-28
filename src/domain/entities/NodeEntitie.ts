@@ -1,5 +1,5 @@
 
-export type InputType = 'buscar_documento' | 'id_da_defesa' | 'do_estado';
+export type InputType = 'lista_de_origem' | 'buscar_documento' | 'id_da_defesa' | 'do_estado';
 
 // um mapeamento nomeDeCampo → objeto { [inputType]: referência }
 export type InputDefinition = {
