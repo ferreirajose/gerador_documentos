@@ -4,6 +4,7 @@ export type Node = {
   type: 'entry' | 'process';
   llmModel?: string;
   prompt?: string;
+  ferramentas: string[];
   createdAt: Date;
   // ✅ ADICIONAR esta propriedade
   workflowData?: {

@@ -14,7 +14,6 @@ export default function WorkflowExecution() {
     state,
     setExecuting,
     setResults,
-    clearLogs,
     buildCompleteWorkflow,
     clearSelectedFile
   } = useWorkFlow();
@@ -52,7 +51,6 @@ export default function WorkflowExecution() {
 
   setExecuting(true);
   setResults(null);
-  clearLogs();
 
   try {
     const workflowJson = buildCompleteWorkflow();
@@ -147,7 +145,6 @@ export default function WorkflowExecution() {
     setExecutionState('idle');
     setExecuting(false);
     setResults(null);
-    clearLogs();
     clearSelectedFile();
   };
 
@@ -235,7 +232,6 @@ export default function WorkflowExecution() {
       )}
 
       {/* Workflow Output */}
-       {/* Workflow Output */}
       <WorkflowOutput
         buildCompleteWorkflow={buildCompleteWorkflow}
         isWorkflowVisible={isWorkflowVisible}

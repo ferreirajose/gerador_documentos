@@ -32,11 +32,8 @@ type WorkflowAction =
   | { type: 'DELETE_CONNECTION'; payload: string }
   | { type: 'SET_EXECUTION_STATE'; payload: boolean }
   | { type: 'SET_EXECUTION_RESULTS'; payload: any }
-  | { type: 'ADD_EXECUTION_LOG'; payload: any }
-  | { type: 'CLEAR_EXECUTION_LOGS' }
   | { type: 'RESET_WORKFLOW' }
-  | { type: 'SET_SELECTED_FILE'; payload: any[] | null } // ✅ MUDANÇA: Agora aceita array
-
+  | { type: 'SET_SELECTED_FILE'; payload: any[] | null } // MUDANÇA: Agora aceita array
 
 // Estado inicial
 const initialState: WorkflowState = {
@@ -116,18 +113,6 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         executionResults: action.payload,
       };
 
-    case 'ADD_EXECUTION_LOG':
-      return {
-        ...state,
-        executionLogs: [...state.executionLogs, action.payload],
-      };
-
-    case 'CLEAR_EXECUTION_LOGS':
-      return {
-        ...state,
-        executionLogs: [],
-      };
-
     case 'RESET_WORKFLOW':
       return {
         ...initialState,
@@ -156,8 +141,6 @@ const WorkflowContext = createContext<{
   deleteConnection: (id: string) => void;
   setExecuting: (isExecuting: boolean) => void;
   setResults: (results: any) => void;
-  addLog: (log: any) => void;
-  clearLogs: () => void;
   resetWorkflow: () => void;
   // Métodos do WorkflowBuilder
   buildCompleteWorkflow: () => any;
@@ -212,14 +195,6 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
     dispatch({ type: 'SET_EXECUTION_RESULTS', payload: results });
   };
 
-  const addLog = (log: any) => {
-    dispatch({ type: 'ADD_EXECUTION_LOG', payload: log });
-  };
-
-  const clearLogs = () => {
-    dispatch({ type: 'CLEAR_EXECUTION_LOGS' });
-  };
-
   const resetWorkflow = () => {
     dispatch({ type: 'RESET_WORKFLOW' });
   };
@@ -236,7 +211,7 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
 
   // Função auxiliar para validar tipos de entrada
   const isValidInputType = (type: string): type is InputType => {
-    return ['buscar_documento', 'id_da_defesa', 'do_estado', 'lista_de_origem'].includes(type);
+    return ['lista_de_origem','buscar_documento', 'id_da_defesa', 'do_estado'].includes(type);
   };
 
   // WorkflowContext.tsx - método buildCompleteWorkflow
@@ -288,6 +263,7 @@ export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
       const nodeBuilder = builder.addNode(nodeName)
         .setAgent(agentName)
         .setModel(node.llmModel || 'o3')
+        .setFerramentas(node.ferramentas)
         .setPrompt(node.prompt || '')
         .setOutputKey(`workflow_data.${nodeName}`);
       
@@ -377,8 +353,6 @@ const getAvailableOutputKeys = () => {
     deleteConnection,
     setExecuting,
     setResults,
-    addLog,
-    clearLogs,
     resetWorkflow,
     buildCompleteWorkflow,
     getNodeWorkflowData,

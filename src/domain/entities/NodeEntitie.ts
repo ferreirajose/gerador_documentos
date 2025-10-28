@@ -1,5 +1,5 @@
 
-export type InputType = 'buscar_documento' | 'id_da_defesa' | 'do_estado';
+export type InputType = 'lista_de_origem' | 'buscar_documento' | 'id_da_defesa' | 'do_estado';
 
 // um mapeamento nomeDeCampo → objeto { [inputType]: referência }
 export type InputDefinition = {
@@ -13,6 +13,7 @@ export default class NodeEntitie {
   nome: string;
   agente: string;
   modelo_llm: string;
+  ferramentas: Array<any>;
   prompt: string;
   chave_de_saida: string;
   entradas: InputDefinition;
@@ -21,6 +22,7 @@ export default class NodeEntitie {
     nome: string,
     agente: string,
     modelo_llm: string,
+    ferramentas: Array<any>,
     prompt: string,
     chave_de_saida: string,
     entradas: InputDefinition
@@ -28,6 +30,7 @@ export default class NodeEntitie {
     this.nome = nome;
     this.agente = agente;
     this.modelo_llm = modelo_llm;
+    this.ferramentas = ferramentas;
     this.prompt = prompt;
     this.chave_de_saida = chave_de_saida;
     this.entradas = entradas;
