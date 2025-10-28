@@ -20,6 +20,7 @@ import { llmModelsByProvider } from '@/data/llmodels';
 import { formatAgentName } from '@/libs/util';
 import WorkflowOutput from './common/WorkflowOutput';
 import { Node } from '@/types/nodes';
+import { FERRAMENTAS_DISPONIVEIS } from '@/data/ferramentas';
 
 const nodeTypes = [
   { value: 'entry', label: 'Entrada', icon: RiLoginCircleLine, color: 'bg-green-500' },
@@ -65,7 +66,8 @@ export default function NodeManager() {
     type: 'process' as 'entry' | 'process',
     llmModel: 'o3',
     prompt: '',
-     workflowData: {
+    ferramentas: [] as string[], //FERRAMENTAS NO NÍVEL PRINCIPAL
+    workflowData: {
       entradas: {} as Record<string, Record<string, string>>
     }
   });
@@ -83,6 +85,7 @@ export default function NodeManager() {
       type: 'process',
       llmModel: 'o3',
       prompt: '',
+      ferramentas: [],
       workflowData: { entradas: {} }
     });
     setEntradas([]);
@@ -90,7 +93,22 @@ export default function NodeManager() {
     setIsMultipleFiles(false);
   };
 
-  // ✅ NOVO: Função para adicionar entrada
+  // FUNÇÃO: Lidar com seleção/deseleção de ferramentas
+  const handleFerramentaChange = (ferramentaValue: string) => {
+    setFormData(prev => {
+      const ferramentasAtuais = prev.ferramentas || [];
+      const novasFerramentas = ferramentasAtuais.includes(ferramentaValue)
+        ? ferramentasAtuais.filter(f => f !== ferramentaValue) // Remover
+        : [...ferramentasAtuais, ferramentaValue]; // Adicionar
+
+      return {
+        ...prev,
+        ferramentas: novasFerramentas
+      };
+    });
+  };
+
+  // NOVO: Função para adicionar entrada
   const adicionarEntrada = () => {
     // Define o tipo padrão baseado no tipo do nó
     const tipoPadrao = formData.type === 'process' ? 'lista_de_origem' : 'buscar_documento';
@@ -154,6 +172,7 @@ export default function NodeManager() {
       type: node.type,
       llmModel: node.llmModel || 'o3',
       prompt: node.prompt || '',
+      ferramentas: node.ferramentas || [],
       workflowData: node.workflowData || { entradas: {} }
     });
 
@@ -682,8 +701,7 @@ export default function NodeManager() {
                   </div>
                 )}
               </div>
-            )}
-            
+            )}            
 
             <div data-testid="node-prompt">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -698,6 +716,34 @@ export default function NodeManager() {
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
+
+            
+              {/* ✅ SEÇÃO: Ferramentas */}
+              <div data-testid="node-tools">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Ferramentas
+                </label>
+                
+                <div className="space-y-2">
+                  {FERRAMENTAS_DISPONIVEIS.map((ferramenta) => (
+                    <div key={ferramenta.value} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`ferramenta-${ferramenta.value}`}
+                        checked={formData.ferramentas?.includes(ferramenta.value) || false}
+                        onChange={() => handleFerramentaChange(ferramenta.value)}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                      <label 
+                        htmlFor={`ferramenta-${ferramenta.value}`}
+                        className="ml-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                      >
+                        {ferramenta.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
             <div className="flex justify-end space-x-3 pt-4">
               <button

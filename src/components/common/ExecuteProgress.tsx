@@ -187,9 +187,9 @@ export function ExecuteProgress({
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-            Gerando Relatório Financeiro
-          </h1>
+          {/* <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+            Gerando de Relatório 
+          </h1> */}
 
           {/* Barra de Progresso */}
           <div className="mb-8">
@@ -241,11 +241,11 @@ export function ExecuteProgress({
                         <span className="font-medium text-gray-800 dark:text-gray-200">
                           {step.name}
                         </span>
-                        {/* {step.duration !== null && step.status === "completed" && (
+                        {step.duration !== null && step.status === "completed" && (
                           <span className="ml-2 text-xs text-gray-500">
                             ({formatDuration(step.duration)})
                           </span>
-                        )} */}
+                        )}
                       </div>
                     </div>
 

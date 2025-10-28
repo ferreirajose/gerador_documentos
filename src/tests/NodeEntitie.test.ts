@@ -10,6 +10,7 @@ describe("NodeEntitie", () => {
       "Node1",
       "Agent1",
       "Model1",
+      ['stf'],
       "Prompt1",
       "OutputKey1",
       {
@@ -25,6 +26,7 @@ describe("NodeEntitie", () => {
               'AuditorNode',
               'audit',
               'claude-3-7-sonnet@20250219',
+              ['buscar'],
               '## PERSONA',
               'workflow_data.analise_auditoria',
               {
@@ -51,6 +53,7 @@ describe("NodeEntitie", () => {
               'DefenseNode',
               'defense',
               'claude-3-7-sonnet@20250219',
+               ['buscar'],
               '## PERSONA',
               'workflow_data.analises_defesas',
               {
@@ -74,6 +77,7 @@ describe("NodeEntitie", () => {
               'EmptyNode',
               'empty',
               'gpt-4',
+              ['stf'],
               'prompt',
               'output',
               {}
@@ -87,6 +91,7 @@ describe("NodeEntitie", () => {
               'RelatorNode',
               'relator',
               'gpt-4',
+              ['stj'],
               '## PERSONA',
               'workflow_data.voto_relator',
               {

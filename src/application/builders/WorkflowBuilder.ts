@@ -20,6 +20,7 @@ export class WorkflowBuilder {
             nome,
             '', // agent
             '', // model
+            [],
             '', // prompt
             '', // outputKey
             {} // inputs - objeto vazio em vez de array
@@ -33,6 +34,7 @@ export class WorkflowBuilder {
             this.currentNode.nome,
             agent,
             this.currentNode.modelo_llm,
+            this.currentNode.ferramentas,
             this.currentNode.prompt,
             this.currentNode.chave_de_saida,
             this.currentNode.entradas
@@ -46,6 +48,7 @@ export class WorkflowBuilder {
             this.currentNode.nome,
             this.currentNode.agente,
             model,
+            this.currentNode.ferramentas,
             this.currentNode.prompt,
             this.currentNode.chave_de_saida,
             this.currentNode.entradas
@@ -59,6 +62,7 @@ export class WorkflowBuilder {
             this.currentNode.nome,
             this.currentNode.agente,
             this.currentNode.modelo_llm,
+            this.currentNode.ferramentas,
             prompt,
             this.currentNode.chave_de_saida,
             this.currentNode.entradas
@@ -72,8 +76,23 @@ export class WorkflowBuilder {
             this.currentNode.nome,
             this.currentNode.agente,
             this.currentNode.modelo_llm,
+            this.currentNode.ferramentas,
             this.currentNode.prompt,
             outputKey,
+            this.currentNode.entradas
+        );
+        return this;
+    }
+
+    public setFerramentas(ferramentas: Array<string>): WorkflowBuilder {
+        if (!this.currentNode) throw new Error('No tools selected');
+        this.currentNode = new NodeEntitie(
+            this.currentNode.nome,
+            this.currentNode.agente,
+            this.currentNode.modelo_llm,
+            ferramentas,
+            this.currentNode.prompt,
+            this.currentNode.chave_de_saida,
             this.currentNode.entradas
         );
         return this;
@@ -92,6 +111,7 @@ export class WorkflowBuilder {
             this.currentNode.nome,
             this.currentNode.agente,
             this.currentNode.modelo_llm,
+            this.currentNode.ferramentas,
             this.currentNode.prompt,
             this.currentNode.chave_de_saida,
             newInputs
