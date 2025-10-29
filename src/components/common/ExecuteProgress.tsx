@@ -1,4 +1,4 @@
-import { downloadMarkdown, renderMarkdown } from "@/libs/util";
+import { downloadMarkdown, formatDuration, renderMarkdown } from "@/libs/util";
 import { 
   RiTimeLine, 
   RiLoader4Line, 
@@ -20,21 +20,6 @@ interface ExecuteProgressProps {
   isLoading: boolean;
   erroCritico?: string | null;
   relatorioFinal?: string | null;
-}
-
-// Função auxiliar para formatar duração
-function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000);
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = seconds % 60;
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${remainingSeconds}s`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${remainingSeconds}s`;
-  }
-  return `${remainingSeconds}s`;
 }
 
 // Função para calcular a duração de um nó
@@ -167,10 +152,10 @@ export function ExecuteProgress({
     ...Array.from({ length: etapas.length }, (_, index) => {
       const stepNumber = index + 1;
       const duration = getGenericStepDuration(stepNumber);
-      
+      const nameEtapas = etapas[index];
       return {
         id: `etapa-${stepNumber}`,
-        name: `Etapa ${stepNumber}`,
+        name: nameEtapas.name,
         status: etapasConcluidas > index ? 'completed' : 'waiting',
         duration: duration
       };

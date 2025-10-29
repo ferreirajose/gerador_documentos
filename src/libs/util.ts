@@ -441,3 +441,18 @@ export function downloadMarkdown(content: string, filename: string = "Documento.
     }
   }
 }
+
+// Função auxiliar para formatar duração
+export function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${remainingSeconds}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${remainingSeconds}s`;
+  }
+  return `${remainingSeconds}s`;
+}
