@@ -15,7 +15,7 @@ export default function WorkflowExecution() {
     setExecuting,
     setResults,
     buildCompleteWorkflow,
-    clearSelectedFile
+    resetWorkflow
   } = useWorkFlow();
 
 
@@ -140,14 +140,6 @@ export default function WorkflowExecution() {
   }
 };
 
-
-   const resetExecution = () => {
-    setExecutionState('idle');
-    setExecuting(false);
-    setResults(null);
-    clearSelectedFile();
-  };
-
   const canExecute = state.nodes.length > 0 && executionState !== 'executing';
 
   // Determinar texto e estilo do botão baseado no estado
@@ -187,20 +179,19 @@ export default function WorkflowExecution() {
           <h2 className="text-2xl font-bold text-gray-900">Executar Workflow</h2>
           <p className="text-gray-600">Execute e monitore o processamento do seu workflow</p>
         </div>
-
+        
         <div className="flex items-center space-x-3">
-          {(state.executionLogs.length > 0 || state.selectedFile || executionState === 'error') && (
+         
             <button
-              onClick={resetExecution}
+              onClick={resetWorkflow}
               data-testid="reset-execution-button"
               disabled={executionState === 'executing'}
               className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50"
             >
               <i className="ri-close-line mr-2"></i>
-              Limpar
+              Iniciar Novo Workflow ?
             </button>
-          )}
-
+          
           <button
             onClick={executeWorkflow}
             data-testid="execute-workflow-button"
