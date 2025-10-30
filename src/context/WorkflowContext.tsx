@@ -1,146 +1,9 @@
-// import NodeEntitie from '@/domain/entities/NodeEntitie';
-// import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-// export interface NodeState {
-//   id: string;
-//   nome: string;
-//   categoria: 'entrada' | 'processamento' | 'saida';
-//   prompt: string;
-//   modelo_llm?: string;
-//   temperatura?: number;
-//   ferramentas: string[];
-//   saida: {
-//     nome: string;
-//     formato?: 'markdown' | 'json';
-//   };
-//   entradas: Array<{
-//     variavel_prompt: string;
-//     fonte: 'documento_anexado' | 'saida_no_anterior';
-//     documento?: string;
-//     no_origem?: string;
-//     processar_em_paralelo?: boolean;
-//   }>;
-// }
-
-// export interface Connection {
-//   id: string;
-//   origem: string;
-//   destino: string;
-// }
-
-// export interface WorkflowState {
-//   nodes: NodeState[];
-//   connections: Connection[];
-//   documentos_anexados: Record<string, string | string[]>;
-// }
-
-// // types/workflowActions.ts
-// export type WorkflowAction =
-//   | { type: 'ADD_NODE'; payload: NodeState }
-//   | { type: 'DELETE_NODE'; payload: string }
-//   | { type: 'UPDATE_NODE'; payload: { id: string; updates: Partial<NodeState> } } // Mude para NodeState
-
-// // reducers/workflowReducer.ts
-
-// export const initialState: WorkflowState = {
-//   nodes: [],
-//   connections: [],
-//   documentos_anexados: {}
-// };
-
-// export function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
-//   switch (action.type) {
-//     // ========== NODE ACTIONS ==========
-//     case 'ADD_NODE':
-//       return {
-//         ...state,
-//         nodes: [...state.nodes, action.payload]
-//       };
-
-//     case 'UPDATE_NODE':
-//       return {
-//         ...state,
-//         nodes: state.nodes.map(node =>
-//           node.id === action.payload.id
-//             ? { ...node, ...action.payload.updates }
-//             : node
-//         )
-//       };
-
-//     case 'DELETE_NODE':
-//       return {
-//         ...state,
-//         nodes: state.nodes.filter(node => node.id !== action.payload),
-//         connections: state.connections.filter(
-//           conn => conn.origem !== action.payload && conn.destino !== action.payload
-//         ),
-//       };
-
-//     default:
-//       return state;
-//   }
-// }
-
-// // contexts/WorkflowContext.tsx
-// interface WorkflowContextType {
-//   state: WorkflowState;
-//   dispatch: React.Dispatch<WorkflowAction>;
-//   // Node actions
-//   addNode: (node: NodeState) => void;
-//   deleteNode: (id: string) => void;
-//   updateNode: (id: string, updates: Partial<NodeState>) => void; // Mude para NodeState
-
-// }
-
-// const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined);
-
-// export function WorkflowProvider({ children }: { children: ReactNode }) {
-//   const [state, dispatch] = useReducer(workflowReducer, initialState);
-
-//   // ========== NODE ACTIONS ==========
-//   const addNode = (node: NodeState) => {
-//     dispatch({type: 'ADD_NODE', payload: {...node, id: node.id}});
-//   };
-
-//   const updateNode = (id: string, updates: Partial<NodeState>) => {
-//     dispatch({ type: 'UPDATE_NODE', payload: { id, updates } });
-//   };
-
-//   const deleteNode = (id: string) => {
-//     dispatch({ type: 'DELETE_NODE', payload: id });
-//   };
-
-//   const value: WorkflowContextType = {
-//     state,
-//     dispatch,
-//     // Node actions
-//     addNode,
-//     deleteNode,
-//     updateNode
-
-//   };
-
-//   return (
-//     <WorkflowContext.Provider value={value}>
-//       {children}
-//     </WorkflowContext.Provider>
-//   );
-// }
-
-// export function useWorkflow() {
-//   const context = useContext(WorkflowContext);
-//   if (context === undefined) {
-//     throw new Error('useWorkflow must be used within a WorkflowProvider');
-//   }
-//   return context;
-// }
-
-// V2
-
 import NodeEntitie from '@/domain/entities/NodeEntitie';
 import { Aresta } from '@/domain/entities/Aresta';
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { Workflow } from '@/domain/entities/Workflow';
 import { Grafo } from '@/domain/entities/Grafo';
+import { ResultadoFinal, SaidaFinal } from '@/domain/entities/ResultadoFinal';
 
 // Use as interfaces das entidades de domínio
 export interface NodeState extends Omit<NodeEntitie, 'validate'> {
@@ -155,6 +18,7 @@ export interface WorkflowState {
   nodes: NodeState[];
   connections: Connection[];
   documentos_anexados: Record<string, string | string[]>;
+  resultado_final?: ResultadoFinal;
 }
 
 // Atualize os tipos de ação
@@ -164,12 +28,16 @@ export type WorkflowAction =
   | { type: 'UPDATE_NODE'; payload: { id: string; updates: Partial<NodeState> } }
   | { type: 'ADD_CONNECTION'; payload: Connection }
   | { type: 'DELETE_CONNECTION'; payload: string }
-  | { type: 'UPDATE_CONNECTION'; payload: { id: string; origem: string; destino: string } };
+  | { type: 'UPDATE_CONNECTION'; payload: { id: string; origem: string; destino: string } }
+  | { type: 'SET_RESULTADO_FINAL'; payload: ResultadoFinal }
+  |{ type: 'UPDATE_RESULTADO_FINAL'; payload: SaidaFinal[] };
+
 
 export const initialState: WorkflowState = {
   nodes: [],
   connections: [],
-  documentos_anexados: {}
+  documentos_anexados: {},
+  resultado_final: new ResultadoFinal([])
 };
 
 export function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
@@ -221,6 +89,18 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         connections: state.connections.filter(conn => conn.id !== action.payload)
       };
 
+    case 'SET_RESULTADO_FINAL':
+      return {
+        ...state,
+        resultado_final: action.payload
+      };
+
+    case 'UPDATE_RESULTADO_FINAL':
+      return {
+        ...state,
+        resultado_final: new ResultadoFinal(action.payload)
+      };
+
     default:
       return state;
   }
@@ -237,7 +117,9 @@ interface WorkflowContextType {
   addConnection: (connection: Connection) => void;
   deleteConnection: (id: string) => void;
   updateConnection: (id: string, origem: string, destino: string) => void;
-
+   // Resultado Final actions
+  setResultadoFinal: (saidas: SaidaFinal[]) => void;
+  updateResultadoFinal: (saidas: SaidaFinal[]) => void;
   // Workflow export
   getWorkflowJSON: () => string;
   getWorkflowObject: () => Workflow;
@@ -271,6 +153,15 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
 
   const deleteConnection = (id: string) => {
     dispatch({ type: 'DELETE_CONNECTION', payload: id });
+  };
+
+    // No WorkflowProvider, adicione estas funções:
+  const setResultadoFinal = (saidas: SaidaFinal[]) => {
+    dispatch({ type: 'SET_RESULTADO_FINAL', payload: new ResultadoFinal(saidas) });
+  };
+
+  const updateResultadoFinal = (saidas: SaidaFinal[]) => {
+    dispatch({ type: 'UPDATE_RESULTADO_FINAL', payload: saidas });
   };
 
 
@@ -374,7 +265,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     const arestas = state.connections.map(convertToAresta);
     const grafo = new Grafo(nodeEntities, arestas);
 
-    return new Workflow(state.documentos_anexados, grafo);
+    return new Workflow(state.documentos_anexados, grafo, state.resultado_final);
   };
 
   // Obter workflow como JSON string
@@ -402,6 +293,10 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     addConnection,
     deleteConnection,
     updateConnection,
+
+    // Resultado Final actions
+    setResultadoFinal,
+    updateResultadoFinal,
 
     // Workflow export
     getWorkflowJSON,
