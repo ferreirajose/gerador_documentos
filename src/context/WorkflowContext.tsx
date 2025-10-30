@@ -1,193 +1,70 @@
-// import NodeEntitie from '@/domain/entities/NodeEntitie';
-// import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-// export interface NodeState {
-//   id: string;
-//   nome: string;
-//   categoria: 'entrada' | 'processamento' | 'saida';
-//   prompt: string;
-//   modelo_llm?: string;
-//   temperatura?: number;
-//   ferramentas: string[];
-//   saida: {
-//     nome: string;
-//     formato?: 'markdown' | 'json';
-//   };
-//   entradas: Array<{
-//     variavel_prompt: string;
-//     fonte: 'documento_anexado' | 'saida_no_anterior';
-//     documento?: string;
-//     no_origem?: string;
-//     processar_em_paralelo?: boolean;
-//   }>;
-// }
-
-// export interface Connection {
-//   id: string;
-//   origem: string;
-//   destino: string;
-// }
-
-// export interface WorkflowState {
-//   nodes: NodeState[];
-//   connections: Connection[];
-//   documentos_anexados: Record<string, string | string[]>;
-// }
-
-// // types/workflowActions.ts
-// export type WorkflowAction =
-//   | { type: 'ADD_NODE'; payload: NodeState }
-//   | { type: 'DELETE_NODE'; payload: string }
-//   | { type: 'UPDATE_NODE'; payload: { id: string; updates: Partial<NodeState> } } // Mude para NodeState
-
-// // reducers/workflowReducer.ts
-
-// export const initialState: WorkflowState = {
-//   nodes: [],
-//   connections: [],
-//   documentos_anexados: {}
-// };
-
-// export function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
-//   switch (action.type) {
-//     // ========== NODE ACTIONS ==========
-//     case 'ADD_NODE':
-//       return {
-//         ...state,
-//         nodes: [...state.nodes, action.payload]
-//       };
-
-//     case 'UPDATE_NODE':
-//       return {
-//         ...state,
-//         nodes: state.nodes.map(node =>
-//           node.id === action.payload.id
-//             ? { ...node, ...action.payload.updates }
-//             : node
-//         )
-//       };
-
-//     case 'DELETE_NODE':
-//       return {
-//         ...state,
-//         nodes: state.nodes.filter(node => node.id !== action.payload),
-//         connections: state.connections.filter(
-//           conn => conn.origem !== action.payload && conn.destino !== action.payload
-//         ),
-//       };
-
-//     default:
-//       return state;
-//   }
-// }
-
-// // contexts/WorkflowContext.tsx
-// interface WorkflowContextType {
-//   state: WorkflowState;
-//   dispatch: React.Dispatch<WorkflowAction>;
-//   // Node actions
-//   addNode: (node: NodeState) => void;
-//   deleteNode: (id: string) => void;
-//   updateNode: (id: string, updates: Partial<NodeState>) => void; // Mude para NodeState
-
-// }
-
-// const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined);
-
-// export function WorkflowProvider({ children }: { children: ReactNode }) {
-//   const [state, dispatch] = useReducer(workflowReducer, initialState);
-
-//   // ========== NODE ACTIONS ==========
-//   const addNode = (node: NodeState) => {
-//     dispatch({type: 'ADD_NODE', payload: {...node, id: node.id}});
-//   };
-
-//   const updateNode = (id: string, updates: Partial<NodeState>) => {
-//     dispatch({ type: 'UPDATE_NODE', payload: { id, updates } });
-//   };
-
-//   const deleteNode = (id: string) => {
-//     dispatch({ type: 'DELETE_NODE', payload: id });
-//   };
-
-//   const value: WorkflowContextType = {
-//     state,
-//     dispatch,
-//     // Node actions
-//     addNode,
-//     deleteNode,
-//     updateNode
-
-//   };
-
-//   return (
-//     <WorkflowContext.Provider value={value}>
-//       {children}
-//     </WorkflowContext.Provider>
-//   );
-// }
-
-// export function useWorkflow() {
-//   const context = useContext(WorkflowContext);
-//   if (context === undefined) {
-//     throw new Error('useWorkflow must be used within a WorkflowProvider');
-//   }
-//   return context;
-// }
-
-// V2
-
-import NodeEntitie from '@/domain/entities/NodeEntitie';
-import { Aresta } from '@/domain/entities/Aresta';
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { Workflow } from '@/domain/entities/Workflow';
-import { Grafo } from '@/domain/entities/Grafo';
+import { WorkflowBuilder } from '../application/builders/WorkflowBuilder';
+import { Node } from '@/types/nodes';
+import { formatAgentName, substituirReferenciasEntradas } from '@/libs/util';
+import { InputType } from '@/domain/entities/NodeEntitie';
 
-// Use as interfaces das entidades de domínio
-export interface NodeState extends Omit<NodeEntitie, 'validate'> {
-  id: string;
-}
 
-export interface Connection extends Aresta {
+export interface Connection {
   id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  createdAt: Date;
+  workflowData?: any;
 }
 
 export interface WorkflowState {
-  nodes: NodeState[];
+  nodes: Node[];
   connections: Connection[];
-  documentos_anexados: Record<string, string | string[]>;
+  isExecuting: boolean;
+  executionResults: any;
+  executionLogs: any[];
+  selectedFile: any[]
 }
 
-// Atualize os tipos de ação
-export type WorkflowAction =
-  | { type: 'ADD_NODE'; payload: NodeState }
+// Ações
+type WorkflowAction =
+  | { type: 'ADD_NODE'; payload: Omit<Node, 'id' | 'createdAt'> }
+  | { type: 'UPDATE_NODE'; payload: { id: string; updates: Partial<Node> } }
   | { type: 'DELETE_NODE'; payload: string }
-  | { type: 'UPDATE_NODE'; payload: { id: string; updates: Partial<NodeState> } }
-  | { type: 'ADD_CONNECTION'; payload: Connection }
+  | { type: 'ADD_CONNECTION'; payload: Omit<Connection, 'id' | 'createdAt'> }
+  | { type: 'UPDATE_CONNECTION'; payload: { id: string; updates: Partial<Connection> } }
   | { type: 'DELETE_CONNECTION'; payload: string }
-  | { type: 'UPDATE_CONNECTION'; payload: { id: string; origem: string; destino: string } };
+  | { type: 'SET_EXECUTION_STATE'; payload: boolean }
+  | { type: 'SET_EXECUTION_RESULTS'; payload: any }
+  | { type: 'RESET_WORKFLOW' }
+  | { type: 'SET_SELECTED_FILE'; payload: any[] | null } // MUDANÇA: Agora aceita array
 
-export const initialState: WorkflowState = {
+// Estado inicial
+const initialState: WorkflowState = {
   nodes: [],
   connections: [],
-  documentos_anexados: {}
+  isExecuting: false,
+  executionResults: null,
+  executionLogs: [],
+  selectedFile: []
 };
 
-export function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
+// Reducer
+function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
   switch (action.type) {
     case 'ADD_NODE':
+      const newNode: Node = {
+        ...action.payload,
+        id: `node_${Date.now()}`,
+        createdAt: new Date(),
+      };
       return {
         ...state,
-        nodes: [...state.nodes, action.payload]
+        nodes: [...state.nodes, newNode],
       };
 
     case 'UPDATE_NODE':
       return {
         ...state,
         nodes: state.nodes.map(node =>
-          node.id === action.payload.id
-            ? { ...node, ...action.payload.updates }
-            : node
-        )
+          node.id === action.payload.id ? { ...node, ...action.payload.updates } : node
+        ),
       };
 
     case 'DELETE_NODE':
@@ -195,30 +72,55 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         ...state,
         nodes: state.nodes.filter(node => node.id !== action.payload),
         connections: state.connections.filter(
-          conn => conn.origem !== action.payload && conn.destino !== action.payload
+          conn => conn.fromNodeId !== action.payload && conn.toNodeId !== action.payload
         ),
       };
 
     case 'ADD_CONNECTION':
+      const newConnection: Connection = {
+        ...action.payload,
+        id: `conn_${Date.now()}`,
+        createdAt: new Date(),
+      };
       return {
         ...state,
-        connections: [...state.connections, action.payload]
+        connections: [...state.connections, newConnection],
       };
 
     case 'UPDATE_CONNECTION':
       return {
         ...state,
         connections: state.connections.map(conn =>
-          conn.id === action.payload.id
-            ? { ...conn, origem: action.payload.origem, destino: action.payload.destino }
-            : conn
-        )
+          conn.id === action.payload.id ? { ...conn, ...action.payload.updates } : conn
+        ),
       };
 
     case 'DELETE_CONNECTION':
       return {
         ...state,
-        connections: state.connections.filter(conn => conn.id !== action.payload)
+        connections: state.connections.filter(conn => conn.id !== action.payload),
+      };
+
+    case 'SET_EXECUTION_STATE':
+      return {
+        ...state,
+        isExecuting: action.payload,
+      };
+
+    case 'SET_EXECUTION_RESULTS':
+      return {
+        ...state,
+        executionResults: action.payload,
+      };
+
+    case 'RESET_WORKFLOW':
+      return {
+        ...initialState,
+      };
+    case 'SET_SELECTED_FILE':
+      return {
+        ...state,
+        selectedFile: action.payload || [],
       };
 
     default:
@@ -226,187 +128,241 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
   }
 }
 
-interface WorkflowContextType {
+// Context
+const WorkflowContext = createContext<{
   state: WorkflowState;
   dispatch: React.Dispatch<WorkflowAction>;
-  // Node actions
-  addNode: (node: NodeState) => void;
+  // Métodos auxiliares
+  createNode: (nodeData: Omit<Node, 'id' | 'createdAt'>) => void;
+  updateNode: (id: string, updates: Partial<Node>) => void;
   deleteNode: (id: string) => void;
-  updateNode: (id: string, updates: Partial<NodeState>) => void;
-  // Connection actions
-  addConnection: (connection: Connection) => void;
+  createConnection: (connectionData: Omit<Connection, 'id' | 'createdAt'>) => void;
+  updateConnection: (id: string, updates: Partial<Connection>) => void;
   deleteConnection: (id: string) => void;
-  updateConnection: (id: string, origem: string, destino: string) => void;
+  setExecuting: (isExecuting: boolean) => void;
+  setResults: (results: any) => void;
+  resetWorkflow: () => void;
+  // Métodos do WorkflowBuilder
+  buildCompleteWorkflow: () => any;
+  getNodeWorkflowData: (nodeId: string) => any;
+  getConnectionWorkflowData: (connectionId: string) => any;
 
-  // Workflow export
-  getWorkflowJSON: () => string;
-  getWorkflowObject: () => Workflow;
-  validateWorkflow: () => { isValid: boolean; errors: string[] };
+  getAvailableDocumentKeys: () => any;
+  getAvailableOutputKeys: () => any;
+  // NOVOS métodos para arquivo selecionado
+  setSelectedFile: (objFile: []) => void;
+  clearSelectedFile: () => void;
+} | null>(null);
+
+// Provider
+interface WorkFlowProviderProps {
+  children: ReactNode;
 }
 
-const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined);
-
-export function WorkflowProvider({ children }: { children: ReactNode }) {
+export function WorkFlowProvider({ children }: WorkFlowProviderProps) {
   const [state, dispatch] = useReducer(workflowReducer, initialState);
 
-  const addNode = (node: NodeState) => {
-    dispatch({ type: 'ADD_NODE', payload: { ...node, id: node.id } });
+  // Métodos auxiliares
+  const createNode = (nodeData: Omit<Node, 'id' | 'createdAt'>) => {
+    dispatch({ type: 'ADD_NODE', payload: nodeData });
   };
 
-  const updateNode = (id: string, updates: Partial<NodeState>) => {
+  const updateNode = (id: string, updates: Partial<Node>) => {
     dispatch({ type: 'UPDATE_NODE', payload: { id, updates } });
   };
-  
+
   const deleteNode = (id: string) => {
     dispatch({ type: 'DELETE_NODE', payload: id });
   };
 
-  const addConnection = (connection: Connection) => {
-    dispatch({ type: 'ADD_CONNECTION', payload: connection });
+  const createConnection = (connectionData: Omit<Connection, 'id' | 'createdAt'>) => {
+    dispatch({ type: 'ADD_CONNECTION', payload: connectionData });
   };
 
-  const updateConnection = (id: string, origem: string, destino: string) => {
-    dispatch({ type: 'UPDATE_CONNECTION', payload: { id, origem, destino } });
+  const updateConnection = (id: string, updates: Partial<Connection>) => {
+    dispatch({ type: 'UPDATE_CONNECTION', payload: { id, updates } });
   };
 
   const deleteConnection = (id: string) => {
     dispatch({ type: 'DELETE_CONNECTION', payload: id });
   };
 
-
-   // Converter NodeState para NodeEntitie
-  const convertToNodeEntitie = (nodeState: NodeState): NodeEntitie => {
-    return new NodeEntitie(
-      nodeState.nome,
-      nodeState.categoria,
-      nodeState.prompt,
-      nodeState.saida,
-      nodeState.entradas,
-      nodeState.modelo_llm,
-      nodeState.temperatura,
-      nodeState.ferramentas
-    );
+  const setExecuting = (isExecuting: boolean) => {
+    dispatch({ type: 'SET_EXECUTION_STATE', payload: isExecuting });
   };
 
-  // Converter Connection para Aresta
-  // const convertToAresta = (connection: Connection): Aresta => {
-  //   return new Aresta(connection.origem, connection.destino);
-  // };
-
-  // Converter Connection para Aresta (usando nomes em vez de IDs)
-  const convertToAresta = (connection: Connection): Aresta => {
-    const origemNode = state.nodes.find(node => node.id === connection.origem);
-    const destinoNode = state.nodes.find(node => node.id === connection.destino);
-    
-    if (!origemNode) {
-      throw new Error(`Nó de origem com ID '${connection.origem}' não encontrado`);
-    }
-    
-    // Para destino 'END', usar 'END' diretamente
-    const destino = connection.destino === 'END' ? 'END' : (destinoNode?.nome || connection.destino);
-    
-    return new Aresta(origemNode.nome, destino);
+  const setResults = (results: any) => {
+    dispatch({ type: 'SET_EXECUTION_RESULTS', payload: results });
   };
 
-  // Validar workflow
-  const validateWorkflow = (): { isValid: boolean; errors: string[] } => {
-    const errors: string[] = [];
+  const resetWorkflow = () => {
+    dispatch({ type: 'RESET_WORKFLOW' });
+  };
 
-    try {
-      // Verificar se há nós
-      if (state.nodes.length === 0) {
-        errors.push('Workflow deve ter pelo menos um nó');
-      }
+  // NOVOS métodos para arquivo selecionado
+  // @TODO DEFINIR TIPO CORRETOR E REMOVE any
+  const setSelectedFile = (file: any) => {
+    dispatch({ type: 'SET_SELECTED_FILE', payload: file });
+  };
 
-      // Verificar se há pelo menos um nó de entrada
-      const entradaNodes = state.nodes.filter(node => node.categoria === 'entrada');
-      if (entradaNodes.length === 0) {
-        errors.push('Workflow deve ter pelo menos um nó de categoria "entrada"');
-      }
+  const clearSelectedFile = () => {
+    dispatch({ type: 'SET_SELECTED_FILE', payload: null });
+  };
 
-      // Verificar se há conexões
-      if (state.connections.length === 0) {
-        errors.push('Workflow deve ter pelo menos uma conexão');
-      }
+  // Função auxiliar para validar tipos de entrada
+  const isValidInputType = (type: string): type is InputType => {
+    return ['lista_de_origem','buscar_documento', 'id_da_defesa', 'do_estado'].includes(type);
+  };
 
-      // Verificar se há conexão para END
-      const hasEndConnection = state.connections.some(conn => conn.destino === 'END');
-      if (!hasEndConnection) {
-        errors.push('Workflow deve terminar com uma conexão para "END"');
-      }
+  // WorkflowContext.tsx - método buildCompleteWorkflow
+  const buildCompleteWorkflow = () => {
+    const builder = new WorkflowBuilder();
+    
+    // Configurar ponto de entrada
+    const entryNodes = state.nodes.filter(node => node.type === 'entry');
+    
+    // ✅ NOVA LÓGICA: Criar objeto documentos apenas se houver arquivos selecionados
+    if (entryNodes.length > 0 && state.selectedFile && state.selectedFile.length > 0) {
+      const documentos: Record<string, any> = {};
+      
+      entryNodes.forEach((entryNode) => {
+        const nodeName = formatAgentName(entryNode.name);
 
-      // Validar nós individuais
-      state.nodes.forEach(node => {
-        try {
-          const nodeEntity = convertToNodeEntitie(node);
-          nodeEntity.validate();
-        } catch (error) {
-          errors.push(`Nó "${node.nome}": ${error.message}`);
+        // NOVA LÓGICA: Verificar configuração de múltiplos arquivos do nó
+        const shouldUseAsList = entryNode.workflowData?.isMultipleFiles === true;
+        
+        if (shouldUseAsList) {
+          // LISTA: Para múltiplos arquivos - pega TODOS os UUIDs
+          documentos[nodeName] = state.selectedFile
+            .map((item: any) => item.uuid)
+            .filter((uuid: string) => uuid); // Filtra UUIDs válidos
+          
+        } else {
+          // ÚNICO: Para arquivo único - pega apenas o PRIMEIRO UUID
+          documentos[nodeName] = state.selectedFile[0]?.uuid || '';
         }
       });
 
-      // Validar conexões
-      const nodeEntities = state.nodes.map(convertToNodeEntitie);
-      state.connections.forEach(connection => {
-        try {
-          const aresta = convertToAresta(connection);
-          aresta.validate(nodeEntities);
-        } catch (error) {
-          errors.push(`Conexão ${connection.origem} → ${connection.destino}: ${error.message}`);
-        }
-      });
-
-    } catch (error) {
-      errors.push(`Erro na validação: ${error.message}`);
+      // ADICIONAR: Só seta documentos se houver conteúdo
+      if (Object.keys(documentos).length > 0) {
+        builder.setDocumentos(documentos);
+      }
     }
 
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  };
-
-
-
-  // Obter workflow como objeto
-  const getWorkflowObject = (): Workflow => {
-    const nodeEntities = state.nodes.map(convertToNodeEntitie);
-    const arestas = state.connections.map(convertToAresta);
-    const grafo = new Grafo(nodeEntities, arestas);
-
-    return new Workflow(state.documentos_anexados, grafo);
-  };
-
-  // Obter workflow como JSON string
-  const getWorkflowJSON = (): string => {
-    try {
-      const workflow = getWorkflowObject();
-
-      console.log(workflow, 'workflow')
-      return workflow.toJsonString();
-    } catch (error) {
-      console.error('Erro ao converter workflow para JSON:', error);
-      return JSON.stringify({
-        error: 'Erro ao converter workflow para JSON',
-        message: error.message
-      }, null, 2);
+    // Configurar ponto de entrada
+    if (entryNodes.length > 0) {
+      builder.setPontoDeEntrada(entryNodes.map(node => formatAgentName(node.name)));
     }
+
+    // Adicionar todos os nós
+    state.nodes.forEach(node => {
+      const nodeData = node.workflowData || {};
+      const agentName = formatAgentName(node.name);
+      const nodeName = formatAgentName(node.name);
+
+      const nodeBuilder = builder.addNode(nodeName)
+        .setAgent(agentName)
+        .setModel(node.llmModel || 'o3')
+        .setFerramentas(node.ferramentas)
+        .setPrompt(node.prompt || '')
+        .setOutputKey(`workflow_data.${nodeName}`);
+      
+      // NOVA LÓGICA: Adicionar entradas apenas se existirem documentos
+      if (state.selectedFile && state.selectedFile.length > 0 && nodeData.entradas && typeof nodeData.entradas === 'object') {
+        Object.entries(nodeData.entradas).forEach(([nomeCampo, definicao]) => {
+          if (definicao && typeof definicao === 'object') {
+            Object.entries(definicao).forEach(([tipo, referencia]) => {
+              if (isValidInputType(tipo) && referencia) {
+                nodeBuilder.addEntrada(nomeCampo, tipo as InputType, `doc.${referencia}` as string);
+              }
+            });
+          }
+        });
+      }
+
+      nodeBuilder.endNode();
+    });
+    
+    // Adicionar todas as conexões usando NOMES dos nós
+    state.connections.forEach(connection => {
+      const fromNode = state.nodes.find(n => n.id === connection.fromNodeId);
+      const toNode = state.nodes.find(n => n.id === connection.toNodeId);
+      
+      if (fromNode && toNode) {
+        builder.addEdge(formatAgentName(fromNode.name), formatAgentName(toNode.name));
+      }
+    });
+
+    // Configurar template de saída
+    const outputTemplate = state.nodes.map(node => 
+      `{workflow_data.${formatAgentName(node.name)}}\n\n`
+    ).join('').trimEnd();
+
+    builder.setModificarSaida('relatorio_final', outputTemplate);
+
+    // Gerar o workflow JSON
+    const workflowJson = builder.toJSON();
+    // ✅ FUNÇÃO AUXILIAR: Substituir referências
+    const workflowJson1 = substituirReferenciasEntradas(workflowJson);
+    return workflowJson1;
+  };
+  
+  const getNodeWorkflowData = (nodeId: string) => {
+    const node = state.nodes.find(n => n.id === nodeId);
+    return node?.workflowData || null;
   };
 
-  const value: WorkflowContextType = {
+  const getConnectionWorkflowData = (connectionId: string) => {
+    const connection = state.connections.find(c => c.id === connectionId);
+    return connection?.workflowData || null;
+  };
+
+  // Método para obter as chaves disponíveis dos documentos
+const getAvailableDocumentKeys = () => {
+  const entryNodes = state.nodes.filter(node => node.type === 'entry');
+  const documentKeys: string[] = [];
+  
+  entryNodes.forEach((entryNode) => {
+    const nodeName = formatAgentName(entryNode.name);
+    documentKeys.push(nodeName);
+  });
+  
+  return documentKeys;
+};
+
+const getAvailableOutputKeys = () => {
+  const outputKeys: string[] = [];
+  
+  state.nodes.forEach(node => {
+    const nodeName = formatAgentName(node.name);
+    outputKeys.push(`workflow_data.${nodeName}`);
+  });
+  
+  return outputKeys;
+};
+
+
+  const value = {
     state,
     dispatch,
-    addNode,
-    deleteNode,
+    createNode,
     updateNode,
-    addConnection,
-    deleteConnection,
+    deleteNode,
+    createConnection,
     updateConnection,
+    deleteConnection,
+    setExecuting,
+    setResults,
+    resetWorkflow,
+    buildCompleteWorkflow,
+    getNodeWorkflowData,
+    getConnectionWorkflowData,
 
-    // Workflow export
-    getWorkflowJSON,
-    getWorkflowObject,
-    validateWorkflow
+    setSelectedFile, // ← NOVO
+    clearSelectedFile , // ← NOVO
+
+    getAvailableDocumentKeys,
+    getAvailableOutputKeys
   };
 
   return (
@@ -416,10 +372,11 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useWorkflow() {
+// Hook personalizado
+export function useWorkFlow() {
   const context = useContext(WorkflowContext);
-  if (context === undefined) {
-    throw new Error('useWorkflow must be used within a WorkflowProvider');
+  if (!context) {
+    throw new Error('useWorkFlow deve ser usado dentro de um WorkFlowProvider');
   }
   return context;
 }
