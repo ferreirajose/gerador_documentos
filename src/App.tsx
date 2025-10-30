@@ -3,12 +3,12 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import './App.css'
 import Dashboard from './Dashboard'
 import { ThemeProvider } from "./components/common/theme-provider"
-import { WorkFlowProvider } from './context/WorkflowContext'
+import { WorkflowProvider } from './context/WorkflowContext'
 
 function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="app-theme">
-      <WorkFlowProvider>
+      <WorkflowProvider>
         <Router>
           <Routes>
             {/* <Route path="/home" element={<Home />} /> */}
@@ -16,7 +16,7 @@ function App() {
             {/* Adicione outras rotas conforme necessário */}
           </Routes>
         </Router>
-      </WorkFlowProvider>
+      </WorkflowProvider>
     </ThemeProvider>
   )
 }
