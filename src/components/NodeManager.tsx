@@ -1,29 +1,54 @@
-// NodeManager.tsx
+// NodeManager.tsx (atualizado)
 import { RiAddLine, RiCloseLine } from "@remixicon/react";
 import { useControllerNode } from "@/hooks/useControllerNode";
-import { NodeForm } from "./forms/NodeForm";
+import { NodeFormCreate } from "./forms/NodeFormCreate";
 import { ListNode } from "./forms/ListNode";
 import { useWorkflow } from "@/context/WorkflowContext";
+import { NodeFormEdit } from "./forms/NodeFormEdit";
+import { useNodeFormEditController } from "@/hooks/useNodeFormEditController";
+import { useEffect, useState } from "react";
+import WorkflowOutput from "./common/WorkflowOutput";
 
 export default function NodeManager() {
+  const [isWorkflowVisible, setIsWorkflowVisible] = useState(true); // ou false se quiser iniciar oculto
 
   const {
     showCreateForm,
     handleCreateNode,
     handleCloseForm
-  } = useControllerNode()
+  } = useControllerNode();
 
-  const { state } = useWorkflow();
+  const { state, deleteNode } = useWorkflow();
+  const { 
+    startEdit, 
+    saveEdit, 
+    editingNode, 
+    showEditForm,
+    closeForm 
+  } = useNodeFormEditController();
 
-  // Função para editar nó (pode ser expandida posteriormente)
+  // Função para editar nó
   const handleEditNode = (nodeId: string) => {
-    console.log('Editar nó:', nodeId);
+      console.log('Iniciando edição do nó:', nodeId);
+
+    startEdit(nodeId);
   };
 
   // Função para excluir nó
   const handleDeleteNode = (nodeId: string) => {
-    console.log(nodeId)
+    deleteNode(nodeId);
   };
+
+  // Fechar qualquer formulário (criação ou edição)
+  const handleCloseAnyForm = () => {
+    handleCloseForm();
+    closeForm();
+  };
+
+  // Adicione este useEffect para debug
+useEffect(() => {
+  console.log('Estado atual do workflow:', state);
+}, [state]);
 
   return (
     <div className="space-y-6">
@@ -44,7 +69,7 @@ export default function NodeManager() {
         </button>
       </div>
 
-      {/* Create/Edit Form */}
+      {/* Create Form */}
       {showCreateForm && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
@@ -52,24 +77,58 @@ export default function NodeManager() {
               Criar Novo Nó
             </h3>
             <button
-              onClick={handleCloseForm}
+              onClick={handleCloseAnyForm}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               <RiCloseLine className="text-xl" />
             </button>
           </div>
 
-          <NodeForm 
+          <NodeFormCreate
             state={state}
-            onCloseForm={handleCloseForm} />
+            onCloseForm={handleCloseAnyForm}
+          />
         </div>
       )}
 
-      <ListNode 
+      {/* Edit Form */}
+      {showEditForm && editingNode && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Editar Nó: {editingNode.nome}
+            </h3>
+            <button
+              onClick={closeForm}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              <RiCloseLine className="text-xl" />
+            </button>
+          </div>
+
+          <NodeFormEdit
+            state={state}
+            onCloseForm={closeForm}
+            // Você precisará adaptar o NodeFormEdit para aceitar dados iniciais
+            initialData={editingNode}
+            onSave={saveEdit}
+          />
+        </div>
+      )}
+
+      <ListNode
         state={state}
         onOpenForm={handleCreateNode}
         onEditNode={handleEditNode}
         onDeleteNode={handleDeleteNode}
       />
+
+      {/* Output do Workflow - só mostra se houver nós */}
+      {state.nodes.length > 0 && (
+        <WorkflowOutput
+          isWorkflowVisible={isWorkflowVisible}
+          setIsWorkflowVisible={setIsWorkflowVisible}
+        />
+      )}
+
     </div>
-  )
+  );
 }
