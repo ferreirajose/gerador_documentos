@@ -10,10 +10,10 @@ import { RiBracesLine } from '@remixicon/react';
   onCloseForm: () => void;
 }
 
-export function NodeForm({ state, onCloseForm }: NodeFormProps) {
+export function NodeFormCreate({ state, onCloseForm }: NodeFormProps) {
   const {
     formData,
-     showVariableSelector,
+    showVariableSelector,
     promptTextareaRef,
     getAvailableVariables,
     setShowVariableSelector,
@@ -27,7 +27,6 @@ export function NodeForm({ state, onCloseForm }: NodeFormProps) {
     updateSaida,
   } = useNodeFormController(onCloseForm);
 
-  console.log(state)
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
