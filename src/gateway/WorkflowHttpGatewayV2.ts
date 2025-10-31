@@ -1,8 +1,8 @@
 // WorkflowHttpGatewayV2.ts
-import { DataResponse } from "@/types/process-docs";
 import HttpClient from "@/infra/HttpClient";
 import WorkflowGateway from "./WorkflowGateway";
-import { GerarDocCallbacks } from "@/types/nodes";
+import { GerarDocCallbacks } from "@/types/node";
+import { DataResponse } from "@/types/process-docs";
 
 export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
   constructor(

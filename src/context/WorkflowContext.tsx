@@ -231,7 +231,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         try {
           const nodeEntity = convertToNodeEntitie(node);
           nodeEntity.validate();
-        } catch (error) {
+        } catch (error: any) {
           errors.push(`Nó "${node.nome}": ${error.message}`);
         }
       });
@@ -242,12 +242,12 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         try {
           const aresta = convertToAresta(connection);
           aresta.validate(nodeEntities);
-        } catch (error) {
+        } catch (error: any) {
           errors.push(`Conexão ${connection.origem} → ${connection.destino}: ${error.message}`);
         }
       });
 
-    } catch (error) {
+    } catch (error: any) {
       errors.push(`Erro na validação: ${error.message}`);
     }
 
@@ -275,7 +275,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
 
       console.log(workflow, 'workflow')
       return workflow.toJsonString();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao converter workflow para JSON:', error);
       return JSON.stringify({
         error: 'Erro ao converter workflow para JSON',

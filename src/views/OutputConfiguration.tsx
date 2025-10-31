@@ -130,10 +130,6 @@ export default function OutputConfiguration() {
     setCollapsedCards(newCollapsed)
   }
 
-  const gerarTemplateAutomatico = (combinar: string[]) => {
-    return combinar.map(nome => `{${nome}}`).join('\n\n---\n\n')
-  }
-
   // Validar se pode adicionar mais saídas
   const podeAdicionar = availableOutputs.length > 0
 

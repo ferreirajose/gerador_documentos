@@ -1,6 +1,6 @@
 // hooks/useNodeFormController.ts
-import { WorkflowBuilder } from "@/application/builders/WorkflowBuilder";
 import { useWorkflow } from "@/context/WorkflowContext";
+import NodeEntitie from "@/domain/entities/NodeEntitie";
 import { useRef, useState, } from "react";
 
 interface Entrada {
@@ -39,44 +39,25 @@ export function useNodeFormController(onSuccess?: () => void) {
   const [showVariableSelector, setShowVariableSelector] = useState(false);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // ✅ Criar nó usando WorkflowBuilder
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(formData)
+    
     try {
-      // Usar WorkflowBuilder para criar o nó
-      const workflowBuilder = new WorkflowBuilder();
-      
-      // Iniciar construção do nó
-      const nodeBuilder = workflowBuilder.startNode(formData.nome, formData.categoria);
-      
-      // Configurar propriedades básicas
-      nodeBuilder
-        .setPrompt(formData.prompt)
-        .setModeloLLM(formData.modelo_llm)
-        .setTemperatura(formData.temperatura)
-        .setFerramentas(formData.ferramentas)
-        .setOutput(formData.saida.nome, formData.saida.formato);
-      
-      // Adicionar entradas
-      formData.entradas.forEach(entrada => {
-        if (entrada.fonte === 'documento_anexado') {
-          nodeBuilder.addDocumentoInput(
-            entrada.variavel_prompt,
-            entrada.documento || '', // @TODO DOCUMENTOS É OPCIONAL, CASO EXISTA DOCUMENTOS VAI EXISITIR ENTRADAS
-            entrada.processar_em_paralelo || false
-          );
-        } else if (entrada.fonte === 'saida_no_anterior') {
-          nodeBuilder.addPreviousOutputInput(
-            entrada.variavel_prompt,
-            entrada.no_origem || ''
-          );
-        }
-      });
-      
-      // Construir o nó
-      const node = nodeBuilder.build();
-      
+      // Criar o nó diretamente sem usar WorkflowBuilder
+      const node = new NodeEntitie(
+        formData.nome,
+        formData.categoria,
+        formData.prompt,
+        formData.saida,
+        formData.entradas,
+        formData.modelo_llm,
+        formData.temperatura,
+        formData.ferramentas
+      );
+
+      // Validar o nó individualmente
+      node.validate();
+
       // Adicionar ao estado global do workflow
       addNode({
         id: `node_${Date.now()}`,
@@ -91,7 +72,6 @@ export function useNodeFormController(onSuccess?: () => void) {
       });
 
       console.log('✅ Nó criado com sucesso:', node);
-      console.log('✅ Nó criado com sucesso:', workflowBuilder.toJSON());
       
       // Limpar formulário
       setFormData({
