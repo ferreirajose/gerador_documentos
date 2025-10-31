@@ -4,17 +4,9 @@ import NodeEntitie, { NodeInput } from "@/domain/entities/NodeEntitie";
 
 
 describe('Node Entity', () => {
-  let baseNodeProps: any
   let consoleSpy: any;
 
   beforeEach(() => {
-    // Setup base properties for tests
-    baseNodeProps = {
-      nome: 'TestNode',
-      categoria: 'entrada',
-      prompt: 'Test prompt {variavel}',
-      saida: { nome: 'test_output' }
-    };
 
     // Spy on console to catch any unexpected errors or warnings
     consoleSpy = {

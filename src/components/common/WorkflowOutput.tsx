@@ -1,11 +1,140 @@
 import { RiEyeLine, RiEyeOffLine, RiClipboardLine, RiCheckLine, RiErrorWarningLine, RiDownloadLine } from '@remixicon/react';
-import { useState } from 'react';
+import { JSX, useState } from 'react';
 import { useWorkflow } from '@/context/WorkflowContext';
 
 interface WorkflowOutputProps {
   isWorkflowVisible: boolean;
   setIsWorkflowVisible: (visible: boolean) => void;
 }
+
+// Função para formatar o JSON com syntax highlighting no estilo Monokai
+const formatJSONWithColors = (jsonString: string): JSX.Element[] => {
+  try {
+    const parsedJSON = JSON.parse(jsonString);
+    const formattedJSON = JSON.stringify(parsedJSON, null, 2);
+    
+    return formattedJSON.split('\n').map((line, lineIndex) => {
+      const parts: JSX.Element[] = [];
+      
+      // Regex para identificar diferentes partes do JSON
+      const keyRegex = /"([^"]+)":/g;
+      const stringRegex = /"([^"]*)"/g;
+      const numberRegex = /(\b-?\d+(\.\d+)?\b)/g;
+      const booleanRegex = /(true|false|null)/g;
+      
+      let match;
+      let lastIndex = 0;
+      
+      // Processa chaves (keys)
+      keyRegex.lastIndex = 0;
+      while ((match = keyRegex.exec(line)) !== null) {
+        // Texto antes da chave
+        if (match.index > lastIndex) {
+          parts.push(
+            <span key={`${lineIndex}-text-${lastIndex}`} className="text-gray-800 dark:text-gray-200">
+              {line.substring(lastIndex, match.index)}
+            </span>
+          );
+        }
+        
+        // A chave completa com aspas e dois pontos
+        parts.push(
+          <span key={`${lineIndex}-key-${match.index}`} className="text-[#000]">
+            {match[0]}
+          </span>
+        );
+        
+        lastIndex = match.index + match[0].length;
+      }
+      
+      // Processa strings (valores entre aspas)
+      stringRegex.lastIndex = lastIndex;
+      while ((match = stringRegex.exec(line)) !== null) {
+        // Texto antes da string
+        if (match.index > lastIndex) {
+          parts.push(
+            <span key={`${lineIndex}-text-${lastIndex}`} className="text-gray-800 dark:text-gray-200">
+              {line.substring(lastIndex, match.index)}
+            </span>
+          );
+        }
+        
+        // A string completa com aspas
+        parts.push(
+          <span key={`${lineIndex}-string-${match.index}`} className="text-[#d14]">
+            {match[0]}
+          </span>
+        );
+        
+        lastIndex = match.index + match[0].length;
+      }
+      
+      // Processa números
+      numberRegex.lastIndex = lastIndex;
+      while ((match = numberRegex.exec(line)) !== null) {
+        // Texto antes do número
+        if (match.index > lastIndex) {
+          parts.push(
+            <span key={`${lineIndex}-text-${lastIndex}`} className="text-gray-800 dark:text-gray-200">
+              {line.substring(lastIndex, match.index)}
+            </span>
+          );
+        }
+        
+        // O número
+        parts.push(
+          <span key={`${lineIndex}-number-${match.index}`} className="text-[#0000ff]">
+            {match[0]}
+          </span>
+        );
+        
+        lastIndex = match.index + match[0].length;
+      }
+      
+      // Processa booleanos e null
+      booleanRegex.lastIndex = lastIndex;
+      while ((match = booleanRegex.exec(line)) !== null) {
+        // Texto antes do booleano/null
+        if (match.index > lastIndex) {
+          parts.push(
+            <span key={`${lineIndex}-text-${lastIndex}`} className="text-gray-800 dark:text-gray-200">
+              {line.substring(lastIndex, match.index)}
+            </span>
+          );
+        }
+        
+        // O booleano ou null
+        parts.push(
+          <span key={`${lineIndex}-boolean-${match.index}`} className="text-[#008000]">
+            {match[0]}
+          </span>
+        );
+        
+        lastIndex = match.index + match[0].length;
+      }
+      
+      // Texto restante na linha
+      if (lastIndex < line.length) {
+        parts.push(
+          <span key={`${lineIndex}-rest`} className="text-gray-800 dark:text-gray-200">
+            {line.substring(lastIndex)}
+          </span>
+        );
+      }
+      
+      return (
+        <div key={lineIndex}>
+          {parts}
+        </div>
+      );
+    });
+    
+  } catch (error) {
+    // Fallback se o JSON for inválido
+    console.error(error)
+    return [<div key="error" className="text-gray-800 dark:text-gray-200">{jsonString}</div>];
+  }
+};
 
 const WorkflowOutput: React.FC<WorkflowOutputProps> = ({
   isWorkflowVisible,
@@ -94,7 +223,7 @@ const WorkflowOutput: React.FC<WorkflowOutputProps> = ({
             ) : (
               <>
                 <RiErrorWarningLine className="w-3 h-3" />
-                {validation.errors.length} erro(s)
+                {validation.errors.length} atenção
               </>
             )}
           </div>
@@ -169,8 +298,8 @@ const WorkflowOutput: React.FC<WorkflowOutputProps> = ({
       {isWorkflowVisible && (
         <div className="relative">
           <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm border border-gray-200 dark:border-gray-700 max-h-96">
-            <code className="text-gray-800 dark:text-gray-200">
-              {workflowJSON}
+            <code className="text-gray-800 dark:text-gray-200 font-mono">
+              {formatJSONWithColors(workflowJSON)}
             </code>
           </pre>
           
