@@ -1,10 +1,8 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { useWorkflow } from "@/context/WorkflowContext"
 import { SaidaFinal } from '@/domain/entities/ResultadoFinal'
 import { RiAddLine, RiDeleteBinLine, RiCodeLine, RiEyeLine, RiEyeOffLine, RiCheckLine, RiCloseLine } from "@remixicon/react"
-import WorkflowOutput from "./common/WorkflowOutput"
+import WorkflowOutput from "../components/common/WorkflowOutput"
 
 interface OutputConfig {
   id: string
@@ -14,12 +12,11 @@ interface OutputConfig {
   manter_original?: boolean
 }
 
-export default function WorkflowExecution() {
+export default function OutputConfiguration() {
   const { state, updateResultadoFinal } = useWorkflow()
   const [outputs, setOutputs] = useState<OutputConfig[]>([])
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set())
-  const [salvando, setSalvando] = useState(false)
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(true); // ou false se quiser iniciar oculto
 
   // Obter todas as saídas disponíveis dos nós
