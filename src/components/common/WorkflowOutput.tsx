@@ -39,7 +39,7 @@ const formatJSONWithColors = (jsonString: string): JSX.Element[] => {
         
         // A chave completa com aspas e dois pontos
         parts.push(
-          <span key={`${lineIndex}-key-${match.index}`} className="text-[#000]">
+          <span key={`${lineIndex}-key-${match.index}`} className="text-[#000] dark:text-[#ff79c6]">
             {match[0]}
           </span>
         );
@@ -61,7 +61,7 @@ const formatJSONWithColors = (jsonString: string): JSX.Element[] => {
         
         // A string completa com aspas
         parts.push(
-          <span key={`${lineIndex}-string-${match.index}`} className="text-[#d14]">
+          <span key={`${lineIndex}-string-${match.index}`} className="text-[#d14] dark:text-[#f1fa8c]">
             {match[0]}
           </span>
         );
@@ -83,7 +83,7 @@ const formatJSONWithColors = (jsonString: string): JSX.Element[] => {
         
         // O número
         parts.push(
-          <span key={`${lineIndex}-number-${match.index}`} className="text-[#0000ff]">
+          <span key={`${lineIndex}-number-${match.index}`} className="text-[#0000ff] dark:text-[#bd93f9]">
             {match[0]}
           </span>
         );
@@ -105,7 +105,7 @@ const formatJSONWithColors = (jsonString: string): JSX.Element[] => {
         
         // O booleano ou null
         parts.push(
-          <span key={`${lineIndex}-boolean-${match.index}`} className="text-[#008000]">
+          <span key={`${lineIndex}-boolean-${match.index}`} className="text-[#008000] dark:text-[#8be9fd]">
             {match[0]}
           </span>
         );
