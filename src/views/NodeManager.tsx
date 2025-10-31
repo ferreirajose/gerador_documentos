@@ -1,13 +1,13 @@
 // NodeManager.tsx (atualizado)
 import { RiAddLine, RiCloseLine } from "@remixicon/react";
 import { useControllerNode } from "@/hooks/useControllerNode";
-import { NodeFormCreate } from "./forms/NodeFormCreate";
-import { ListNode } from "./forms/ListNode";
 import { useWorkflow } from "@/context/WorkflowContext";
-import { NodeFormEdit } from "./forms/NodeFormEdit";
 import { useNodeFormEditController } from "@/hooks/useNodeFormEditController";
 import { useEffect, useState } from "react";
-import WorkflowOutput from "./common/WorkflowOutput";
+import { NodeFormEdit } from "@/components/forms/NodeFormEdit";
+import { NodeFormCreate } from "@/components/forms/NodeFormCreate";
+import { ListNode } from "@/components/forms/ListNode";
+import WorkflowOutput from "@/components/common/WorkflowOutput";
 
 export default function NodeManager() {
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(true); // ou false se quiser iniciar oculto

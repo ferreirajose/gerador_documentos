@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { RiAddLine, RiInformationLine, RiCloseLine, RiErrorWarningLine, RiCheckLine, RiArrowRightLine, RiTimeLine, RiEditLine, RiDeleteBinLine, RiLink, RiSearchLine } from "@remixicon/react";
 
 import { useWorkflow } from "@/context/WorkflowContext";
-import WorkflowOutput from "./common/WorkflowOutput";
+import WorkflowOutput from "../components/common/WorkflowOutput";
 
 interface ConnectionFormData {
   fromNodeId: string;
