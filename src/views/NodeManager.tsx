@@ -62,7 +62,8 @@ useEffect(() => {
         <button
           onClick={handleCreateNode}
           data-testid="create-node-button"
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 whitespace-nowrap"
+          disabled={Boolean(showEditForm && editingNode)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 whitespace-nowrap disabled:bg-blue-400 disabled:cursor-not-allowed"
         >
           <RiAddLine className="text-xl" />
           <span>Criar Nó</span>
@@ -113,6 +114,11 @@ useEffect(() => {
           />
         </div>
       )}
+
+    {/* @TODO ADICIONAR REGRA PARA IMPEDIR DE ABRIR O FORMULARIO DE EDITAR COM ESTIVER ABERTO O FORMULARIO DE CRIAR NODE, HOJE SO EXISTE UMA VALIDAÇÃO PARA CRIAR, ESSA 
+      onClick={handleCreateNode}
+      disabled={Boolean(showEditForm && editingNode)}
+    */}
 
       <ListNode
         state={state}

@@ -133,6 +133,7 @@ export function ListNode({ onOpenForm, state, onEditNode, onDeleteNode }: ListNo
                                             </div>
                                         </div>
 
+                                        {/* @TODO ADICIONAR REGRA PARA IMPEDIR DE ABRIR O FORMULARIO DE EDITAR COM ESTIVER ABERTO O FORMULARIO DE CRIAR NODE */}
                                         <div className="flex items-center space-x-2">
                                             {onEditNode && (
                                                 <button
