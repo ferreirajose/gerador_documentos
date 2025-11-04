@@ -1,7 +1,10 @@
 // hooks/useNodeFormController.ts
+
 import { useWorkflow } from "@/context/WorkflowContext";
 import NodeEntitie from "@/domain/entities/NodeEntitie";
-import { useRef, useState, } from "react";
+import WorkflowHttpGatewayV2 from "@/gateway/WorkflowHttpGatewayV2";
+import FetchAdapter from "@/infra/FetchAdapter";
+import { useRef, useState } from "react";
 
 interface Entrada {
   variavel_prompt: string;
@@ -22,8 +25,26 @@ interface FormData {
   ferramentas: string[];
 }
 
+interface UploadedFile {
+  id: string;
+  file: File;
+  name: string;
+  size: number;
+  uuid?: string; // UUID retornado pelo upload
+  status: 'pending' | 'uploading' | 'completed' | 'error';
+}
+
+const BASE_URL = import.meta.env.VITE_API_URL_MINUTA;
+const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
+
 export function useNodeFormController(onSuccess?: () => void) {
-  const { addNode } = useWorkflow();
+  const { 
+    addNode, 
+    addDocumentoAnexado, 
+    updateDocumentoAnexado, 
+    removeDocumentoAnexado,
+    state 
+  } = useWorkflow();
 
   const [formData, setFormData] = useState<FormData>({
     nome: "",
@@ -37,12 +58,199 @@ export function useNodeFormController(onSuccess?: () => void) {
   });
   
   const [showVariableSelector, setShowVariableSelector] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Inicializar HTTP client
+  const httpClient = new FetchAdapter();
+  const workflowGateway = new WorkflowHttpGatewayV2(
+    httpClient,
+    BASE_URL,
+    AUTH_TOKEN
+  );
+
+  // Funções para gerenciar documentos anexados
+  const addDocumento = () => {
+    const novoDocumento = {
+      chave: '',
+      descricao: '',
+      tipo: 'unico' as 'unico' | 'lista',
+      uuid_unico: '',
+      uuids_lista: []
+    };
+    addDocumentoAnexado(novoDocumento);
+  };
+
+  const updateDocumento = (index: number, campo: string, valor: any) => {
+    const documentoAtual = state.documentos_anexados[index];
+    const documentoAtualizado = {
+      ...documentoAtual,
+      [campo]: valor
+    };
+    
+    // Se mudou de lista para único, limpa a lista de UUIDs
+    if (campo === 'tipo' && valor === 'unico') {
+      documentoAtualizado.uuids_lista = [];
+    }
+    
+    // Se mudou de único para lista, limpa o UUID único
+    if (campo === 'tipo' && valor === 'lista') {
+      documentoAtualizado.uuid_unico = '';
+    }
+
+    updateDocumentoAnexado(index, documentoAtualizado);
+  };
+
+  const removeDocumento = (index: number) => {
+    removeDocumentoAnexado(index);
+  };
+
+  const retryUpload = async (fileId: string) => {
+    const fileToRetry = uploadedFiles.find(file => file.id === fileId);
+    if (!fileToRetry) return;
+
+    await processFileUpload(fileToRetry);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    setIsUploading(true);
+
+    const newUploadedFiles: UploadedFile[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      newUploadedFiles.push({
+        id: Date.now().toString() + i,
+        file,
+        name: file.name,
+        size: file.size,
+        status: 'pending'
+      });
+    }
+
+    setUploadedFiles(prev => [...prev, ...newUploadedFiles]);
+
+    // Processar upload de cada arquivo
+    for (const uploadedFile of newUploadedFiles) {
+      await processFileUpload(uploadedFile);
+    }
+
+    setIsUploading(false);
+  };
+
+  const processFileUpload = async (uploadedFile: UploadedFile) => {
+    try {
+      // Atualizar status para uploading
+      setUploadedFiles(prev => 
+        prev.map(file => 
+          file.id === uploadedFile.id 
+            ? { ...file, status: 'uploading' }
+            : file
+        )
+      );
+
+      // Fazer upload do arquivo
+      const response = await workflowGateway.uploadAndProcess(uploadedFile.file);
+      
+      if (response.success && response.data) {
+        const uuidDocumento = response.data.uuid_documento;
+        
+        // Atualizar arquivo com UUID
+        setUploadedFiles(prev => 
+          prev.map(file => 
+            file.id === uploadedFile.id 
+              ? { ...file, status: 'completed', uuid: uuidDocumento }
+              : file
+          )
+        );
+
+        console.log('✅ Arquivo uploadado com sucesso:', uploadedFile.name, 'UUID:', uuidDocumento);
+        
+        // Atualizar documento anexado correspondente
+        updateDocumentWithUUID(uuidDocumento, uploadedFile.name);
+        
+      } else {
+        throw new Error(response.message || 'Erro no upload');
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro no upload:', error);
+      
+      // Atualizar status para error
+      setUploadedFiles(prev => 
+        prev.map(file => 
+          file.id === uploadedFile.id 
+            ? { ...file, status: 'error' }
+            : file
+        )
+      );
+    }
+  };
+
+
+  const updateDocumentWithUUID = (uuid: string, fileName: string) => {
+    // Encontrar o documento anexado que corresponde a este arquivo
+    // Aqui você pode implementar a lógica para mapear arquivos para documentos
+    // Por enquanto, vou atualizar o primeiro documento do tipo correspondente
+    
+    const documentosAnexados = state.documentos_anexados;
+    
+    if (documentosAnexados.length > 0) {
+      const documentoIndex = 0; // Ou implemente lógica para encontrar o documento correto
+      const documento = documentosAnexados[documentoIndex];
+      
+      if (documento.tipo === 'unico') {
+        updateDocumento(documentoIndex, 'uuid_unico', uuid);
+      } else if (documento.tipo === 'lista') {
+        const currentUuids = documento.uuids_lista || [];
+        updateDocumento(documentoIndex, 'uuids_lista', [...currentUuids, uuid]);
+      }
+    }
+  };
+
+  const onRemoveFile = (fileId: string) => {
+    setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
+  };
+
+  const getUploadStatusText = (status: UploadedFile['status']) => {
+    switch (status) {
+      case 'pending':
+        return 'Pendente';
+      case 'uploading':
+        return 'Enviando...';
+      case 'completed':
+        return 'Concluído';
+      case 'error':
+        return 'Erro';
+      default:
+        return 'Desconhecido';
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
+      // Validar se há documentos anexados para nós de entrada
+      if (formData.categoria === 'entrada' && state.documentos_anexados.length === 0) {
+        throw new Error('Nós de entrada devem ter pelo menos um documento anexado');
+      }
+
+      // Validar se os documentos têm UUIDs quando necessário
+      state.documentos_anexados.forEach((doc, index) => {
+        if (doc.tipo === 'unico' && !doc.uuid_unico) {
+          throw new Error(`Documento único "${doc.descricao}" não possui UUID. Faça o upload do arquivo primeiro.`);
+        }
+        if (doc.tipo === 'lista' && (!doc.uuids_lista || doc.uuids_lista.length === 0)) {
+          throw new Error(`Documento lista "${doc.descricao}" não possui UUIDs. Faça o upload dos arquivos primeiro.`);
+        }
+      });
+
       // Criar o nó diretamente sem usar WorkflowBuilder
       const node = new NodeEntitie(
         formData.nome,
@@ -85,6 +293,9 @@ export function useNodeFormController(onSuccess?: () => void) {
         ferramentas: [],
       });
 
+      // Limpar arquivos uploadados
+      setUploadedFiles([]);
+
       // Chamar callback de sucesso
       if (onSuccess) {
         onSuccess();
@@ -95,6 +306,7 @@ export function useNodeFormController(onSuccess?: () => void) {
       alert(`Erro ao criar nó: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   };
+
 
   // ✅ Adicionar entrada
   const addEntrada = () => {
@@ -173,12 +385,10 @@ export function useNodeFormController(onSuccess?: () => void) {
     });
   };
 
-  
   const getAvailableVariables = () => {
     return formData.entradas.map(entrada => entrada.variavel_prompt).filter(v => v.trim() !== '');
   };
 
-  
   const insertVariableInPrompt = (variable: string) => {
     const textarea = promptTextareaRef.current;
     if (textarea) {
@@ -197,11 +407,13 @@ export function useNodeFormController(onSuccess?: () => void) {
     setShowVariableSelector(false);
   };
 
-
   return {
     formData,
     showVariableSelector,
     promptTextareaRef,
+    fileInputRef, // ✅ Agora exportando fileInputRef
+    uploadedFiles, // ✅ Agora exportando uploadedFiles
+    isUploading,
     getAvailableVariables,
     setShowVariableSelector,
     insertVariableInPrompt,
@@ -212,5 +424,13 @@ export function useNodeFormController(onSuccess?: () => void) {
     removeEntrada,
     updateEntrada,
     updateSaida,
+      // Funções de documentos anexados
+      retryUpload,
+    addDocumento,
+    updateDocumento,
+    removeDocumento,
+    handleFileUpload,
+    onRemoveFile,
+    getUploadStatusText
   };
 }

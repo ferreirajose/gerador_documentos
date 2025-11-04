@@ -1,7 +1,7 @@
 import NodeEntitie from '@/domain/entities/NodeEntitie';
 import { Aresta } from '@/domain/entities/Aresta';
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { Workflow } from '@/domain/entities/Workflow';
+import { DocumentoAnexado, Workflow } from '@/domain/entities/Workflow';
 import { Grafo } from '@/domain/entities/Grafo';
 import { ResultadoFinal, SaidaFinal } from '@/domain/entities/ResultadoFinal';
 
@@ -17,7 +17,7 @@ export interface Connection extends Aresta {
 export interface WorkflowState {
   nodes: NodeState[];
   connections: Connection[];
-  documentos_anexados: Record<string, string | string[]>;
+  documentos_anexados: DocumentoAnexado[];
   resultado_final?: ResultadoFinal;
 }
 
@@ -30,13 +30,17 @@ export type WorkflowAction =
   | { type: 'DELETE_CONNECTION'; payload: string }
   | { type: 'UPDATE_CONNECTION'; payload: { id: string; origem: string; destino: string } }
   | { type: 'SET_RESULTADO_FINAL'; payload: ResultadoFinal }
-  |{ type: 'UPDATE_RESULTADO_FINAL'; payload: SaidaFinal[] };
+  |{ type: 'UPDATE_RESULTADO_FINAL'; payload: SaidaFinal[] }
+  | { type: 'ADD_DOCUMENTO_ANEXADO'; payload: DocumentoAnexado }
+  | { type: 'UPDATE_DOCUMENTO_ANEXADO'; payload: { index: number; documento: DocumentoAnexado } }
+  | { type: 'REMOVE_DOCUMENTO_ANEXADO'; payload: number }
+  | { type: 'SET_DOCUMENTOS_ANEXADOS'; payload: DocumentoAnexado[] };
 
 
 export const initialState: WorkflowState = {
   nodes: [],
   connections: [],
-  documentos_anexados: {},
+  documentos_anexados: [],
   resultado_final: new ResultadoFinal([])
 };
 
@@ -95,6 +99,32 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         resultado_final: action.payload
       };
 
+    case 'ADD_DOCUMENTO_ANEXADO':
+      return {
+        ...state,
+        documentos_anexados: [...state.documentos_anexados, action.payload]
+      };
+
+    case 'UPDATE_DOCUMENTO_ANEXADO':
+      const updatedDocumentos = [...state.documentos_anexados];
+      updatedDocumentos[action.payload.index] = action.payload.documento;
+      return {
+        ...state,
+        documentos_anexados: updatedDocumentos
+      };
+
+    case 'REMOVE_DOCUMENTO_ANEXADO':
+      return {
+        ...state,
+        documentos_anexados: state.documentos_anexados.filter((_, index) => index !== action.payload)
+      };
+
+    case 'SET_DOCUMENTOS_ANEXADOS':
+      return {
+        ...state,
+        documentos_anexados: action.payload
+      };
+
     case 'UPDATE_RESULTADO_FINAL':
       return {
         ...state,
@@ -120,6 +150,11 @@ interface WorkflowContextType {
    // Resultado Final actions
   setResultadoFinal: (saidas: SaidaFinal[]) => void;
   updateResultadoFinal: (saidas: SaidaFinal[]) => void;
+   // Documentos Anexados actions
+  addDocumentoAnexado: (documento: DocumentoAnexado) => void;
+  updateDocumentoAnexado: (index: number, documento: DocumentoAnexado) => void;
+  removeDocumentoAnexado: (index: number) => void;
+  setDocumentosAnexados: (documentos: DocumentoAnexado[]) => void;
   // Workflow export
   getWorkflowJSON: () => string;
   getWorkflowObject: () => Workflow;
@@ -158,6 +193,23 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     // No WorkflowProvider, adicione estas funções:
   const setResultadoFinal = (saidas: SaidaFinal[]) => {
     dispatch({ type: 'SET_RESULTADO_FINAL', payload: new ResultadoFinal(saidas) });
+  };
+
+   // Documentos Anexados actions
+  const addDocumentoAnexado = (documento: DocumentoAnexado) => {
+    dispatch({ type: 'ADD_DOCUMENTO_ANEXADO', payload: documento });
+  };
+
+  const updateDocumentoAnexado = (index: number, documento: DocumentoAnexado) => {
+    dispatch({ type: 'UPDATE_DOCUMENTO_ANEXADO', payload: { index, documento } });
+  };
+
+  const removeDocumentoAnexado = (index: number) => {
+    dispatch({ type: 'REMOVE_DOCUMENTO_ANEXADO', payload: index });
+  };
+
+  const setDocumentosAnexados = (documentos: DocumentoAnexado[]) => {
+    dispatch({ type: 'SET_DOCUMENTOS_ANEXADOS', payload: documentos });
   };
 
   const updateResultadoFinal = (saidas: SaidaFinal[]) => {
@@ -297,6 +349,12 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     // Resultado Final actions
     setResultadoFinal,
     updateResultadoFinal,
+
+     // Documentos Anexados actions
+    addDocumentoAnexado,
+    updateDocumentoAnexado,
+    removeDocumentoAnexado,
+    setDocumentosAnexados,
 
     // Workflow export
     getWorkflowJSON,

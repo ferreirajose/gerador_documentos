@@ -1,10 +1,20 @@
+// Workflow.ts
 import { Grafo } from './Grafo';
 import { ResultadoFinal } from "./ResultadoFinal";
+
+// Interface para Documento Anexado
+export interface DocumentoAnexado {
+  chave: string;
+  descricao: string;
+  uuid_unico?: string;
+  uuids_lista?: string[];
+  tipo: 'unico' | 'lista';
+}
 
 // Entidade Raiz: Workflow
 export class Workflow {
   constructor(
-    public readonly documentos_anexados: Record<string, string | string[]>,
+    public readonly documentos_anexados: DocumentoAnexado[],
     public readonly grafo: Grafo,
     public readonly resultado_final?: ResultadoFinal
   ) {}
@@ -18,18 +28,36 @@ export class Workflow {
       this.resultado_final.validate(this.grafo.nos);
     }
 
+    // Valida documentos anexados
+    this.documentos_anexados.forEach(doc => {
+      if (!doc.chave || !doc.descricao) {
+        throw new Error('Documento anexado deve ter chave e descrição');
+      }
+      
+      if (doc.tipo === 'unico' && !doc.uuid_unico) {
+        throw new Error(`Documento único '${doc.chave}' deve ter um UUID único`);
+      }
+      
+      if (doc.tipo === 'lista' && (!doc.uuids_lista || doc.uuids_lista.length === 0)) {
+        throw new Error(`Documento lista '${doc.chave}' deve ter uma lista de UUIDs`);
+      }
+    });
+
     // Valida referências de documentos nos nós
     this.grafo.nos.forEach(node => {
       node.entradas.forEach(input => {
         if (input.fonte === 'documento_anexado' && input.documento) {
-          if (!this.documentos_anexados[input.documento]) {
+          const documentoExiste = this.documentos_anexados.some(
+            doc => doc.chave === input.documento
+          );
+          if (!documentoExiste) {
             throw new Error(`Nó '${node.nome}': documento '${input.documento}' não encontrado em documentos_anexados`);
           }
         }
       });
     });
 
-    // Valida variáveis no prompt
+    // Valida variáveis no prompt (código existente mantido)
     this.grafo.nos.forEach(node => {
       const promptVariables = this.extractPromptVariables(node.prompt);
       const inputVariables = node.entradas.map(input => input.variavel_prompt);
