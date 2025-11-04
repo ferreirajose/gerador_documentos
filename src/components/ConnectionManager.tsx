@@ -28,7 +28,7 @@ export default function ConnectionManager() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingConnection, setEditingConnection] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isWorkflowVisible, setIsWorkflowVisible] = useState(true); // ou false se quiser iniciar oculto
+  const [isWorkflowVisible, setIsWorkflowVisible] = useState(false); // ou false se quiser iniciar oculto
 
   const [formData, setFormData] = useState({
     fromNodeId: '',
