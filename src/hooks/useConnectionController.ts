@@ -136,7 +136,6 @@ export function useConnectionController() {
     try {
       const domainNodes = convertToDomainNodes();
       
-      // ✅ CORREÇÃO: Usar nomes dos nós para criar a aresta
       const origemNome = getNodeName(formData.origem);
       const destinoNome = formData.destino === 'END' ? 'END' : getNodeName(formData.destino);
       
@@ -153,27 +152,6 @@ export function useConnectionController() {
         errors.push('Esta conexão já existe');
       }
 
-      // Validar categorias
-      const origemNode = state.nodes.find(n => n.id === formData.origem);
-      const destinoNode = state.nodes.find(n => n.id === formData.destino);
-
-      if (origemNode && destinoNode) {
-        // ✅ REGRA ADICIONADA: Nós de entrada não podem se conectar entre si
-        if (origemNode.categoria === 'entrada' && destinoNode.categoria === 'entrada') {
-          errors.push('Nós de entrada não podem se conectar entre si');
-        }
-
-        // Nós de saída só podem conectar ao END
-        if (origemNode.categoria === 'saida' && formData.destino !== 'END') {
-          errors.push('Nós de saída só podem conectar ao END');
-        }
-
-        // Nós de entrada não podem receber conexões (exceto se for END)
-        if (destinoNode.categoria === 'entrada' && formData.destino !== 'END') {
-          errors.push('Nós de entrada não podem receber conexões de outros nós');
-        }
-      }
-
       return { 
         isValid: errors.length === 0, 
         errors 
@@ -183,6 +161,31 @@ export function useConnectionController() {
       errors.push(error instanceof Error ? error.message : 'Erro de validação');
       return { isValid: false, errors };
     }
+  };
+
+  const canConnectToEnd = (origem: string): { canConnect: boolean; reason?: string } => {
+  // Verificar se já está conectado ao END
+  const alreadyConnectedToEnd = state.connections.some(
+    conn => conn.origem === origem && conn.destino === 'END'
+  );
+
+  if (alreadyConnectedToEnd) {
+    return { canConnect: false, reason: 'Já conectado ao END' };
+  }
+
+  // Nós sem outras conexões de saída podem conectar ao END
+  const hasOtherOutgoingConnections = state.connections.some(
+    conn => conn.origem === origem && conn.destino !== 'END'
+  );
+
+  if (!hasOtherOutgoingConnections) {
+    return { canConnect: true, reason: 'Nó sem outras saídas pode finalizar no END' };
+  }
+
+  return { 
+    canConnect: false, 
+    reason: 'Nó já tem conexões de saída para outros nós' 
+  };
   };
 
   // Validação de workflow completo
@@ -207,53 +210,6 @@ export function useConnectionController() {
         errors: [error instanceof Error ? error.message : 'Erro na validação do workflow'] 
       };
     }
-  };
-
-  // Validação de conexão ao END
-  const canConnectToEnd = (origem: string): { canConnect: boolean; reason?: string } => {
-    const node = state.nodes.find(n => n.id === origem);
-    if (!node) {
-      return { canConnect: false, reason: 'Nó não encontrado' };
-    }
-
-    // Verificar se já está conectado ao END
-    const alreadyConnectedToEnd = state.connections.some(
-      conn => conn.origem === origem && conn.destino === 'END'
-    );
-
-    if (alreadyConnectedToEnd) {
-      return { canConnect: false, reason: 'Já conectado ao END' };
-    }
-
-    // Nós de saída devem conectar ao END
-    if (node.categoria === 'saida') {
-      return { canConnect: true, reason: 'Nó de saída deve finalizar no END' };
-    }
-
-    // Nós de entrada podem conectar ao END se forem os únicos
-    if (node.categoria === 'entrada') {
-      const hasOtherConnections = state.connections.some(
-        conn => conn.origem === origem && conn.destino !== 'END'
-      );
-      
-      if (!hasOtherConnections) {
-        return { canConnect: true, reason: 'Nó de entrada isolado pode finalizar no END' };
-      }
-    }
-
-    // Nós de processamento podem conectar ao END se não tiverem outras saídas
-    const hasOtherOutgoingConnections = state.connections.some(
-      conn => conn.origem === origem && conn.destino !== 'END'
-    );
-
-    if (!hasOtherOutgoingConnections) {
-      return { canConnect: true, reason: 'Nó sem outras saídas pode finalizar no END' };
-    }
-
-    return { 
-      canConnect: false, 
-      reason: 'Nó já tem conexões de saída para outros nós' 
-    };
   };
 
   // Sugestões de conexão ao END

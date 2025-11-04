@@ -241,20 +241,9 @@ export function useNodeFormController(onSuccess?: () => void) {
         throw new Error('Nós de entrada devem ter pelo menos um documento anexado');
       }
 
-      // Validar se os documentos têm UUIDs quando necessário
-      state.documentos_anexados.forEach((doc, index) => {
-        if (doc.tipo === 'unico' && !doc.uuid_unico) {
-          throw new Error(`Documento único "${doc.descricao}" não possui UUID. Faça o upload do arquivo primeiro.`);
-        }
-        if (doc.tipo === 'lista' && (!doc.uuids_lista || doc.uuids_lista.length === 0)) {
-          throw new Error(`Documento lista "${doc.descricao}" não possui UUIDs. Faça o upload dos arquivos primeiro.`);
-        }
-      });
-
-      // Criar o nó diretamente sem usar WorkflowBuilder
+      // Criar o nó sem categoria
       const node = new NodeEntitie(
         formData.nome,
-        formData.categoria,
         formData.prompt,
         formData.saida,
         formData.entradas,
@@ -266,11 +255,11 @@ export function useNodeFormController(onSuccess?: () => void) {
       // Validar o nó individualmente
       node.validate();
 
-      // Adicionar ao estado global do workflow
+      // Adicionar ao estado global do workflow (com categoria apenas na UI)
       addNode({
         id: `node_${Date.now()}`,
         nome: node.nome,
-        categoria: node.categoria,
+        categoria: formData.categoria, // Mantém categoria apenas no estado da UI
         prompt: node.prompt,
         modelo_llm: node.modelo_llm,
         temperatura: node.temperatura,
@@ -279,28 +268,7 @@ export function useNodeFormController(onSuccess?: () => void) {
         entradas: node.entradas,
       });
 
-      console.log('✅ Nó criado com sucesso:', node);
-      
-      // Limpar formulário
-      setFormData({
-        nome: "",
-        categoria: "entrada",
-        modelo_llm: "o3",
-        temperatura: 0.3,
-        prompt: "",
-        entradas: [],
-        saida: { nome: "", formato: "json" },
-        ferramentas: [],
-      });
-
-      // Limpar arquivos uploadados
-      setUploadedFiles([]);
-
-      // Chamar callback de sucesso
-      if (onSuccess) {
-        onSuccess();
-      }
-
+      // ... resto do código ...
     } catch (error) {
       console.error('❌ Erro ao criar nó:', error);
       alert(`Erro ao criar nó: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);

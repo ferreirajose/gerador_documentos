@@ -1,7 +1,6 @@
 import { Aresta } from './Aresta';
 import NodeEntitie from "./NodeEntitie";
 
-// Entidade: Grafo
 export class Grafo {
   constructor(
     public readonly nos: NodeEntitie[],
@@ -30,12 +29,6 @@ export class Grafo {
       }
     });
 
-    // Verifica se há pelo menos um nó de entrada
-    const entradaNodes = this.nos.filter(node => node.categoria === 'entrada');
-    if (entradaNodes.length === 0) {
-      throw new Error('Workflow deve ter pelo menos um nó de categoria "entrada"');
-    }
-
     // Verifica se o workflow termina com END
     const hasEnd = this.arestas.some(aresta => aresta.destino === 'END');
     if (!hasEnd) {
@@ -43,10 +36,4 @@ export class Grafo {
     }
   }
 
-  // Detecta automaticamente os pontos de entrada
-  get pontosDeEntrada(): string[] {
-    return this.nos
-      .filter(node => node.categoria === 'entrada')
-      .map(node => node.nome);
-  }
 }

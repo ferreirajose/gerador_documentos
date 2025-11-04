@@ -85,7 +85,6 @@ export class Workflow {
       grafo: {
         nos: this.grafo.nos.map(node => ({
           nome: node.nome,
-          categoria: node.categoria,
           ...(node.modelo_llm && { modelo_llm: node.modelo_llm }),
           ...(node.temperatura && { temperatura: node.temperatura }),
           ...(node.ferramentas.length > 0 && { ferramentas: node.ferramentas }),
