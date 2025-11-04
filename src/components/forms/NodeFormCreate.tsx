@@ -3,18 +3,38 @@ import { WorkflowState } from '@/context/WorkflowContext';
 import { FERRAMENTAS_DISPONIVEIS } from '@/data/ferramentas';
 import { llmModelsByProvider } from '@/data/llmodels';
 import { useNodeFormController } from '@/hooks/useNodeFormController';
-import { RiBracesLine } from '@remixicon/react';
+import { formatFileSize } from '@/libs/util';
+import { RiBracesLine, RiCheckboxCircleLine, RiDeleteBinLine, RiErrorWarningLine, RiFileLine, RiInformationLine, RiLoader4Line, RiRefreshLine, RiTimeLine, RiUploadLine } from '@remixicon/react';
 
   interface NodeFormProps {
   state: WorkflowState;
   onCloseForm: () => void;
 }
 
+const UploadStatusIcon = ({ status }: { status: string }) => {
+  const iconProps = { className: "w-4 h-4" };
+  
+  switch (status) {
+    case 'pending':
+      return <RiTimeLine {...iconProps} className={`${iconProps.className} text-gray-400`} />;
+    case 'uploading':
+      return <RiLoader4Line {...iconProps} className={`${iconProps.className} text-blue-500 animate-spin`} />;
+    case 'completed':
+      return <RiCheckboxCircleLine {...iconProps} className={`${iconProps.className} text-green-500`} />;
+    case 'error':
+      return <RiErrorWarningLine {...iconProps} className={`${iconProps.className} text-red-500`} />;
+    default:
+      return <RiFileLine {...iconProps} className={`${iconProps.className} text-gray-400`} />;
+  }
+};
 export function NodeFormCreate({ state, onCloseForm }: NodeFormProps) {
   const {
     formData,
     showVariableSelector,
     promptTextareaRef,
+    fileInputRef,
+    uploadedFiles,
+    isUploading,
     getAvailableVariables,
     setShowVariableSelector,
     insertVariableInPrompt,
@@ -25,7 +45,18 @@ export function NodeFormCreate({ state, onCloseForm }: NodeFormProps) {
     removeEntrada,
     updateEntrada,
     updateSaida,
+    // Funções de documentos anexados
+    retryUpload,
+    addDocumento,
+    updateDocumento,
+    removeDocumento,
+    handleFileUpload,
+    onRemoveFile,
+    getUploadStatusText,
   } = useNodeFormController(onCloseForm);
+
+  const documentosAnexados = state.documentos_anexados;
+
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
@@ -91,7 +122,7 @@ export function NodeFormCreate({ state, onCloseForm }: NodeFormProps) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Temperatura ({formData.temperatura})
+            Nivel de Criatividade ({formData.temperatura})
           </label>
           <input
             type="range"
@@ -134,6 +165,214 @@ export function NodeFormCreate({ state, onCloseForm }: NodeFormProps) {
           ))}
         </div>
       </div>
+
+      {/* ✅ SEÇÃO: Documentos Anexados - apenas para categoria entrada */}
+      {/* ✅ SEÇÃO: Documentos Anexados - apenas para categoria entrada */}
+      {formData.categoria === 'entrada' && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-sm font-medium text-gray-700">
+              Documentos Anexados
+            </label>
+            <button
+              type="button"
+              onClick={addDocumento}
+              className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors flex items-center space-x-1"
+            >
+              <RiUploadLine className="w-4" />
+              <span>Adicionar Documento</span>
+            </button>
+          </div>
+
+          {documentosAnexados.length === 0 ? (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <RiFileLine className="text-3xl text-gray-400 mb-2 mx-auto" />
+              <p className="text-gray-500 text-sm">Nenhum documento anexado</p>
+              <p className="text-gray-400 text-xs">Clique em "Adicionar Documento" para começar</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {documentosAnexados.map((documento, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-gray-700">Documento {index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeDocumento(index)}
+                      className="text-red-500 hover:text-red-700 cursor-pointer"
+                    >
+                      <RiDeleteBinLine className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Chave do Documento
+                      </label>
+                      <input
+                        type="text"
+                        value={documento.chave}
+                        onChange={(e) => updateDocumento(index, 'chave', e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="ex: auditoria_especial"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Tipo
+                      </label>
+                      <div className="flex items-center space-x-4">
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name={`tipo-${index}`}
+                            checked={documento.tipo === 'unico'}
+                            onChange={(e) => updateDocumento(index, 'tipo', 'unico')}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">Único</span>
+                        </label>
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name={`tipo-${index}`}
+                            checked={documento.tipo === 'lista'}
+                            onChange={(e) => updateDocumento(index, 'tipo', 'lista')}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">Lista</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Descrição do Documento
+                      </label>
+                      <input
+                        type="text"
+                        value={documento.descricao}
+                        onChange={(e) => updateDocumento(index, 'descricao', e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="ex: Relatório de Auditoria Especial"
+                        required
+                      />
+                    </div>
+
+                    {/* Upload de Arquivos */}
+                    <div className="md:col-span-2">
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="block text-xs font-medium text-gray-600">
+                          Upload de Arquivos
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors flex items-center space-x-1"
+                          disabled={isUploading}
+                        >
+                          <RiUploadLine className="w-4" />
+                          <span>{isUploading ? 'Enviando...' : 'Selecionar Arquivos'}</span>
+                        </button>
+                      </div>
+                      
+                      <div 
+                        onClick={() => !isUploading && fileInputRef.current?.click()}
+                        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                          isUploading 
+                            ? 'border-gray-300 bg-gray-100 cursor-not-allowed' 
+                            : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                        }`}
+                      >
+                        <div className="w-12 h-12 flex items-center justify-center bg-blue-600 rounded-lg mx-auto mb-4">
+                          <RiFileLine className="text-white text-xl" />
+                        </div>
+                        <p className="text-blue-600 font-medium mb-2">
+                          {isUploading ? 'Enviando arquivos...' : 'Selecionar Arquivo'}
+                        </p>
+                        <p className="text-sm text-gray-500">Formatos suportados: PDF, DOC, DOCX, TXT, JSON</p>
+                      </div>
+                      
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.txt,.json"
+                        disabled={isUploading}
+                      />
+
+                      {uploadedFiles.length > 0 && (
+                        <div className="space-y-2 mt-4">
+                          {uploadedFiles.map(file => (
+                            <div key={file.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                              <div className="flex items-center space-x-3 flex-1">
+                                <UploadStatusIcon status={file.status} />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                                  <div className="flex items-center space-x-4 text-xs text-gray-500">
+                                    <span>{formatFileSize(file.size)}</span>
+                                    <span>{getUploadStatusText(file.status)}</span>
+                                    {file.uuid && (
+                                      <span className="text-green-600">UUID: {file.uuid}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                               {/* ✅ Botão de Retry - aparece apenas quando há erro */}
+                              {file.status === 'error' && (
+                                <button
+                                  type="button"
+                                  onClick={() => retryUpload(file.id)}
+                                  className="text-blue-500 hover:text-blue-700 cursor-pointer"
+                                  title="Tentar novamente"
+                                >
+                                  <RiRefreshLine className="w-4 h-4" />
+                                </button>
+                              )}
+                              
+                              {/* Botão de Delete */}
+                              
+                              <button
+                                type="button"
+                                onClick={() => onRemoveFile(file.id)}
+                                className="text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                                disabled={file.status === 'uploading'}
+                              >
+                                <RiDeleteBinLine className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <div className="p-3 bg-white border border-gray-200 rounded-md">
+                        <div className="flex items-center space-x-2 text-xs text-gray-600">
+                          <RiInformationLine className="w-4 h-4" />
+                          <span>
+                            {documento.tipo === 'unico' 
+                              ? `UUID: ${documento.uuid_unico || 'Será gerado automaticamente'}`
+                              : `UUIDs Lista: ${documento.uuids_lista?.length || 0} arquivo(s)`
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
 
       <div>
         <div className="flex items-center justify-between mb-1">
@@ -254,17 +493,19 @@ export function NodeFormCreate({ state, onCloseForm }: NodeFormProps) {
                     <>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                          Documento
+                          Documentos Anexados
                         </label>
                         <select
                           value={entrada.documento || ''}
                           onChange={(e) => updateEntrada(index, 'documento', e.target.value)}
                           className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 bg-white dark:bg-gray-600 text-gray-900 dark:text-white"
-                          
                         >
-                          <option value="">Selecione um documento</option>
-                          <option value="auditoria">Documentos de auditoria</option>
-                          <option value="defesas">Documentos de defesa</option>
+                          <option value="">Selecione um documento anexado</option>
+                          {documentosAnexados.map(doc => (
+                            <option key={doc.chave} value={doc.chave}>
+                              {doc.descricao} ({doc.chave})
+                            </option>
+                          ))}
                         </select>
                       </div>
 
