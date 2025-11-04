@@ -8,6 +8,7 @@ import { ResultadoFinal, SaidaFinal } from '@/domain/entities/ResultadoFinal';
 // Use as interfaces das entidades de domínio
 export interface NodeState extends Omit<NodeEntitie, 'validate'> {
   id: string;
+  categoria: 'entrada' | 'processamento' | 'saida';
 }
 
 export interface Connection extends Aresta {
@@ -221,7 +222,6 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
   const convertToNodeEntitie = (nodeState: NodeState): NodeEntitie => {
     return new NodeEntitie(
       nodeState.nome,
-      nodeState.categoria,
       nodeState.prompt,
       nodeState.saida,
       nodeState.entradas,
@@ -230,12 +230,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       nodeState.ferramentas
     );
   };
-
-  // Converter Connection para Aresta
-  // const convertToAresta = (connection: Connection): Aresta => {
-  //   return new Aresta(connection.origem, connection.destino);
-  // };
-
+  
   // Converter Connection para Aresta (usando nomes em vez de IDs)
   const convertToAresta = (connection: Connection): Aresta => {
     const origemNode = state.nodes.find(node => node.id === connection.origem);
