@@ -1,9 +1,8 @@
 import NodeEntitie from '@/domain/entities/NodeEntitie';
 import { Aresta } from '@/domain/entities/Aresta';
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { DocumentoAnexado, Workflow } from '@/domain/entities/Workflow';
-import { Grafo } from '@/domain/entities/Grafo';
-import { ResultadoFinal, SaidaFinal } from '@/domain/entities/ResultadoFinal';
+import { DocumentoAnexado } from '@/domain/entities/Workflow';
+import { ResultadoFinal } from '@/domain/entities/ResultadoFinal';
 
 // Use as interfaces das entidades de domínio
 export interface NodeState extends Omit<NodeEntitie, 'validate'> {
@@ -25,17 +24,6 @@ export interface WorkflowState {
 // Atualize os tipos de ação
 export type WorkflowAction =
   | { type: 'ADD_NODE'; payload: NodeState }
-  | { type: 'DELETE_NODE'; payload: string }
-  | { type: 'UPDATE_NODE'; payload: { id: string; updates: Partial<NodeState> } }
-  | { type: 'ADD_CONNECTION'; payload: Connection }
-  | { type: 'DELETE_CONNECTION'; payload: string }
-  | { type: 'UPDATE_CONNECTION'; payload: { id: string; origem: string; destino: string } }
-  | { type: 'SET_RESULTADO_FINAL'; payload: ResultadoFinal }
-  |{ type: 'UPDATE_RESULTADO_FINAL'; payload: SaidaFinal[] }
-  | { type: 'ADD_DOCUMENTO_ANEXADO'; payload: DocumentoAnexado }
-  | { type: 'UPDATE_DOCUMENTO_ANEXADO'; payload: { index: number; documento: DocumentoAnexado } }
-  | { type: 'REMOVE_DOCUMENTO_ANEXADO'; payload: number }
-  | { type: 'SET_DOCUMENTOS_ANEXADOS'; payload: DocumentoAnexado[] };
 
 
 export const initialState: WorkflowState = {
@@ -53,84 +41,6 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         nodes: [...state.nodes, action.payload]
       };
 
-    case 'UPDATE_NODE':
-      return {
-        ...state,
-        nodes: state.nodes.map(node =>
-          node.id === action.payload.id
-            ? { ...node, ...action.payload.updates }
-            : node
-        )
-      };
-
-    case 'DELETE_NODE':
-      return {
-        ...state,
-        nodes: state.nodes.filter(node => node.id !== action.payload),
-        connections: state.connections.filter(
-          conn => conn.origem !== action.payload && conn.destino !== action.payload
-        ),
-      };
-
-    case 'ADD_CONNECTION':
-      return {
-        ...state,
-        connections: [...state.connections, action.payload]
-      };
-
-    case 'UPDATE_CONNECTION':
-      return {
-        ...state,
-        connections: state.connections.map(conn =>
-          conn.id === action.payload.id
-            ? { ...conn, origem: action.payload.origem, destino: action.payload.destino }
-            : conn
-        )
-      };
-
-    case 'DELETE_CONNECTION':
-      return {
-        ...state,
-        connections: state.connections.filter(conn => conn.id !== action.payload)
-      };
-
-    case 'SET_RESULTADO_FINAL':
-      return {
-        ...state,
-        resultado_final: action.payload
-      };
-
-    case 'ADD_DOCUMENTO_ANEXADO':
-      return {
-        ...state,
-        documentos_anexados: [...state.documentos_anexados, action.payload]
-      };
-
-    case 'UPDATE_DOCUMENTO_ANEXADO':
-      const updatedDocumentos = [...state.documentos_anexados];
-      updatedDocumentos[action.payload.index] = action.payload.documento;
-      return {
-        ...state,
-        documentos_anexados: updatedDocumentos
-      };
-
-    case 'REMOVE_DOCUMENTO_ANEXADO':
-      return {
-        ...state,
-        documentos_anexados: state.documentos_anexados.filter((_, index) => index !== action.payload)
-      };
-
-    case 'SET_DOCUMENTOS_ANEXADOS':
-      return {
-        ...state,
-        documentos_anexados: action.payload
-      };
-
-    case 'UPDATE_RESULTADO_FINAL':
-      return {
-        ...state,
-        resultado_final: new ResultadoFinal(action.payload)
-      };
 
     default:
       return state;
@@ -142,24 +52,7 @@ interface WorkflowContextType {
   dispatch: React.Dispatch<WorkflowAction>;
   // Node actions
   addNode: (node: NodeState) => void;
-  deleteNode: (id: string) => void;
-  updateNode: (id: string, updates: Partial<NodeState>) => void;
-  // Connection actions
-  addConnection: (connection: Connection) => void;
-  deleteConnection: (id: string) => void;
-  updateConnection: (id: string, origem: string, destino: string) => void;
-   // Resultado Final actions
-  setResultadoFinal: (saidas: SaidaFinal[]) => void;
-  updateResultadoFinal: (saidas: SaidaFinal[]) => void;
-   // Documentos Anexados actions
-  addDocumentoAnexado: (documento: DocumentoAnexado) => void;
-  updateDocumentoAnexado: (index: number, documento: DocumentoAnexado) => void;
-  removeDocumentoAnexado: (index: number) => void;
-  setDocumentosAnexados: (documentos: DocumentoAnexado[]) => void;
-  // Workflow export
-  getWorkflowJSON: () => string;
-  getWorkflowObject: () => Workflow;
-  validateWorkflow: () => { isValid: boolean; errors: string[] };
+
 }
 
 const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined);
@@ -171,190 +64,12 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'ADD_NODE', payload: { ...node, id: node.id } });
   };
 
-  const updateNode = (id: string, updates: Partial<NodeState>) => {
-    dispatch({ type: 'UPDATE_NODE', payload: { id, updates } });
-  };
-  
-  const deleteNode = (id: string) => {
-    dispatch({ type: 'DELETE_NODE', payload: id });
-  };
 
-  const addConnection = (connection: Connection) => {
-    dispatch({ type: 'ADD_CONNECTION', payload: connection });
-  };
-
-  const updateConnection = (id: string, origem: string, destino: string) => {
-    dispatch({ type: 'UPDATE_CONNECTION', payload: { id, origem, destino } });
-  };
-
-  const deleteConnection = (id: string) => {
-    dispatch({ type: 'DELETE_CONNECTION', payload: id });
-  };
-
-    // No WorkflowProvider, adicione estas funções:
-  const setResultadoFinal = (saidas: SaidaFinal[]) => {
-    dispatch({ type: 'SET_RESULTADO_FINAL', payload: new ResultadoFinal(saidas) });
-  };
-
-   // Documentos Anexados actions
-  const addDocumentoAnexado = (documento: DocumentoAnexado) => {
-    dispatch({ type: 'ADD_DOCUMENTO_ANEXADO', payload: documento });
-  };
-
-  const updateDocumentoAnexado = (index: number, documento: DocumentoAnexado) => {
-    dispatch({ type: 'UPDATE_DOCUMENTO_ANEXADO', payload: { index, documento } });
-  };
-
-  const removeDocumentoAnexado = (index: number) => {
-    dispatch({ type: 'REMOVE_DOCUMENTO_ANEXADO', payload: index });
-  };
-
-  const setDocumentosAnexados = (documentos: DocumentoAnexado[]) => {
-    dispatch({ type: 'SET_DOCUMENTOS_ANEXADOS', payload: documentos });
-  };
-
-  const updateResultadoFinal = (saidas: SaidaFinal[]) => {
-    dispatch({ type: 'UPDATE_RESULTADO_FINAL', payload: saidas });
-  };
-
-
-   // Converter NodeState para NodeEntitie
-  const convertToNodeEntitie = (nodeState: NodeState): NodeEntitie => {
-    return new NodeEntitie(
-      nodeState.nome,
-      nodeState.prompt,
-      nodeState.saida,
-      nodeState.entradas,
-      nodeState.modelo_llm,
-      nodeState.temperatura,
-      nodeState.ferramentas
-    );
-  };
-  
-  // Converter Connection para Aresta (usando nomes em vez de IDs)
-  const convertToAresta = (connection: Connection): Aresta => {
-    const origemNode = state.nodes.find(node => node.id === connection.origem);
-    const destinoNode = state.nodes.find(node => node.id === connection.destino);
-    
-    if (!origemNode) {
-      throw new Error(`Nó de origem com ID '${connection.origem}' não encontrado`);
-    }
-    
-    // Para destino 'END', usar 'END' diretamente
-    const destino = connection.destino === 'END' ? 'END' : (destinoNode?.nome || connection.destino);
-    
-    return new Aresta(origemNode.nome, destino);
-  };
-
-  // Validar workflow
-  const validateWorkflow = (): { isValid: boolean; errors: string[] } => {
-    const errors: string[] = [];
-
-    try {
-      // Verificar se há nós
-      if (state.nodes.length === 0) {
-        errors.push('Workflow deve ter pelo menos um nó');
-      }
-
-      // Verificar se há pelo menos um nó de entrada
-      const entradaNodes = state.nodes.filter(node => node.categoria === 'entrada');
-      if (entradaNodes.length === 0) {
-        errors.push('Workflow deve ter pelo menos um nó de categoria "entrada"');
-      }
-
-      // Verificar se há conexões
-      if (state.connections.length === 0) {
-        errors.push('Workflow deve ter pelo menos uma conexão');
-      }
-
-      // Verificar se há conexão para END
-      const hasEndConnection = state.connections.some(conn => conn.destino === 'END');
-      if (!hasEndConnection) {
-        errors.push('Workflow deve terminar com uma conexão para "END"');
-      }
-
-      // Validar nós individuais
-      state.nodes.forEach(node => {
-        try {
-          const nodeEntity = convertToNodeEntitie(node);
-          nodeEntity.validate();
-        } catch (error: any) {
-          errors.push(`Nó "${node.nome}": ${error.message}`);
-        }
-      });
-
-      // Validar conexões
-      const nodeEntities = state.nodes.map(convertToNodeEntitie);
-      state.connections.forEach(connection => {
-        try {
-          const aresta = convertToAresta(connection);
-          aresta.validate(nodeEntities);
-        } catch (error: any) {
-          errors.push(`Conexão ${connection.origem} → ${connection.destino}: ${error.message}`);
-        }
-      });
-
-    } catch (error: any) {
-      errors.push(`Erro na validação: ${error.message}`);
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  };
-
-
-
-  // Obter workflow como objeto
-  const getWorkflowObject = (): Workflow => {
-    const nodeEntities = state.nodes.map(convertToNodeEntitie);
-    const arestas = state.connections.map(convertToAresta);
-    const grafo = new Grafo(nodeEntities, arestas);
-
-    return new Workflow(state.documentos_anexados, grafo, state.resultado_final);
-  };
-
-  // Obter workflow como JSON string
-  const getWorkflowJSON = (): string => {
-    try {
-      const workflow = getWorkflowObject();
-
-      console.log(workflow, 'workflow')
-      return workflow.toJsonString();
-    } catch (error: any) {
-      console.error('Erro ao converter workflow para JSON:', error);
-      return JSON.stringify({
-        error: 'Erro ao converter workflow para JSON',
-        message: error.message
-      }, null, 2);
-    }
-  };
 
   const value: WorkflowContextType = {
     state,
     dispatch,
-    addNode,
-    deleteNode,
-    updateNode,
-    addConnection,
-    deleteConnection,
-    updateConnection,
-
-    // Resultado Final actions
-    setResultadoFinal,
-    updateResultadoFinal,
-
-     // Documentos Anexados actions
-    addDocumentoAnexado,
-    updateDocumentoAnexado,
-    removeDocumentoAnexado,
-    setDocumentosAnexados,
-
-    // Workflow export
-    getWorkflowJSON,
-    getWorkflowObject,
-    validateWorkflow
+    addNode
   };
 
   return (

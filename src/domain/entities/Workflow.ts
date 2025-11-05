@@ -8,7 +8,6 @@ export interface DocumentoAnexado {
   descricao: string;
   uuid_unico?: string;
   uuids_lista?: string[];
-  tipo: 'unico' | 'lista';
 }
 
 // Entidade Raiz: Workflow
@@ -27,21 +26,6 @@ export class Workflow {
     if (this.resultado_final) {
       this.resultado_final.validate(this.grafo.nos);
     }
-
-    // Valida documentos anexados
-    this.documentos_anexados.forEach(doc => {
-      if (!doc.chave || !doc.descricao) {
-        throw new Error('Documento anexado deve ter chave e descrição');
-      }
-      
-      if (doc.tipo === 'unico' && !doc.uuid_unico) {
-        throw new Error(`Documento único '${doc.chave}' deve ter um UUID único`);
-      }
-      
-      if (doc.tipo === 'lista' && (!doc.uuids_lista || doc.uuids_lista.length === 0)) {
-        throw new Error(`Documento lista '${doc.chave}' deve ter uma lista de UUIDs`);
-      }
-    });
 
     // Valida referências de documentos nos nós
     this.grafo.nos.forEach(node => {
