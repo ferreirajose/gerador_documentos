@@ -1,5 +1,5 @@
 // NodeManagerCreate.tsx
-import { RiCloseLine } from "@remixicon/react";
+import { RiCloseLine, RiFileAddLine, RiFileListLine, RiRefreshLine, RiUploadLine } from "@remixicon/react";
 import { useNodeManagerController } from "@/hooks/useNodeManagerController";
 import { formatFileSize } from "@/libs/util";
 
@@ -234,7 +234,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
 
                     {formData.documentosAnexados.length === 0 ? (
                         <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-                            <i className="ri-file-list-line text-3xl text-gray-400 mb-2"></i>
+                            <RiFileListLine className="text-3xl text-gray-400 mb-2" />
                             <p className="text-gray-500 dark:text-gray-400 text-sm">Nenhum documento anexado</p>
                             <p className="text-gray-400 dark:text-gray-500 text-xs">Clique em "Adicionar Documento" para começar</p>
                         </div>
@@ -321,7 +321,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                     onClick={() => fileInputRef.current?.click()}
                                                     className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors flex items-center space-x-1"
                                                 >
-                                                    <i className="ri-upload-line"></i>
+                                                    <RiUploadLine />
                                                     <span>Selecionar Arquivos</span>
                                                 </button>
                                             </div>
@@ -331,7 +331,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                 className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                                             >
                                                 <div className="w-12 h-12 flex items-center justify-center bg-blue-600 rounded-lg mx-auto mb-4">
-                                                    <i className="ri-file-add-line text-white text-xl"></i>
+                                                    <RiFileAddLine className="text-white text-xl" />
                                                 </div>
                                                 <p className="text-blue-600 dark:text-blue-400 font-medium mb-2">Selecionar Arquivo</p>
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">Formatos suportados: PDF, DOC, DOCX, TXT, JSON</p>
@@ -380,7 +380,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                                         className="text-blue-500 hover:text-blue-700 cursor-pointer"
                                                                         title="Tentar novamente"
                                                                     >
-                                                                        <i className="ri-refresh-line"></i>
+                                                                        <RiRefreshLine className="w-4" />
                                                                     </button>
                                                                 )}
                                                                 <button

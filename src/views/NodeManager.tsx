@@ -9,7 +9,7 @@ export default function NodeManager() {
   const handleCreateNode = (formData: any) => {
     console.log('Nó criado:', formData);
     setShowCreateForm(false);
-    // Aqui você pode adicionar a lógica para salvar o nó
+    // @TODO Adicionar a lógica para salvar o nó
   };
 
   return (
