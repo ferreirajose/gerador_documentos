@@ -4,7 +4,7 @@ export interface NodeInput {
   fonte: 'documento_anexado' | 'saida_no_anterior';
   documento?: string;
   no_origem?: string;
-  processar_em_paralelo?: boolean;
+  executar_em_paralelo?: boolean;
 }
 
 export interface NodeOutput {
@@ -38,10 +38,10 @@ export default class NodeEntitie {
       throw new Error('Nome da saída é obrigatório');
     }
 
-    // Apenas uma entrada por nó pode ter processar_em_paralelo: true
-    const parallelInputs = this.entradas.filter(input => input.processar_em_paralelo);
+    // Apenas uma entrada por nó pode ter executar_em_paralelo: true
+    const parallelInputs = this.entradas.filter(input => input.executar_em_paralelo);
     if (parallelInputs.length > 1) {
-      throw new Error(`Nó '${this.nome}' pode ter apenas uma entrada com processar_em_paralelo: true`);
+      throw new Error(`Nó '${this.nome}' pode ter apenas uma entrada com executar_em_paralelo: true`);
     }
   }
 }

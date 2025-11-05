@@ -3,8 +3,7 @@ import WorkflowOutput from "../components/common/WorkflowOutput"
 import { useWorkflow } from "@/context/WorkflowContext";
 
 export default function WorkflowExecution() {
-    const { state } = useWorkflow()
-  
+  const { state } = useWorkflow();
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(true); // ou false se quiser iniciar oculto
 
   return (

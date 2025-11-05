@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest --dom",
-    "test:node": "vitest src/tests/NodeEntitie"
+    "test:node": "vitest src/tests/NodeEntitie",
+    "test:workflow": "vitest src/tests/Workflow"
   },
   "dependencies": {
     "@radix-ui/react-progress": "^1.1.7",
