@@ -1,6 +1,8 @@
 // useNodeManagerController.ts
 import { FERRAMENTAS_DISPONIVEIS } from "@/data/ferramentas";
 import { llmModelsByProvider } from "@/data/llmodels";
+import WorkflowHttpGatewayV2 from "@/gateway/WorkflowHttpGatewayV2";
+import FetchAdapter from "@/infra/FetchAdapter";
 import { useRef, useState } from "react";
 
 interface Entrada {
@@ -24,6 +26,8 @@ interface ArquivoUpload {
   size: number;
   type: string;
   file: File;
+  status: 'pending' | 'uploading' | 'completed' | 'error';
+  uuid?: string; // Adicionar UUID após upload bem-sucedido
 }
 
 export interface FormData {
@@ -50,15 +54,34 @@ const initialFormData: FormData = {
   documentosAnexados: [],
 };
 
+
+const BASE_URL = import.meta.env.VITE_API_URL_MINUTA;
+const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
+
 export function useNodeManagerController() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [showVariableSelector, setShowVariableSelector] = useState(false);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [uploadedFiles, setUploadedFiles] = useState<ArquivoUpload[]>([]); 
+  
+  // Inicializar HTTP client
+  const httpClient = new FetchAdapter();
+  const workflowGateway = new WorkflowHttpGatewayV2(
+    httpClient,
+    BASE_URL,
+    AUTH_TOKEN
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Dados do formulário:", formData);
+    
+    // Preparar dados com UUIDs dos documentos
+    const workflowData = prepareWorkflowData();
+    
+    console.log("Dados do workflow para envio:", workflowData);
+    
   };
 
   const handleInputChange = (field: keyof FormData, value: any) => {
@@ -188,8 +211,83 @@ export function useNodeManagerController() {
     });
   };
 
+  const retryUpload = async (documentoIndex: number, arquivoId: string) => {
+    const documento = formData.documentosAnexados[documentoIndex];
+    const arquivoIndex = documento.arquivos.findIndex(arquivo => arquivo.id === arquivoId);
+    
+    if (arquivoIndex === -1) return;
+
+    await processFileUpload(documento.arquivos[arquivoIndex], documentoIndex, arquivoIndex);
+  };
+
+
+  const processFileUpload = async (uploadedFile: ArquivoUpload, documentoIndex: number, arquivoIndex: number) => {
+    try {
+      // Atualizar status para uploading
+      setFormData(prev => {
+        const updatedDocumentos = [...prev.documentosAnexados];
+        const arquivos = [...updatedDocumentos[documentoIndex].arquivos];
+        arquivos[arquivoIndex] = {
+          ...arquivos[arquivoIndex],
+          status: 'uploading'
+        };
+        updatedDocumentos[documentoIndex] = {
+          ...updatedDocumentos[documentoIndex],
+          arquivos
+        };
+        return { ...prev, documentosAnexados: updatedDocumentos };
+      });
+
+      // Fazer upload do arquivo
+      const response = await workflowGateway.uploadAndProcess(uploadedFile.file);
+      
+      if (response.success && response.data) {
+        const uuidDocumento = response.data.uuid_documento;
+
+        console.log('✅ Arquivo uploadado com sucesso:', uploadedFile.name, 'UUID:', uuidDocumento);
+        
+        // Atualizar arquivo com UUID e status completed
+        setFormData(prev => {
+          const updatedDocumentos = [...prev.documentosAnexados];
+          const arquivos = [...updatedDocumentos[documentoIndex].arquivos];
+          arquivos[arquivoIndex] = {
+            ...arquivos[arquivoIndex],
+            status: 'completed',
+            uuid: uuidDocumento
+          };
+          updatedDocumentos[documentoIndex] = {
+            ...updatedDocumentos[documentoIndex],
+            arquivos
+          };
+          return { ...prev, documentosAnexados: updatedDocumentos };
+        });
+        
+      } else {
+        throw new Error(response.message || 'Erro no upload');
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro no upload:', error);
+      
+      // Atualizar status para error
+      setFormData(prev => {
+        const updatedDocumentos = [...prev.documentosAnexados];
+        const arquivos = [...updatedDocumentos[documentoIndex].arquivos];
+        arquivos[arquivoIndex] = {
+          ...arquivos[arquivoIndex],
+          status: 'error'
+        };
+        updatedDocumentos[documentoIndex] = {
+          ...updatedDocumentos[documentoIndex],
+          arquivos
+        };
+        return { ...prev, documentosAnexados: updatedDocumentos };
+      });
+    }
+  };
+
   // Funções para upload de arquivos
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, documentoIndex: number) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, documentoIndex: number) => {
     const files = event.target.files;
     if (!files) return;
 
@@ -198,26 +296,28 @@ export function useNodeManagerController() {
       name: file.name,
       size: file.size,
       type: file.type,
-      file: file
+      file: file,
+      status: 'pending' as const
     }));
 
     setFormData(prev => {
       const updatedDocumentos = [...prev.documentosAnexados];
       const documentoAtual = updatedDocumentos[documentoIndex];
       
+      let arquivosAtualizados: ArquivoUpload[];
+      
       if (documentoAtual.tipo === 'lista') {
         // Para lista, adiciona todos os arquivos
-        updatedDocumentos[documentoIndex] = {
-          ...documentoAtual,
-          arquivos: [...documentoAtual.arquivos, ...novosArquivos]
-        };
+        arquivosAtualizados = [...documentoAtual.arquivos, ...novosArquivos];
       } else {
         // Para único, mantém apenas o último arquivo
-        updatedDocumentos[documentoIndex] = {
-          ...documentoAtual,
-          arquivos: [novosArquivos[0]] // Pega apenas o primeiro arquivo
-        };
+        arquivosAtualizados = [novosArquivos[0]]; // Pega apenas o primeiro arquivo
       }
+
+      updatedDocumentos[documentoIndex] = {
+        ...documentoAtual,
+        arquivos: arquivosAtualizados
+      };
 
       return {
         ...prev,
@@ -225,10 +325,66 @@ export function useNodeManagerController() {
       };
     });
 
+    // Processar upload dos novos arquivos
+    const documento = formData.documentosAnexados[documentoIndex];
+    const startIndex = documento.arquivos.length;
+    
+    novosArquivos.forEach(async (arquivo, index) => {
+      await processFileUpload(arquivo, documentoIndex, startIndex + index);
+    });
+
     // Limpa o input de arquivo
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+   // Função para preparar dados do workflow para envio
+  const prepareWorkflowData = () => {
+    const documentosParaEnvio = formData.documentosAnexados
+    .filter(documento => {
+      // Filtrar apenas documentos que têm arquivos com upload concluído
+      const hasCompletedFiles = documento.arquivos.some(
+        arquivo => arquivo.status === 'completed' && arquivo.uuid
+      );
+      return documento.chave && documento.descricao && hasCompletedFiles;
+    })
+    .map(documento => {
+      // Filtrar apenas arquivos com upload concluído e com UUID
+      const uuids = documento.arquivos
+        .filter(arquivo => arquivo.status === 'completed' && arquivo.uuid)
+        .map(arquivo => arquivo.uuid!);
+
+      // Base do objeto (sempre inclui chave e descricao)
+      const documentoBase = {
+        chave: documento.chave,
+        descricao: documento.descricao
+      };
+
+      // Para tipo único - usar uuid_unico
+      if (documento.tipo === 'unico' && uuids.length > 0) {
+        return {
+          ...documentoBase,
+          uuid_unico: uuids[0] // Pega o primeiro UUID (único arquivo)
+        };
+      }
+
+      // Para tipo lista - usar uuids_lista
+      if (documento.tipo === 'lista' && uuids.length > 0) {
+        return {
+          ...documentoBase,
+          uuids_lista: uuids // Array com todos os UUIDs
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean); // Remove null values
+
+    return {
+      ...formData,
+      documentosAnexados: documentosParaEnvio
+    };
   };
 
   const removeArquivo = (documentoIndex: number, arquivoId: string) => {
@@ -253,7 +409,7 @@ export function useNodeManagerController() {
     }));
   };
 
-  return {
+   return {
     formData,
     showVariableSelector,
     promptTextareaRef,
@@ -270,11 +426,13 @@ export function useNodeManagerController() {
     updateDocumento,
     handleFileUpload,
     removeArquivo,
+    retryUpload, // Exportar retryUpload
     insertVariableInPrompt,
     handleSubmit,
     handleInputChange,
     handleFerramentaChange,
     resetForm,
     handleSaidaFormatoChange,
+    prepareWorkflowData, // Exportar para uso no componente
   };
 }

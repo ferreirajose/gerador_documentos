@@ -26,12 +26,13 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
         updateDocumento,
         handleFileUpload,
         removeArquivo,
+        retryUpload,
         insertVariableInPrompt,
         handleSubmit,
         handleInputChange,
         handleFerramentaChange,
         resetForm,
-        handleSaidaFormatoChange,
+        handleSaidaFormatoChange
     } = useNodeManagerController();
 
     const handleFormSubmit = (e: React.FormEvent) => {
@@ -350,19 +351,46 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                     {documento.arquivos.map(arquivo => (
                                                         <div key={arquivo.id} className="flex items-center justify-between bg-gray-100 dark:bg-gray-600 p-3 rounded-lg">
                                                             <div className="flex items-center space-x-3">
-                                                                <i className="ri-file-line text-blue-500"></i>
+                                                                <i className={`ri-file-line ${arquivo.status === 'completed' ? 'text-green-500' :
+                                                                        arquivo.status === 'uploading' ? 'text-blue-500' :
+                                                                            arquivo.status === 'error' ? 'text-red-500' : 'text-gray-500'
+                                                                    }`}></i>
                                                                 <div>
                                                                     <p className="text-sm font-medium text-gray-900 dark:text-white">{arquivo.name}</p>
-                                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(arquivo.size)}</p>
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                        {formatFileSize(arquivo.size)} •
+                                                                        <span className={
+                                                                            arquivo.status === 'completed' ? 'text-green-600' :
+                                                                                arquivo.status === 'uploading' ? 'text-blue-600' :
+                                                                                    arquivo.status === 'error' ? 'text-red-600' : 'text-gray-600'
+                                                                        }>
+                                                                            {arquivo.status === 'completed' ? ' Concluído' :
+                                                                                arquivo.status === 'uploading' ? ' Enviando...' :
+                                                                                    arquivo.status === 'error' ? ' Erro' : ' Pendente'}
+                                                                            {arquivo.uuid && ` • UUID: ${arquivo.uuid}`}
+                                                                        </span>
+                                                                    </p>
                                                                 </div>
                                                             </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeArquivo(index, arquivo.id)}
-                                                                className="text-red-500 hover:text-red-700 cursor-pointer"
-                                                            >
-                                                                <RiCloseLine className="text-lg" />
-                                                            </button>
+                                                            <div className="flex items-center space-x-2">
+                                                                {arquivo.status === 'error' && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => retryUpload(index, arquivo.id)}
+                                                                        className="text-blue-500 hover:text-blue-700 cursor-pointer"
+                                                                        title="Tentar novamente"
+                                                                    >
+                                                                        <i className="ri-refresh-line"></i>
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeArquivo(index, arquivo.id)}
+                                                                    className="text-red-500 hover:text-red-700 cursor-pointer"
+                                                                >
+                                                                    <RiCloseLine className="text-lg" />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -427,7 +455,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
 
                                         <div>
                                             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                                Fonte dos Dados
+                                                fonte dos Dados
                                             </label>
                                             <select
                                                 value={entrada.fonte}
@@ -478,15 +506,15 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                         {entrada.fonte === 'saida_no_anterior' && (
                                             <div>
                                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                                    Nó de Origem
+                                                    Nó de fonte
                                                 </label>
                                                 <select
-                                                    value={entrada.no_origem || ''}
-                                                    onChange={(e) => updateEntrada(index, 'no_origem', e.target.value)}
+                                                    value={entrada.no_fonte || ''}
+                                                    onChange={(e) => updateEntrada(index, 'no_fonte', e.target.value)}
                                                     className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-600 dark:text-white"
                                                     required
                                                 >
-                                                    <option value="">Selecione o nó de origem</option>
+                                                    <option value="">Selecione o nó de fonte</option>
                                                     {nodes.map(node => (
                                                         <option key={node.id} value={node.nome}>
                                                             {node.nome}
