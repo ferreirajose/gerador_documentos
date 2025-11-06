@@ -1,9 +1,8 @@
-// NodeEntitie.ts
-export interface NodeInput {
+export interface Entrada {
   variavel_prompt: string;
-  fonte: 'documento_anexado' | 'saida_no_anterior';
-  documento?: string;
-  no_origem?: string;
+  origem: 'documento_anexado' | 'resultado_no_anterior';
+  chave_documento_origem?: string;
+  nome_no_origem?: string;
   executar_em_paralelo?: boolean;
 }
 
@@ -18,7 +17,7 @@ export default class NodeEntitie {
     public readonly nome: string,
     public readonly prompt: string,
     public readonly saida: NodeOutput,
-    public readonly entradas: NodeInput[] = [],
+    public readonly entradas: Entrada[] = [],
     public readonly modelo_llm?: string,
     public readonly temperatura?: number,
     public readonly ferramentas: string[] = []

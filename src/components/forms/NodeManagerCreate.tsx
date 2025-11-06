@@ -49,18 +49,21 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
         onClose?.(); // Fecha o formulário
     };
 
-    const documentosAnexados = [
-        { chave: 'doc1', descricao: 'Documento de Auditoria' },
-        { chave: 'doc2', descricao: 'Contrato de Serviço' },
-        { chave: 'doc3', descricao: 'Relatório Financeiro' }
-    ];
+    // const documentosAnexados = [
+    //     { chave: 'doc1', descricao: 'auditoria_verba_cultural_2024' },
+    //     { chave: 'doc2', descricao: 'contratacoes_artistas_2024' },
+    //     { chave: 'doc3', descricao: 'prestacoes_contas_cidades_2024' }
+    // ];
 
-    // @TODO IMPLMENTAR PARA OBTER OS NODE DO ESTADO
-    const nodes = [
-        { id: '1', nome: 'Nó de Entrada' },
-        { id: '2', nome: 'Nó de Processamento' },
-        { id: '3', nome: 'Nó de Saída' }
-    ];
+    const documentosAnexados = state.documentos_anexados.map(doc => ({
+        chave: doc.chave,
+        descricao: doc.descricao
+    }))
+
+    const nodes = state.nodes.map(node => ({
+        id: node.id,
+        nome: node.nome
+    }))
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -462,24 +465,24 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                 fonte dos Dados
                                             </label>
                                             <select
-                                                value={entrada.fonte}
-                                                onChange={(e) => updateEntrada(index, 'fonte', e.target.value)}
+                                                value={entrada.origem}
+                                                onChange={(e) => updateEntrada(index, 'origem', e.target.value)}
                                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-600 dark:text-white"
                                             >
                                                 <option value="documento_anexado">Documento Anexado</option>
-                                                <option value="saida_no_anterior">Saída de Nó Anterior</option>
+                                                <option value="resultado_no_anterior">Saída de Nó Anterior</option>
                                             </select>
                                         </div>
 
-                                        {entrada.fonte === 'documento_anexado' && (
+                                        {entrada.origem === 'documento_anexado' && (
                                             <>
                                                 <div id="input-documento-anexados">
                                                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                                                         Documentos Anexados
                                                     </label>
                                                     <select
-                                                        value={entrada.documento || ''}
-                                                        onChange={(e) => updateEntrada(index, 'documento', e.target.value)}
+                                                        value={entrada.chave_documento_origem || ''}
+                                                        onChange={(e) => updateEntrada(index, 'chave_documento_origem', e.target.value)}
                                                         className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-600 dark:text-white"
                                                     >
                                                         <option value="">Selecione um documento anexado</option>
@@ -506,14 +509,14 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                         )}
                                         
                                         {/* @TODO VERIFICAR, QUANDO SELECIONAR UM VALOR O CAMPO SELECT DESAPARECE */}
-                                        {entrada.fonte === 'saida_no_anterior' && (
+                                        {entrada.origem === 'resultado_no_anterior' && (
                                             <div id="input-fonte">
                                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                                    Nó de fonte
+                                                   Lista de Nós 
                                                 </label>
                                                 <select
-                                                    value={entrada.no_origem || ''}
-                                                    onChange={(e) => updateEntrada(index, 'no_origem', e.target.value)}
+                                                    value={entrada.origem || ''}
+                                                    onChange={(e) => updateEntrada(index, 'origem', e.target.value)}
                                                     className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-600 dark:text-white"
                                                     required
                                                 >
