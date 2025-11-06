@@ -25,7 +25,9 @@ export interface WorkflowState {
 // Atualize os tipos de ação
 export type WorkflowAction =
   | { type: 'ADD_NODE'; payload: NodeState }
+  | { type: 'DELETE_NODE'; payload: { nodeId: string, chavesDocumentos?: string[] } }
   | { type: 'ADD_DOCUMENTO_ANEXO'; payload: DocumentoAnexado }
+  | { type: 'REMOVE_DOCUMENTOS_POR_CHAVE'; payload: string[] } 
 
 export const initialState: WorkflowState = {
   nodes: [],
@@ -42,10 +44,25 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         nodes: [...state.nodes, action.payload]
       };
 
-      case 'ADD_DOCUMENTO_ANEXO':
+    case 'DELETE_NODE':
+      return {
+        ...state,
+        nodes: state.nodes.filter(node => node.id !== action.payload.nodeId)
+      };
+
+    case 'ADD_DOCUMENTO_ANEXO':
       return {
         ...state,
         documentos_anexados: [...state.documentos_anexados, action.payload]
+      };
+
+    // Ação para remover documentos por chave
+    case 'REMOVE_DOCUMENTOS_POR_CHAVE':
+      return {
+        ...state,
+        documentos_anexados: state.documentos_anexados.filter(
+          doc => !action.payload.includes(doc.chave)
+        )
       };
 
     default:
@@ -58,8 +75,10 @@ interface WorkflowContextType {
   dispatch: React.Dispatch<WorkflowAction>;
   // Node actions
   addNode: (node: NodeState) => void;
+  deleteNode: (nodeId: string, chavesDocumentos?: string[]) => void;
   addDocumentoAnexo: (node: DocumentoAnexado) => void;
-  // New methods
+  removeDocumentosPorChave: (chaves: string[]) => void;
+  // WORKFLOW
   getWorkflowJSON: () => string;
   validateWorkflow: () => { isValid: boolean; errors: string[] };
 }
@@ -73,6 +92,20 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'ADD_NODE', payload: { ...node, id: node.id } });
   };
 
+  const deleteNode = (nodeId: string, chavesDocumentos?: string[]) => {
+    // Primeiro remove o nó
+    dispatch({ type: 'DELETE_NODE', payload: { nodeId, chavesDocumentos } });
+    
+    // Se houver chaves de documentos para remover, remove os documentos também
+    if (chavesDocumentos && chavesDocumentos.length > 0) {
+      dispatch({ type: 'REMOVE_DOCUMENTOS_POR_CHAVE', payload: chavesDocumentos });
+    }
+  };
+
+  const removeDocumentosPorChave = (chaves: string[]) => {
+    dispatch({ type: 'REMOVE_DOCUMENTOS_POR_CHAVE', payload: chaves });
+  };
+  
   const addDocumentoAnexo = (documento: DocumentoAnexado) => {
     dispatch({ type: 'ADD_DOCUMENTO_ANEXO', payload: { ...documento} });
   };
@@ -188,6 +221,8 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     state,
     dispatch,
     addNode,
+    deleteNode,
+    removeDocumentosPorChave,
     addDocumentoAnexo,
     getWorkflowJSON,
     validateWorkflow

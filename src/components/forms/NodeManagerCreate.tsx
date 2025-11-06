@@ -36,7 +36,6 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
     } = useNodeManagerController();
 
     const { state } = useWorkflow();
-    
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,17 +48,12 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
         onClose?.(); // Fecha o formulário
     };
 
-    // const documentosAnexados = [
-    //     { chave: 'doc1', descricao: 'auditoria_verba_cultural_2024' },
-    //     { chave: 'doc2', descricao: 'contratacoes_artistas_2024' },
-    //     { chave: 'doc3', descricao: 'prestacoes_contas_cidades_2024' }
-    // ];
-
-    const documentosAnexados = state.documentos_anexados.map(doc => ({
+    const documentosAnexados = formData.documentosAnexados.map(doc => ({
         chave: doc.chave,
         descricao: doc.descricao
     }))
 
+    // @TODO ALTERA PARA PEGAR O NODE DO formData IGUAL A documentosAnexados
     const nodes = state.nodes.map(node => ({
         id: node.id,
         nome: node.nome
@@ -359,8 +353,8 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                         <div key={arquivo.id} className="flex items-center justify-between bg-gray-100 dark:bg-gray-600 p-3 rounded-lg">
                                                             <div className="flex items-center space-x-3">
                                                                 <i className={`ri-file-line ${arquivo.status === 'completed' ? 'text-green-500' :
-                                                                        arquivo.status === 'uploading' ? 'text-blue-500' :
-                                                                            arquivo.status === 'error' ? 'text-red-500' : 'text-gray-500'
+                                                                    arquivo.status === 'uploading' ? 'text-blue-500' :
+                                                                        arquivo.status === 'error' ? 'text-red-500' : 'text-gray-500'
                                                                     }`}></i>
                                                                 <div>
                                                                     <p className="text-sm font-medium text-gray-900 dark:text-white">{arquivo.name}</p>
@@ -507,12 +501,12 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                 </div>
                                             </>
                                         )}
-                                        
+
                                         {/* @TODO VERIFICAR, QUANDO SELECIONAR UM VALOR O CAMPO SELECT DESAPARECE */}
                                         {entrada.origem === 'resultado_no_anterior' && (
                                             <div id="input-fonte">
                                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                                   Lista de Nós 
+                                                    Lista de Nós
                                                 </label>
                                                 <select
                                                     value={entrada.origem || ''}
@@ -538,7 +532,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
 
                 {/* Saída - 2 colunas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
+                    <div id="input-name-output">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Nome da Saída
                         </label>
