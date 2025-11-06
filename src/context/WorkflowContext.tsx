@@ -3,8 +3,9 @@ import { Aresta } from '@/domain/entities/Aresta';
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { DocumentoAnexado } from '@/domain/entities/Workflow';
 import { ResultadoFinal } from '@/domain/entities/ResultadoFinal';
+import { Grafo } from '@/domain/entities/Grafo';
+import { Workflow } from '@/domain/entities/Workflow';
 
-// Use as interfaces das entidades de domínio
 export interface NodeState extends Omit<NodeEntitie, 'validate'> {
   id: string;
   categoria: 'entrada' | 'processamento' | 'saida';
@@ -24,7 +25,7 @@ export interface WorkflowState {
 // Atualize os tipos de ação
 export type WorkflowAction =
   | { type: 'ADD_NODE'; payload: NodeState }
-
+  | { type: 'ADD_DOCUMENTO_ANEXO'; payload: DocumentoAnexado }
 
 export const initialState: WorkflowState = {
   nodes: [],
@@ -41,6 +42,11 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         nodes: [...state.nodes, action.payload]
       };
 
+      case 'ADD_DOCUMENTO_ANEXO':
+      return {
+        ...state,
+        documentos_anexados: [...state.documentos_anexados, action.payload]
+      };
 
     default:
       return state;
@@ -52,7 +58,10 @@ interface WorkflowContextType {
   dispatch: React.Dispatch<WorkflowAction>;
   // Node actions
   addNode: (node: NodeState) => void;
-
+  addDocumentoAnexo: (node: DocumentoAnexado) => void;
+  // New methods
+  getWorkflowJSON: () => string;
+  validateWorkflow: () => { isValid: boolean; errors: string[] };
 }
 
 const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined);
@@ -64,12 +73,124 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'ADD_NODE', payload: { ...node, id: node.id } });
   };
 
+  const addDocumentoAnexo = (documento: DocumentoAnexado) => {
+    dispatch({ type: 'ADD_DOCUMENTO_ANEXO', payload: { ...documento} });
+  };
 
+  // WorkflowContext.tsx - métodos atualizados
+  const getWorkflowJSON = (): string => {
+    try {
+      // Convert NodeState[] to NodeEntitie[]
+      const nodes: NodeEntitie[] = state.nodes.map(node => 
+        new NodeEntitie(
+          node.nome,
+          node.prompt,
+          node.saida,
+          node.entradas,
+          node.modelo_llm,
+          node.temperatura,
+          node.ferramentas
+        )
+      );
+
+      // Validar todos os nós (incluindo nomes únicos)
+      nodes.forEach((node, index, allNodes) => {
+        // Passar todos os nodes exceto o atual para validação de nome único
+        const otherNodes = allNodes.filter((_, i) => i !== index);
+        node.validate(otherNodes);
+      });
+
+      // Create empty edges array
+      const edges: Aresta[] = [];
+
+      // Create graph with empty edges
+      const grafo = new Grafo(nodes, edges);
+
+      // Create workflow with empty resultado_final
+      const workflow = new Workflow(
+        state.documentos_anexados,
+        grafo,
+        state.resultado_final
+      );
+
+      return workflow.toJsonString();
+    } catch (error) {
+      console.error('Error generating workflow JSON:', error);
+      return JSON.stringify({ error: 'Failed to generate workflow JSON' }, null, 2);
+    }
+  };
+
+  const validateWorkflow = (): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    try {
+      // Convert NodeState[] to NodeEntitie[]
+      const nodes: NodeEntitie[] = state.nodes.map(node => 
+        new NodeEntitie(
+          node.nome,
+          node.prompt,
+          node.saida,
+          node.entradas,
+          node.modelo_llm,
+          node.temperatura,
+          node.ferramentas
+        )
+      );
+
+      // Validar todos os nós (incluindo nomes únicos)
+      nodes.forEach((node, index, allNodes) => {
+        try {
+          const otherNodes = allNodes.filter((_, i) => i !== index);
+          node.validate(otherNodes);
+        } catch (error) {
+          if (error instanceof Error) {
+            errors.push(error.message);
+          }
+        }
+      });
+
+      // Create empty edges array
+      const edges: Aresta[] = [];
+
+      // Create graph with empty edges
+      const grafo = new Grafo(nodes, edges);
+
+      // Create workflow
+      const workflow = new Workflow(
+        state.documentos_anexados,
+        grafo,
+        state.resultado_final
+      );
+
+      // Validate the workflow
+      workflow.validate();
+      
+    } catch (error) {
+      if (error instanceof Error) {
+        errors.push(error.message);
+      } else {
+        errors.push('Unknown validation error occurred');
+      }
+    }
+
+    // Additional validations specific to the React state
+    if (state.nodes.length === 0) {
+      errors.push('Workflow must contain at least one node');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
 
   const value: WorkflowContextType = {
     state,
     dispatch,
-    addNode
+    addNode,
+    addDocumentoAnexo,
+    getWorkflowJSON,
+    validateWorkflow
   };
 
   return (
