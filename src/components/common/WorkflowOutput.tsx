@@ -1,4 +1,4 @@
-import { RiEyeLine, RiEyeOffLine, RiClipboardLine, RiCheckLine, RiErrorWarningLine, RiDownloadLine } from '@remixicon/react';
+import { RiEyeLine, RiEyeOffLine, RiClipboardLine, RiCheckLine, RiErrorWarningLine, RiDownloadLine, RiArrowRightSLine, RiArrowDownSLine } from '@remixicon/react';
 import { JSX, useState } from 'react';
 import { useWorkflow } from '@/context/WorkflowContext';
 
@@ -7,132 +7,189 @@ interface WorkflowOutputProps {
   setIsWorkflowVisible: (visible: boolean) => void;
 }
 
-// Função para formatar o JSON com syntax highlighting no estilo Monokai
-const formatJSONWithColors = (jsonString: string): JSX.Element[] => {
+interface JSONNode {
+  type: 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
+  key?: string;
+  value: any;
+  depth: number;
+  isExpanded: boolean;
+  path: string;
+  children?: JSONNode[];
+  parentType?: 'object' | 'array';
+  index?: number;
+  totalChildren?: number;
+}
+
+// Função para construir a árvore do JSON com estado de expansão
+const buildJSONTree = (obj: any, depth = 0, path = 'root', parentType?: 'object' | 'array', index = 0, totalChildren = 1): JSONNode => {
+  if (typeof obj === 'object' && obj !== null) {
+    const isArray = Array.isArray(obj);
+    const node: JSONNode = {
+      type: isArray ? 'array' : 'object',
+      value: obj,
+      depth,
+      isExpanded: depth < 2, // Expande automaticamente até o segundo nível
+      path,
+      parentType,
+      index,
+      totalChildren
+    };
+
+    if (isArray) {
+      node.children = obj.map((item, idx) => 
+        buildJSONTree(item, depth + 1, `${path}[${idx}]`, 'array', idx, obj.length)
+      );
+    } else {
+      const entries = Object.entries(obj);
+      node.children = entries.map(([key, value], idx) => ({
+        ...buildJSONTree(value, depth + 1, `${path}.${key}`, 'object', idx, entries.length),
+        key
+      }));
+    }
+
+    return node;
+  }
+
+  return {
+    type: obj === null ? 'null' : typeof obj as 'string' | 'number' | 'boolean',
+    value: obj,
+    depth,
+    isExpanded: false,
+    path,
+    parentType,
+    index,
+    totalChildren
+  };
+};
+
+// Função para renderizar a árvore do JSON com controles de expansão
+const renderJSONTree = (
+  node: JSONNode, 
+  onToggle: (path: string) => void,
+  expandedPaths: Set<string>
+): JSX.Element => {
+  const isExpanded = expandedPaths.has(node.path);
+  const showComma = node.index !== undefined && node.totalChildren !== undefined && node.index < node.totalChildren - 1;
+  
+  const toggleExpand = () => {
+    onToggle(node.path);
+  };
+
+  // Valores primitivos
+  if (node.type !== 'object' && node.type !== 'array') {
+    let valueColor = 'text-gray-800 dark:text-gray-200';
+    let displayValue = node.value;
+
+    if (node.type === 'string') {
+      valueColor = 'text-[#d14] dark:text-[#f1fa8c]';
+      displayValue = `"${node.value}"`;
+    } else if (node.type === 'number') {
+      valueColor = 'text-[#0000ff] dark:text-[#bd93f9]';
+    } else if (node.type === 'boolean' || node.type === 'null') {
+      valueColor = 'text-[#008000] dark:text-[#8be9fd]';
+      displayValue = String(node.value);
+    }
+
+    return (
+      <div className="flex">
+        {node.key && (
+          <span className="text-[#000] dark:text-[#ff79c6] mr-2">
+            "{node.key}":
+          </span>
+        )}
+        <span className={valueColor}>{displayValue}</span>
+        {showComma && <span className="text-gray-800 dark:text-gray-200">,</span>}
+      </div>
+    );
+  }
+
+  // Objetos e arrays
+  const isArray = node.type === 'array';
+  const isEmpty = !node.children || node.children.length === 0;
+  const bracketColor = 'text-gray-800 dark:text-gray-200';
+
+  return (
+    <div>
+      <div className="flex items-start">
+        {node.key && (
+          <span className="text-[#000] dark:text-[#ff79c6] mr-2">
+            "{node.key}":
+          </span>
+        )}
+        
+        {!isEmpty && (
+          <button
+            onClick={toggleExpand}
+            className="mr-1 mt-0.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+          >
+            {isExpanded ? (
+              <RiArrowDownSLine className="w-4 h-4" />
+            ) : (
+              <RiArrowRightSLine className="w-4 h-4" />
+            )}
+          </button>
+        )}
+        
+        <span className={bracketColor}>
+          {isArray ? '[' : '{'}
+          {isEmpty && (isArray ? ']' : '}')}
+        </span>
+      </div>
+
+      {!isEmpty && isExpanded && node.children && (
+        <div className="ml-6 border-l border-gray-200 dark:border-gray-700 pl-4">
+          {node.children.map((child, index) => (
+            <div key={child.path} className="my-1">
+              {renderJSONTree(
+                {
+                  ...child,
+                  index,
+                  totalChildren: node.children!.length
+                }, 
+                onToggle, 
+                expandedPaths
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isEmpty && isExpanded && (
+        <div className="flex">
+          <span className={bracketColor}>
+            {isArray ? ']' : '}'}
+          </span>
+          {showComma && <span className="text-gray-800 dark:text-gray-200">,</span>}
+        </div>
+      )}
+
+      {!isEmpty && !isExpanded && (
+        <div className="flex">
+          <span className={`${bracketColor} ml-1`}>
+            {isArray ? `... ${node.children.length} items]` : `... ${node.children.length} keys}`}
+          </span>
+          {showComma && <span className="text-gray-800 dark:text-gray-200">,</span>}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Função para formatar o JSON com controles de expansão
+const formatJSONWithCollapse = (jsonString: string, expandedPaths: Set<string>, onToggle: (path: string) => void): JSX.Element => {
   try {
     const parsedJSON = JSON.parse(jsonString);
-    const formattedJSON = JSON.stringify(parsedJSON, null, 2);
+    const jsonTree = buildJSONTree(parsedJSON);
     
-    return formattedJSON.split('\n').map((line, lineIndex) => {
-      const parts: JSX.Element[] = [];
-      
-      // Regex para identificar diferentes partes do JSON
-      const keyRegex = /"([^"]+)":/g;
-      const stringRegex = /"([^"]*)"/g;
-      const numberRegex = /(\b-?\d+(\.\d+)?\b)/g;
-      const booleanRegex = /(true|false|null)/g;
-      
-      let match;
-      let lastIndex = 0;
-      
-      // Processa chaves (keys)
-      keyRegex.lastIndex = 0;
-      while ((match = keyRegex.exec(line)) !== null) {
-        // Texto antes da chave
-        if (match.index > lastIndex) {
-          parts.push(
-            <span key={`${lineIndex}-text-${lastIndex}`} className="text-gray-800 dark:text-gray-200">
-              {line.substring(lastIndex, match.index)}
-            </span>
-          );
-        }
-        
-        // A chave completa com aspas e dois pontos
-        parts.push(
-          <span key={`${lineIndex}-key-${match.index}`} className="text-[#000] dark:text-[#ff79c6]">
-            {match[0]}
-          </span>
-        );
-        
-        lastIndex = match.index + match[0].length;
-      }
-      
-      // Processa strings (valores entre aspas)
-      stringRegex.lastIndex = lastIndex;
-      while ((match = stringRegex.exec(line)) !== null) {
-        // Texto antes da string
-        if (match.index > lastIndex) {
-          parts.push(
-            <span key={`${lineIndex}-text-${lastIndex}`} className="text-gray-800 dark:text-gray-200">
-              {line.substring(lastIndex, match.index)}
-            </span>
-          );
-        }
-        
-        // A string completa com aspas
-        parts.push(
-          <span key={`${lineIndex}-string-${match.index}`} className="text-[#d14] dark:text-[#f1fa8c]">
-            {match[0]}
-          </span>
-        );
-        
-        lastIndex = match.index + match[0].length;
-      }
-      
-      // Processa números
-      numberRegex.lastIndex = lastIndex;
-      while ((match = numberRegex.exec(line)) !== null) {
-        // Texto antes do número
-        if (match.index > lastIndex) {
-          parts.push(
-            <span key={`${lineIndex}-text-${lastIndex}`} className="text-gray-800 dark:text-gray-200">
-              {line.substring(lastIndex, match.index)}
-            </span>
-          );
-        }
-        
-        // O número
-        parts.push(
-          <span key={`${lineIndex}-number-${match.index}`} className="text-[#0000ff] dark:text-[#bd93f9]">
-            {match[0]}
-          </span>
-        );
-        
-        lastIndex = match.index + match[0].length;
-      }
-      
-      // Processa booleanos e null
-      booleanRegex.lastIndex = lastIndex;
-      while ((match = booleanRegex.exec(line)) !== null) {
-        // Texto antes do booleano/null
-        if (match.index > lastIndex) {
-          parts.push(
-            <span key={`${lineIndex}-text-${lastIndex}`} className="text-gray-800 dark:text-gray-200">
-              {line.substring(lastIndex, match.index)}
-            </span>
-          );
-        }
-        
-        // O booleano ou null
-        parts.push(
-          <span key={`${lineIndex}-boolean-${match.index}`} className="text-[#008000] dark:text-[#8be9fd]">
-            {match[0]}
-          </span>
-        );
-        
-        lastIndex = match.index + match[0].length;
-      }
-      
-      // Texto restante na linha
-      if (lastIndex < line.length) {
-        parts.push(
-          <span key={`${lineIndex}-rest`} className="text-gray-800 dark:text-gray-200">
-            {line.substring(lastIndex)}
-          </span>
-        );
-      }
-      
-      return (
-        <div key={lineIndex}>
-          {parts}
-        </div>
-      );
-    });
+    return (
+      <div className="font-mono text-sm">
+        {renderJSONTree(jsonTree, onToggle, expandedPaths)}
+      </div>
+    );
     
   } catch (error) {
-    // Fallback se o JSON for inválido
-    console.error(error)
-    return [<div key="error" className="text-gray-800 dark:text-gray-200">{jsonString}</div>];
+    console.error(error);
+    return <div className="text-gray-800 dark:text-gray-200 font-mono text-sm">{jsonString}</div>;
   }
 };
 
@@ -143,9 +200,55 @@ const WorkflowOutput: React.FC<WorkflowOutputProps> = ({
   const { getWorkflowJSON, validateWorkflow } = useWorkflow();
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
   const workflowJSON = getWorkflowJSON();
   const validation = validateWorkflow();
+
+  // Função para alternar expansão de um caminho
+  const handleTogglePath = (path: string) => {
+    const newExpandedPaths = new Set(expandedPaths);
+    if (newExpandedPaths.has(path)) {
+      newExpandedPaths.delete(path);
+      
+      // Remove também todos os filhos deste caminho
+      Array.from(newExpandedPaths).forEach(existingPath => {
+        if (existingPath.startsWith(path + '.') || existingPath.startsWith(path + '[')) {
+          newExpandedPaths.delete(existingPath);
+        }
+      });
+    } else {
+      newExpandedPaths.add(path);
+    }
+    setExpandedPaths(newExpandedPaths);
+  };
+
+  // Função para expandir/contrair tudo
+  const handleToggleAll = () => {
+    if (expandedPaths.size > 0) {
+      // Contrair tudo
+      setExpandedPaths(new Set());
+    } else {
+      // Expandir tudo - precisamos construir a árvore para obter todos os caminhos
+      try {
+        const parsedJSON = JSON.parse(workflowJSON);
+        const jsonTree = buildJSONTree(parsedJSON);
+        const allPaths = new Set<string>();
+        
+        const collectPaths = (node: JSONNode) => {
+          if (node.type === 'object' || node.type === 'array') {
+            allPaths.add(node.path);
+            node.children?.forEach(collectPaths);
+          }
+        };
+        
+        collectPaths(jsonTree);
+        setExpandedPaths(allPaths);
+      } catch (error) {
+        console.error('Erro ao expandir tudo:', error);
+      }
+    }
+  };
 
   // Função para copiar o JSON
   const handleCopyJSON = async () => {
@@ -230,6 +333,16 @@ const WorkflowOutput: React.FC<WorkflowOutputProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Botão Expandir/Contrair Tudo */}
+          {isWorkflowVisible && (
+            <button
+              onClick={handleToggleAll}
+              className="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-md transition-colors dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300 dark:border-gray-600"
+            >
+              {expandedPaths.size > 0 ? 'Contrair Tudo' : 'Expandir Tudo'}
+            </button>
+          )}
+
           {/* Botão Copiar */}
           <button
             onClick={handleCopyJSON}
@@ -299,7 +412,7 @@ const WorkflowOutput: React.FC<WorkflowOutputProps> = ({
         <div className="relative">
           <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-sm border border-gray-200 dark:border-gray-700 max-h-96">
             <code className="text-gray-800 dark:text-gray-200 font-mono">
-              {formatJSONWithColors(workflowJSON)}
+              {formatJSONWithCollapse(workflowJSON, expandedPaths, handleTogglePath)}
             </code>
           </pre>
           

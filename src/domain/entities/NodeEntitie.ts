@@ -12,6 +12,7 @@ export interface NodeOutput {
   formato?: 'markdown' | 'json';
 }
 
+// NodeEntitie.ts
 export default class NodeEntitie {
   constructor(
     public readonly nome: string,
@@ -23,9 +24,9 @@ export default class NodeEntitie {
     public readonly ferramentas: string[] = []
   ) {}
 
-  // Validação simplificada sem categoria
-  validate(): void {
-    // Apenas validações básicas que não dependem de categoria
+  // Validação que inclui verificação de nome único
+  validate(existingNodes: NodeEntitie[] = []): void {
+    // Validações básicas
     if (!this.nome || this.nome.trim() === '') {
       throw new Error('Nome do nó é obrigatório');
     }
@@ -36,6 +37,15 @@ export default class NodeEntitie {
 
     if (!this.saida.nome || this.saida.nome.trim() === '') {
       throw new Error('Nome da saída é obrigatório');
+    }
+
+    // Validação de nome único
+    const duplicateNode = existingNodes.find(node => 
+      node.nome === this.nome && node !== this
+    );
+    
+    if (duplicateNode) {
+      throw new Error(`Já existe um nó com o nome "${this.nome}"`);
     }
 
     // Apenas uma entrada por nó pode ter executar_em_paralelo: true

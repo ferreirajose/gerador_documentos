@@ -1,7 +1,7 @@
-// NodeManagerCreate.tsx
 import { RiCloseLine, RiFileAddLine, RiFileListLine, RiRefreshLine, RiUploadLine } from "@remixicon/react";
 import { useNodeManagerController } from "@/hooks/useNodeManagerController";
 import { formatFileSize } from "@/libs/util";
+import { useWorkflow } from "@/context/WorkflowContext";
 
 interface NodeManagerCreateProps {
     onClose?: () => void;
@@ -35,6 +35,9 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
         handleSaidaFormatoChange
     } = useNodeManagerController();
 
+    const { state } = useWorkflow();
+    
+
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         handleSubmit(e);
@@ -52,6 +55,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
         { chave: 'doc3', descricao: 'Relatório Financeiro' }
     ];
 
+    // @TODO IMPLMENTAR PARA OBTER OS NODE DO ESTADO
     const nodes = [
         { id: '1', nome: 'Nó de Entrada' },
         { id: '2', nome: 'Nó de Processamento' },
@@ -469,9 +473,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
 
                                         {entrada.fonte === 'documento_anexado' && (
                                             <>
-
-
-                                                <div id="input-documento">
+                                                <div id="input-documento-anexados">
                                                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                                                         Documentos Anexados
                                                     </label>
@@ -502,15 +504,16 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                 </div>
                                             </>
                                         )}
-
+                                        
+                                        {/* @TODO VERIFICAR, QUANDO SELECIONAR UM VALOR O CAMPO SELECT DESAPARECE */}
                                         {entrada.fonte === 'saida_no_anterior' && (
-                                            <div>
+                                            <div id="input-fonte">
                                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                                                     Nó de fonte
                                                 </label>
                                                 <select
-                                                    value={entrada.no_fonte || ''}
-                                                    onChange={(e) => updateEntrada(index, 'no_fonte', e.target.value)}
+                                                    value={entrada.no_origem || ''}
+                                                    onChange={(e) => updateEntrada(index, 'no_origem', e.target.value)}
                                                     className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-600 dark:text-white"
                                                     required
                                                 >

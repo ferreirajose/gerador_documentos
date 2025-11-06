@@ -1,9 +1,13 @@
 // NodeManager.tsx (atualizado)
+import WorkflowOutput from "@/components/common/WorkflowOutput";
 import NodeManagerCreate from "@/components/forms/NodeManagerCreate";
+import { useWorkflow } from "@/context/WorkflowContext";
 import { RiAddLine, RiNodeTree } from "@remixicon/react";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function NodeManager() {
+  const { state } = useWorkflow();
+  const [isWorkflowVisible, setIsWorkflowVisible] = useState(true); // ou false se quiser iniciar oculto
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const handleCreateNode = (formData: any) => {
@@ -11,6 +15,10 @@ export default function NodeManager() {
     setShowCreateForm(false);
     // @TODO Adicionar a lógica para salvar o nó
   };
+
+  useEffect(() => {
+    console.log(state, 'Estado Atual')
+  })
 
   return (
     <div className="space-y-6">
@@ -54,6 +62,15 @@ export default function NodeManager() {
           </button>
         </div>
       )}
+
+      {/* Output do Workflow - só mostra se houver nós */}
+      {state.nodes.length > 0 && (
+        <WorkflowOutput
+          isWorkflowVisible={isWorkflowVisible}
+          setIsWorkflowVisible={setIsWorkflowVisible}
+        />
+      )}
+
     </div>
   );
 }

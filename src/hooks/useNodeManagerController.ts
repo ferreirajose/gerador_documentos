@@ -1,4 +1,4 @@
-// useNodeManagerController.ts
+import { NodeState, useWorkflow } from "@/context/WorkflowContext";
 import { FERRAMENTAS_DISPONIVEIS } from "@/data/ferramentas";
 import { llmModelsByProvider } from "@/data/llmodels";
 import WorkflowHttpGatewayV2 from "@/gateway/WorkflowHttpGatewayV2";
@@ -59,6 +59,7 @@ const BASE_URL = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
 
 export function useNodeManagerController() {
+  const { addNode, addDocumentoAnexo } = useWorkflow();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [showVariableSelector, setShowVariableSelector] = useState(false);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -75,14 +76,48 @@ export function useNodeManagerController() {
   );
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Preparar dados com UUIDs dos documentos
-    const workflowData = prepareWorkflowData();
-    
-    console.log("Dados do workflow para envio:", workflowData);
-    
-  };
+  e.preventDefault();
+
+  const workflowData = prepareWorkflowData();
+  
+  console.log("Dados do workflow para envio:", workflowData);
+  
+  try {
+    // Criar o objeto NodeState para adicionar ao workflow
+    const newNode: NodeState = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      nome: workflowData.nome,
+      categoria: workflowData.categoria,
+      modelo_llm: workflowData.modelo_llm,
+      temperatura: workflowData.temperatura,
+      prompt: workflowData.prompt,
+      entradas: workflowData.entradas,
+      saida: workflowData.saida,
+      ferramentas: workflowData.ferramentas
+    };
+
+    // Adicionar o nó ao workflow via contexto
+    addNode(newNode);
+
+    // Adicionar cada documento individualmente
+    if (workflowData.documentosAnexados && Array.isArray(workflowData.documentosAnexados)) {
+      workflowData.documentosAnexados.forEach((documento: any) => {
+        if (documento) { // Verificar se não é null
+          addDocumentoAnexo(documento);
+        }
+      });
+    }
+    // Limpar o formulário após sucesso
+    resetForm();
+
+    // Feedback de sucesso (opcional)
+    console.log('Nó criado com sucesso:', newNode);
+
+  } catch (error) {
+    console.error('Erro ao criar nó:', error);
+    // Você pode adicionar um toast de erro aqui
+  }
+};
 
   const handleInputChange = (field: keyof FormData, value: any) => {
     if (field === 'saida') {
