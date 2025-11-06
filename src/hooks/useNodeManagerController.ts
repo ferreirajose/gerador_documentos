@@ -1,17 +1,10 @@
 import { NodeState, useWorkflow } from "@/context/WorkflowContext";
 import { FERRAMENTAS_DISPONIVEIS } from "@/data/ferramentas";
 import { llmModelsByProvider } from "@/data/llmodels";
+import { Entrada } from "@/domain/entities/NodeEntitie";
 import WorkflowHttpGatewayV2 from "@/gateway/WorkflowHttpGatewayV2";
 import FetchAdapter from "@/infra/FetchAdapter";
 import { useRef, useState } from "react";
-
-interface Entrada {
-  variavel_prompt: string;
-  fonte: "documento_anexado" | "saida_no_anterior";
-  documento?: string;
-  no_origem?: string;
-  executar_em_paralelo?: boolean;
-}
 
 interface DocumentoAnexado {
   chave: string;
@@ -180,8 +173,8 @@ export function useNodeManagerController() {
   const addEntrada = () => {
     const novaEntrada: Entrada = {
       variavel_prompt: '',
-      fonte: 'documento_anexado',
-      documento: '',
+      origem: 'documento_anexado',
+      chave_documento_origem: '',
       executar_em_paralelo: false
     };
     setFormData({
