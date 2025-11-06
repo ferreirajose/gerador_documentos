@@ -69,48 +69,41 @@ export function useNodeManagerController() {
   );
 
   const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const workflowData = prepareWorkflowData();
-  
-  console.log("Dados do workflow para envio:", workflowData);
-  
-  try {
-    // Criar o objeto NodeState para adicionar ao workflow
-    const newNode: NodeState = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      nome: workflowData.nome,
-      categoria: workflowData.categoria,
-      modelo_llm: workflowData.modelo_llm,
-      temperatura: workflowData.temperatura,
-      prompt: workflowData.prompt,
-      entradas: workflowData.entradas,
-      saida: workflowData.saida,
-      ferramentas: workflowData.ferramentas
-    };
+    const workflowData = buildAttachedDocument();
+    
+    console.log("Dados do workflow para envio:", workflowData);
+    
+    try {
+      // Criar o objeto NodeState para adicionar ao workflow
+      const newNode: NodeState = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        ...formData
+      };
 
-    // Adicionar o nó ao workflow via contexto
-    addNode(newNode);
+      // Adicionar o nó ao workflow via contexto
+      addNode(newNode);
 
-    // Adicionar cada documento individualmente
-    if (workflowData.documentosAnexados && Array.isArray(workflowData.documentosAnexados)) {
-      workflowData.documentosAnexados.forEach((documento: any) => {
-        if (documento) { // Verificar se não é null
-          addDocumentoAnexo(documento);
-        }
-      });
+      // Adicionar cada documento individualmente
+      if (workflowData.documentosAnexados && Array.isArray(workflowData.documentosAnexados)) {
+        workflowData.documentosAnexados.forEach((documento: any) => {
+          if (documento) { // Verificar se não é null
+            addDocumentoAnexo(documento);
+          }
+        });
+      }
+      // Limpar o formulário após sucesso
+      resetForm();
+
+      // Feedback de sucesso (opcional)
+      console.log('Nó criado com sucesso:', newNode);
+
+    } catch (error) {
+      console.error('Erro ao criar nó:', error);
+      // Você pode adicionar um toast de erro aqui
     }
-    // Limpar o formulário após sucesso
-    resetForm();
-
-    // Feedback de sucesso (opcional)
-    console.log('Nó criado com sucesso:', newNode);
-
-  } catch (error) {
-    console.error('Erro ao criar nó:', error);
-    // Você pode adicionar um toast de erro aqui
-  }
-};
+  };
 
   const handleInputChange = (field: keyof FormData, value: any) => {
     if (field === 'saida') {
@@ -249,7 +242,7 @@ export function useNodeManagerController() {
   };
 
 
-  const processFileUpload = async (uploadedFile: ArquivoUpload, documentoIndex: number, arquivoIndex: number) => {
+   const processFileUpload = async (uploadedFile: ArquivoUpload, documentoIndex: number, arquivoIndex: number) => {
     try {
       // Atualizar status para uploading
       setFormData(prev => {
@@ -367,8 +360,8 @@ export function useNodeManagerController() {
     }
   };
 
-   // Função para preparar dados do workflow para envio
-  const prepareWorkflowData = () => {
+  // Função responsavel por criar um objeto documento anexo
+  const buildAttachedDocument = () => {
     const documentosParaEnvio = formData.documentosAnexados
     .filter(documento => {
       // Filtrar apenas documentos que têm arquivos com upload concluído
@@ -454,13 +447,12 @@ export function useNodeManagerController() {
     updateDocumento,
     handleFileUpload,
     removeArquivo,
-    retryUpload, // Exportar retryUpload
+    retryUpload,
     insertVariableInPrompt,
     handleSubmit,
     handleInputChange,
     handleFerramentaChange,
     resetForm,
-    handleSaidaFormatoChange,
-    prepareWorkflowData, // Exportar para uso no componente
+    handleSaidaFormatoChange
   };
 }
