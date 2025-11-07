@@ -502,15 +502,14 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                             </>
                                         )}
 
-                                        {/* @TODO VERIFICAR, QUANDO SELECIONAR UM VALOR O CAMPO SELECT DESAPARECE */}
                                         {entrada.origem === 'resultado_no_anterior' && (
                                             <div id="input-fonte">
                                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                                                     Lista de Nós
                                                 </label>
                                                 <select
-                                                    value={entrada.origem || ''}
-                                                    onChange={(e) => updateEntrada(index, 'origem', e.target.value)}
+                                                    value={entrada.nome_no_origem || ''}
+                                                    onChange={(e) => updateEntrada(index, 'nome_no_origem', e.target.value)}
                                                     className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-600 dark:text-white"
                                                     required
                                                 >
