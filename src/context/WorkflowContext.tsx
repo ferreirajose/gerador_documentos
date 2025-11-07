@@ -45,7 +45,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         nodes: [...state.nodes, action.payload]
       };
 
-    case 'UPDATE_NODE': // NOVO CASE
+    case 'UPDATE_NODE': 
       return {
         ...state,
         nodes: state.nodes.map(node => 
@@ -132,6 +132,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         new NodeEntitie(
           node.nome,
           node.prompt,
+          node.entrada_grafo,
           node.saida,
           node.entradas,
           node.modelo_llm,
@@ -176,6 +177,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         new NodeEntitie(
           node.nome,
           node.prompt,
+          node.entrada_grafo,
           node.saida,
           node.entradas,
           node.modelo_llm,

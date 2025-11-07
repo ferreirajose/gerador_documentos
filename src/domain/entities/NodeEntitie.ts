@@ -11,11 +11,11 @@ export interface NodeOutput {
   formato?: 'markdown' | 'json';
 }
 
-// NodeEntitie.ts
 export default class NodeEntitie {
   constructor(
     public readonly nome: string,
     public readonly prompt: string,
+    public readonly entrada_grafo: boolean = false,
     public readonly saida: NodeOutput,
     public readonly entradas: Entrada[] = [],
     public readonly modelo_llm?: string,

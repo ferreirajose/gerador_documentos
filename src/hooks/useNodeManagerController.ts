@@ -26,6 +26,7 @@ interface ArquivoUpload {
 export interface FormData {
   nome: string;
   categoria: "entrada" | "processamento" | "saida";
+  entrada_grafo: boolean,
   modelo_llm: string;
   temperatura: number;
   prompt: string;
@@ -38,6 +39,7 @@ export interface FormData {
 const initialFormData: FormData = {
   nome: "",
   categoria: "entrada",
+  entrada_grafo: false,
   modelo_llm: "claude-3-5-sonnet@20240620",
   temperatura: 0.3,
   prompt: "",
@@ -51,7 +53,7 @@ const BASE_URL = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
 
 export function useNodeManagerController() {
-  const { addNode, updateNode, addDocumentoAnexo, state } = useWorkflow();
+  const { state, addNode, updateNode, addDocumentoAnexo } = useWorkflow();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [showVariableSelector, setShowVariableSelector] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -118,9 +120,10 @@ export function useNodeManagerController() {
     if (node) {
       setFormData({
         nome: node.nome || '',
-        categoria: node.categoria || 'processamento',
-        modelo_llm: node.modelo_llm || 'gpt-4',
-        temperatura: node.temperatura || 0.7,
+        categoria: node.categoria || '',
+        entrada_grafo: node.entrada_grafo,
+        modelo_llm: node.modelo_llm || '',
+        temperatura: node.temperatura || 0,
         ferramentas: node.ferramentas || [],
         prompt: node.prompt || '',
         documentosAnexados: node.documentosAnexados || [],

@@ -1,6 +1,5 @@
 import NodeEntitie from "@/domain/entities/NodeEntitie";
 
-// Entidade: Aresta (Edge)
 export class Aresta {
   constructor(
     public readonly origem: string,

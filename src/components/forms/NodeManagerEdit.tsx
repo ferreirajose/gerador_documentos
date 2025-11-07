@@ -195,6 +195,25 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                     </div>
                 </div>
 
+                {/* Entrada de Grafo - Checkboxes */}
+                <div id="input-graph">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                        Informe se o Nó sera um  Entrada de Grafo.
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <input
+                                type="checkbox"
+                                checked={formData.entrada_grafo}
+                                onChange={(e) => handleInputChange('entrada_grafo', e.target.checked)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">Entrada de Grafo</span>
+                        </label>
+
+                    </div>
+                </div>
+
                 {/* Prompt - largura total */}
                 <div id="input-text-prompt">
                     <div className="flex items-center justify-between mb-1">
@@ -572,24 +591,23 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                         />
                     </div>
 
-                    {formData.categoria === 'saida' && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Formato da Saída
-                            </label>
-                            <select
-                                value={formData.saida.formato || 'json'}
-                                onChange={(e) => handleSaidaFormatoChange(e.target.value as "json" | "markdown")}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-700 dark:text-white"
-                            >
-                                <option value="json">JSON</option>
-                                <option value="markdown">Markdown</option>
-                            </select>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Escolha o formato de saída para este nó
-                            </p>
-                        </div>
-                    )}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Formato da Saída
+                        </label>
+                        <select
+                            value={formData.saida.formato || 'json'}
+                            onChange={(e) => handleSaidaFormatoChange(e.target.value as "json" | "markdown")}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-700 dark:text-white"
+                        >
+                            <option value="json">JSON</option>
+                            <option value="markdown">Markdown</option>
+                        </select>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Escolha o formato de saída para este nó
+                        </p>
+                    </div>
+
                 </div>
 
                 {/* Botão de submit */}
