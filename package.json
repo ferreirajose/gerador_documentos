@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "test": "vitest --dom",
     "test:node": "vitest src/tests/NodeEntitie",
+    "test:grafo": "vitest src/tests/Grafo",
     "test:workflow": "vitest src/tests/Workflow"
   },
   "dependencies": {
