@@ -4,7 +4,7 @@ import { llmModelsByProvider } from "@/data/llmodels";
 import { Entrada } from "@/domain/entities/NodeEntitie";
 import WorkflowHttpGatewayV2 from "@/gateway/WorkflowHttpGatewayV2";
 import FetchAdapter from "@/infra/FetchAdapter";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 interface DocumentoAnexado {
   chave: string;
@@ -20,7 +20,7 @@ interface ArquivoUpload {
   type: string;
   file: File;
   status: 'pending' | 'uploading' | 'completed' | 'error';
-  uuid?: string; // Adicionar UUID após upload bem-sucedido
+  uuid?: string;
 }
 
 export interface FormData {
@@ -47,14 +47,15 @@ const initialFormData: FormData = {
   documentosAnexados: [],
 };
 
-
 const BASE_URL = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
 
 export function useNodeManagerController() {
-  const { addNode, addDocumentoAnexo } = useWorkflow();
+  const { addNode, updateNode, addDocumentoAnexo, state } = useWorkflow();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [showVariableSelector, setShowVariableSelector] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -76,33 +77,66 @@ export function useNodeManagerController() {
     console.log("Dados do workflow para envio:", workflowData);
     
     try {
-      // Criar o objeto NodeState para adicionar ao workflow
-      const newNode: NodeState = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        ...formData
-      };
-
-      // Adicionar o nó ao workflow via contexto
-      addNode(newNode);
+      if (isEditing && editingNodeId) {
+        // Modo edição - atualizar nó existente
+        const updatedNode: NodeState = {
+          id: editingNodeId,
+          ...formData
+        };
+        updateNode(updatedNode);
+        console.log('Nó atualizado com sucesso:', updatedNode);
+      } else {
+        // Modo criação - adicionar novo nó
+        const newNode: NodeState = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          ...formData
+        };
+        addNode(newNode);
+        console.log('Nó criado com sucesso:', newNode);
+      }
 
       // Adicionar cada documento individualmente
       if (workflowData.documentosAnexados && Array.isArray(workflowData.documentosAnexados)) {
         workflowData.documentosAnexados.forEach((documento: any) => {
-          if (documento) { // Verificar se não é null
+          if (documento) {
             addDocumentoAnexo(documento);
           }
         });
       }
+
       // Limpar o formulário após sucesso
       resetForm();
 
-      // Feedback de sucesso (opcional)
-      console.log('Nó criado com sucesso:', newNode);
-
     } catch (error) {
-      console.error('Erro ao criar nó:', error);
-      // Você pode adicionar um toast de erro aqui
+      console.error('Erro ao criar/atualizar nó:', error);
     }
+  };
+
+  // NOVO MÉTODO: Carregar dados do nó para edição
+   const loadNodeData = useCallback((nodeId: string) => {
+    const node = state.nodes.find(n => n.id === nodeId);
+    if (node) {
+      setFormData({
+        nome: node.nome || '',
+        categoria: node.categoria || 'processamento',
+        modelo_llm: node.modelo_llm || 'gpt-4',
+        temperatura: node.temperatura || 0.7,
+        ferramentas: node.ferramentas || [],
+        prompt: node.prompt || '',
+        documentosAnexados: node.documentosAnexados || [],
+        entradas: node.entradas || [],
+        saida: node.saida || { nome: '', formato: 'json' }
+      });
+      setIsEditing(true);
+      setEditingNodeId(nodeId);
+    }
+  }, [state.nodes]); // Dependência apenas de state.nodes
+
+  // NOVO MÉTODO: Reset para modo criação
+  const resetToCreateMode = () => {
+    resetForm();
+    setIsEditing(false);
+    setEditingNodeId(null);
   };
 
   const handleInputChange = (field: keyof FormData, value: any) => {
@@ -131,6 +165,8 @@ export function useNodeManagerController() {
 
   const resetForm = () => {
     setFormData(initialFormData);
+    setIsEditing(false);
+    setEditingNodeId(null);
   };
 
   const insertVariableInPrompt = (variable: string) => {
@@ -197,7 +233,6 @@ export function useNodeManagerController() {
     });
   };
 
-  // Funções para gerenciar documentos anexados
   const addDocumento = () => {
     const novoDocumento: DocumentoAnexado = {
       chave: '',
@@ -241,10 +276,8 @@ export function useNodeManagerController() {
     await processFileUpload(documento.arquivos[arquivoIndex], documentoIndex, arquivoIndex);
   };
 
-
-   const processFileUpload = async (uploadedFile: ArquivoUpload, documentoIndex: number, arquivoIndex: number) => {
+  const processFileUpload = async (uploadedFile: ArquivoUpload, documentoIndex: number, arquivoIndex: number) => {
     try {
-      // Atualizar status para uploading
       setFormData(prev => {
         const updatedDocumentos = [...prev.documentosAnexados];
         const arquivos = [...updatedDocumentos[documentoIndex].arquivos];
@@ -259,7 +292,6 @@ export function useNodeManagerController() {
         return { ...prev, documentosAnexados: updatedDocumentos };
       });
 
-      // Fazer upload do arquivo
       const response = await workflowGateway.uploadAndProcess(uploadedFile.file);
       
       if (response.success && response.data) {
@@ -267,7 +299,6 @@ export function useNodeManagerController() {
 
         console.log('✅ Arquivo uploadado com sucesso:', uploadedFile.name, 'UUID:', uuidDocumento);
         
-        // Atualizar arquivo com UUID e status completed
         setFormData(prev => {
           const updatedDocumentos = [...prev.documentosAnexados];
           const arquivos = [...updatedDocumentos[documentoIndex].arquivos];
@@ -290,7 +321,6 @@ export function useNodeManagerController() {
     } catch (error) {
       console.error('❌ Erro no upload:', error);
       
-      // Atualizar status para error
       setFormData(prev => {
         const updatedDocumentos = [...prev.documentosAnexados];
         const arquivos = [...updatedDocumentos[documentoIndex].arquivos];
@@ -307,7 +337,6 @@ export function useNodeManagerController() {
     }
   };
 
-  // Funções para upload de arquivos
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, documentoIndex: number) => {
     const files = event.target.files;
     if (!files) return;
@@ -328,11 +357,9 @@ export function useNodeManagerController() {
       let arquivosAtualizados: ArquivoUpload[];
       
       if (documentoAtual.tipo === 'lista') {
-        // Para lista, adiciona todos os arquivos
         arquivosAtualizados = [...documentoAtual.arquivos, ...novosArquivos];
       } else {
-        // Para único, mantém apenas o último arquivo
-        arquivosAtualizados = [novosArquivos[0]]; // Pega apenas o primeiro arquivo
+        arquivosAtualizados = [novosArquivos[0]];
       }
 
       updatedDocumentos[documentoIndex] = {
@@ -346,7 +373,6 @@ export function useNodeManagerController() {
       };
     });
 
-    // Processar upload dos novos arquivos
     const documento = formData.documentosAnexados[documentoIndex];
     const startIndex = documento.arquivos.length;
     
@@ -354,53 +380,46 @@ export function useNodeManagerController() {
       await processFileUpload(arquivo, documentoIndex, startIndex + index);
     });
 
-    // Limpa o input de arquivo
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // Função responsavel por criar um objeto documento anexo
   const buildAttachedDocument = () => {
     const documentosParaEnvio = formData.documentosAnexados
     .filter(documento => {
-      // Filtrar apenas documentos que têm arquivos com upload concluído
       const hasCompletedFiles = documento.arquivos.some(
         arquivo => arquivo.status === 'completed' && arquivo.uuid
       );
       return documento.chave && documento.descricao && hasCompletedFiles;
     })
     .map(documento => {
-      // Filtrar apenas arquivos com upload concluído e com UUID
       const uuids = documento.arquivos
         .filter(arquivo => arquivo.status === 'completed' && arquivo.uuid)
         .map(arquivo => arquivo.uuid!);
 
-      // Base do objeto (sempre inclui chave e descricao)
       const documentoBase = {
         chave: documento.chave,
         descricao: documento.descricao
       };
 
-      // Para tipo único - usar uuid_unico
       if (documento.tipo === 'unico' && uuids.length > 0) {
         return {
           ...documentoBase,
-          uuid_unico: uuids[0] // Pega o primeiro UUID (único arquivo)
+          uuid_unico: uuids[0]
         };
       }
 
-      // Para tipo lista - usar uuids_lista
       if (documento.tipo === 'lista' && uuids.length > 0) {
         return {
           ...documentoBase,
-          uuids_lista: uuids // Array com todos os UUIDs
+          uuids_lista: uuids
         };
       }
 
       return null;
     })
-    .filter(Boolean); // Remove null values
+    .filter(Boolean);
 
     return {
       ...formData,
@@ -422,7 +441,6 @@ export function useNodeManagerController() {
     });
   };
 
-  // Função para atualizar o formato da saída
   const handleSaidaFormatoChange = (formato: "json" | "markdown") => {
     setFormData(prev => ({
       ...prev,
@@ -437,6 +455,8 @@ export function useNodeManagerController() {
     fileInputRef,
     modelos: llmModelsByProvider,
     ferramentasDisponiveis: FERRAMENTAS_DISPONIVEIS,
+    isEditing,
+    editingNodeId,
     setShowVariableSelector,
     getAvailableVariables,
     addEntrada,
@@ -453,6 +473,8 @@ export function useNodeManagerController() {
     handleInputChange,
     handleFerramentaChange,
     resetForm,
+    resetToCreateMode, // NOVO MÉTODO
+    loadNodeData, // NOVO MÉTODO
     handleSaidaFormatoChange
   };
 }

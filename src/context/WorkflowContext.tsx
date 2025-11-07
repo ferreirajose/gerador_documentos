@@ -25,6 +25,7 @@ export interface WorkflowState {
 // Atualize os tipos de ação
 export type WorkflowAction =
   | { type: 'ADD_NODE'; payload: NodeState }
+  | { type: 'UPDATE_NODE'; payload: NodeState }
   | { type: 'DELETE_NODE'; payload: { nodeId: string, chavesDocumentos?: string[] } }
   | { type: 'ADD_DOCUMENTO_ANEXO'; payload: DocumentoAnexado }
   | { type: 'REMOVE_DOCUMENTOS_POR_CHAVE'; payload: string[] } 
@@ -43,6 +44,14 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         ...state,
         nodes: [...state.nodes, action.payload]
       };
+
+    case 'UPDATE_NODE': // NOVO CASE
+      return {
+        ...state,
+        nodes: state.nodes.map(node => 
+          node.id === action.payload.id ? action.payload : node
+        )
+    };
 
     case 'DELETE_NODE':
       return {
@@ -75,6 +84,7 @@ interface WorkflowContextType {
   dispatch: React.Dispatch<WorkflowAction>;
   // Node actions
   addNode: (node: NodeState) => void;
+  updateNode: (node: NodeState) => void;
   deleteNode: (nodeId: string, chavesDocumentos?: string[]) => void;
   addDocumentoAnexo: (node: DocumentoAnexado) => void;
   removeDocumentosPorChave: (chaves: string[]) => void;
@@ -90,6 +100,10 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
 
   const addNode = (node: NodeState) => {
     dispatch({ type: 'ADD_NODE', payload: { ...node, id: node.id } });
+  };
+
+  const updateNode = (node: NodeState) => { 
+    dispatch({ type: 'UPDATE_NODE', payload: node });
   };
 
   const deleteNode = (nodeId: string, chavesDocumentos?: string[]) => {
@@ -221,6 +235,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     state,
     dispatch,
     addNode,
+    updateNode,
     deleteNode,
     removeDocumentosPorChave,
     addDocumentoAnexo,
