@@ -3,10 +3,10 @@ import { useState } from "react";
 import { RiAddLine } from "@remixicon/react";
 
 import { useConnectionController } from "@/hooks/useConnectionController";
-import { FormCreateConnection } from "@/components/forms/FormCreateConnection";
 import { useWorkflow } from "@/context/WorkflowContext";
 import { ConnectionsList } from "@/components/forms/ConnectionsList";
 import WorkflowOutput from "@/components/common/WorkflowOutput";
+import FormCreateConnection from "@/components/forms/FormCreateConnection";
 
 export default function ConnectionManager() {
   const { state } = useWorkflow();
@@ -16,6 +16,10 @@ export default function ConnectionManager() {
   } = useConnectionController();
 
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(true);
+
+  const handleCloseForm = () => {
+    setShowCreateForm(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -43,7 +47,8 @@ export default function ConnectionManager() {
 
       {/* Create/Edit Form */}
       {showCreateForm && (
-        <FormCreateConnection />
+        <FormCreateConnection 
+         onClose={handleCloseForm} />
       )}
 
       {/* Connections List */}

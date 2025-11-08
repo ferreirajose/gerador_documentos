@@ -1,6 +1,7 @@
 // ConnectionsList.tsx
 import { RiArrowRightLine, RiTimeLine, RiEditLine, RiDeleteBinLine, RiCheckLine, RiLink } from "@remixicon/react";
 import { useConnectionController } from "@/hooks/useConnectionController";
+import { useWorkflow } from "@/context/WorkflowContext";
 
 
 interface ListNodeProps {
@@ -11,7 +12,6 @@ export function ConnectionsList({ onOpenForm }: ListNodeProps) {
   const {
     connections,
     showCreateForm,
-    state,
     getNodeName,
     getNodeType,
     canConnectToEnd,
@@ -19,6 +19,8 @@ export function ConnectionsList({ onOpenForm }: ListNodeProps) {
     removeConnection,
     handleConnectToEnd
   } = useConnectionController();
+
+  const { state } = useWorkflow();
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
