@@ -113,7 +113,7 @@ export function ListNode({ onOpenForm, state, onEditNode, onDeleteNode }: ListNo
 
                                                     <div className="flex items-center space-x-1">
                                                         <RiTimeLine className="w-4" />
-                                                        <span>Temperatura: {node.temperatura || 0.3}</span>
+                                                        <span>Criatividade : {node.temperatura}</span>
                                                     </div>
 
                                                     {node.prompt && (

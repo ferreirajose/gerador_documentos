@@ -28,7 +28,10 @@ export type WorkflowAction =
   | { type: 'UPDATE_NODE'; payload: NodeState }
   | { type: 'DELETE_NODE'; payload: { nodeId: string, chavesDocumentos?: string[] } }
   | { type: 'ADD_DOCUMENTO_ANEXO'; payload: DocumentoAnexado }
-  | { type: 'REMOVE_DOCUMENTOS_POR_CHAVE'; payload: string[] } 
+  | { type: 'REMOVE_DOCUMENTOS_POR_CHAVE'; payload: string[] }
+  | { type: 'ADD_CONNECTION'; payload: Connection }
+  | { type: 'UPDATE_CONNECTION'; payload: Connection }
+  | { type: 'DELETE_CONNECTION'; payload: { connectionId: string } }
 
 export const initialState: WorkflowState = {
   nodes: [],
@@ -74,6 +77,26 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         )
       };
 
+    case 'ADD_CONNECTION':
+      return {
+        ...state,
+        connections: [...state.connections, action.payload]
+      };
+
+    case 'UPDATE_CONNECTION':
+      return {
+        ...state,
+        connections: state.connections.map(conn =>
+          conn.id === action.payload.id ? action.payload : conn
+        )
+      };
+
+    case 'DELETE_CONNECTION':
+      return {
+        ...state,
+        connections: state.connections.filter(conn => conn.id !== action.payload.connectionId)
+      };
+
     default:
       return state;
   }
@@ -88,6 +111,10 @@ interface WorkflowContextType {
   deleteNode: (nodeId: string, chavesDocumentos?: string[]) => void;
   addDocumentoAnexo: (node: DocumentoAnexado) => void;
   removeDocumentosPorChave: (chaves: string[]) => void;
+  // Connection actions
+  addConnection: (connection: Connection) => void;
+  updateConnection: (connection: Connection) => void;
+  deleteConnection: (connectionId: string) => void;
   // WORKFLOW
   getWorkflowJSON: () => string;
   validateWorkflow: () => { isValid: boolean; errors: string[] };
@@ -124,7 +151,18 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'ADD_DOCUMENTO_ANEXO', payload: { ...documento} });
   };
 
-  // WorkflowContext.tsx - métodos atualizados
+  const addConnection = (connection: Connection) => {
+    dispatch({ type: 'ADD_CONNECTION', payload: connection });
+  };
+
+  const updateConnection = (connection: Connection) => {
+    dispatch({ type: 'UPDATE_CONNECTION', payload: connection });
+  };
+
+  const deleteConnection = (connectionId: string) => {
+    dispatch({ type: 'DELETE_CONNECTION', payload: { connectionId } });
+  };
+
   const getWorkflowJSON = (): string => {
     try {
       // Convert NodeState[] to NodeEntitie[]
@@ -148,10 +186,28 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         node.validate(otherNodes);
       });
 
-      // Create empty edges array
-      const edges: Aresta[] = [];
+      // Converter connections (IDs) para Aresta[] (nomes)
+      const edges: Aresta[] = state.connections.map(connection => {
+        // Encontrar o nó de origem pelo ID para obter o nome
+        const origemNode = state.nodes.find(node => node.id === connection.origem);
+        if (!origemNode) {
+          throw new Error(`Nó de origem não encontrado para ID: ${connection.origem}`);
+        }
 
-      // Create graph with empty edges
+        // Se for END, usar "END" como destino, senão encontrar o nó de destino
+        let destinoNome = connection.destino;
+        if (connection.destino !== 'END') {
+          const destinoNode = state.nodes.find(node => node.id === connection.destino);
+          if (!destinoNode) {
+            throw new Error(`Nó de destino não encontrado para ID: ${connection.destino}`);
+          }
+          destinoNome = destinoNode.nome;
+        }
+
+        return new Aresta(origemNode.nome, destinoNome);
+      });
+
+      // Create graph with actual edges
       const grafo = new Grafo(nodes, edges);
 
       // Create workflow with empty resultado_final
@@ -198,10 +254,28 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         }
       });
 
-      // Create empty edges array
-      const edges: Aresta[] = [];
+      // Converter connections (IDs) para Aresta[] (nomes)
+      const edges: Aresta[] = state.connections.map(connection => {
+        // Encontrar o nó de origem pelo ID para obter o nome
+        const origemNode = state.nodes.find(node => node.id === connection.origem);
+        if (!origemNode) {
+          throw new Error(`Nó de origem não encontrado para ID: ${connection.origem}`);
+        }
 
-      // Create graph with empty edges
+        // Se for END, usar "END" como destino, senão encontrar o nó de destino
+        let destinoNome = connection.destino;
+        if (connection.destino !== 'END') {
+          const destinoNode = state.nodes.find(node => node.id === connection.destino);
+          if (!destinoNode) {
+            throw new Error(`Nó de destino não encontrado para ID: ${connection.destino}`);
+          }
+          destinoNome = destinoNode.nome;
+        }
+
+        return new Aresta(origemNode.nome, destinoNome);
+      });
+
+      // Create graph with actual edges
       const grafo = new Grafo(nodes, edges);
 
       // Create workflow
@@ -218,13 +292,13 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       if (error instanceof Error) {
         errors.push(error.message);
       } else {
-        errors.push('Unknown validation error occurred');
+        errors.push('Ocorreu um erro de validação desconhecido.');
       }
     }
 
-    // Additional validations specific to the React state
+    // Validações adicionais específicas para o estado do React
     if (state.nodes.length === 0) {
-      errors.push('Workflow must contain at least one node');
+      errors.push('O Worflow de trabalho deve conter pelo menos um nó.');
     }
 
     return {
@@ -241,6 +315,11 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     deleteNode,
     removeDocumentosPorChave,
     addDocumentoAnexo,
+    
+    addConnection,
+    deleteConnection,
+    updateConnection,
+
     getWorkflowJSON,
     validateWorkflow
   };
