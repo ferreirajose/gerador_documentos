@@ -1,4 +1,4 @@
-import { RiCloseLine, RiFileAddLine, RiFileListLine, RiRefreshLine, RiUploadLine } from "@remixicon/react";
+import { RiBracesLine, RiCloseLine, RiFileAddLine, RiFileListLine, RiRefreshLine, RiUploadLine } from "@remixicon/react";
 import { useNodeManagerController } from "@/hooks/useNodeManagerController";
 import { formatFileSize } from "@/libs/util";
 import { useWorkflow } from "@/context/WorkflowContext";
@@ -200,7 +200,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                 className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 whitespace-nowrap disabled:bg-green-400 disabled:cursor-not-allowed"
                                 disabled={getAvailableVariables().length === 0}
                             >
-                                + Inserir Variável
+                                <span><RiBracesLine className="h-4 mr-2" /></span> Inserir Variável 
                             </button>
 
                             {showVariableSelector && getAvailableVariables().length > 0 && (

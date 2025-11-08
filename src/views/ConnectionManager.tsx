@@ -47,15 +47,14 @@ export default function ConnectionManager() {
       )}
 
       {/* Connections List */}
-      <ConnectionsList />
+      <ConnectionsList
+        onOpenForm={() => setShowCreateForm(true)}
+      />
 
-            {/* Output do Workflow */}
-      {state.nodes.length > 0 && (
-        <WorkflowOutput
-          isWorkflowVisible={isWorkflowVisible}
-          setIsWorkflowVisible={setIsWorkflowVisible}
-        />
-      )}
+      <WorkflowOutput
+        isWorkflowVisible={isWorkflowVisible}
+        setIsWorkflowVisible={setIsWorkflowVisible}
+      />
     </div>
   );
 }

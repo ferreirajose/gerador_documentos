@@ -28,16 +28,16 @@ export default function NodeManager() {
 
   const handleDeleteNode = (nodeId: string) => {
     const nodeToDelete = state.nodes.find(node => node.id === nodeId);
-    
+
     if (nodeToDelete) {
       // Extrair todas as chaves de documentos usadas nas entradas do nó
       const chavesDocumentos = nodeToDelete.entradas
         .filter(entrada => entrada.origem === 'documento_anexado' && entrada.chave_documento_origem)
         .map(entrada => entrada.chave_documento_origem!);
-      
+
       console.log('🗑️ Deletando nó:', nodeToDelete.nome);
       console.log('📄 Chaves de documentos a remover:', chavesDocumentos);
-      
+
       // Deletar o nó e os documentos relacionados
       deleteNode(nodeId, chavesDocumentos);
     } else {
@@ -117,26 +117,28 @@ export default function NodeManager() {
 
       {/* Estado vazio - só mostra quando não há nós E não está mostrando formulários */}
       {!showCreateForm && !editingNodeId && state.nodes.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200 flex flex-col items-center">
-          <RiNodeTree className="w-12 h-12 text-gray-400 mb-4 mx-auto" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum nó criado</h3>
-          <p className="text-gray-500 mb-4">Comece criando seu primeiro nó para construir o workflow</p>
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center">
+          <RiNodeTree className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4 mx-auto" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Nenhum nó criado
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            Comece criando seu primeiro nó para construir o workflow
+          </p>
           <button
             onClick={() => setShowCreateForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 whitespace-nowrap"
+            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg whitespace-nowrap transition-colors"
           >
             Criar Primeiro Nó
           </button>
         </div>
       )}
 
-      {/* Output do Workflow - só mostra se houver nós E não estiver editando/criando */}
-      {state.nodes.length > 0 && !showCreateForm && !editingNodeId && (
-        <WorkflowOutput
-          isWorkflowVisible={isWorkflowVisible}
-          setIsWorkflowVisible={setIsWorkflowVisible}
-        />
-      )}
+      <WorkflowOutput
+        isWorkflowVisible={isWorkflowVisible}
+        setIsWorkflowVisible={setIsWorkflowVisible}
+      />
+
     </div>
   );
 }
