@@ -2,7 +2,12 @@
 import { RiArrowRightLine, RiTimeLine, RiEditLine, RiDeleteBinLine, RiCheckLine, RiLink } from "@remixicon/react";
 import { useConnectionController } from "@/hooks/useConnectionController";
 
-export function ConnectionsList() {
+
+interface ListNodeProps {
+    onOpenForm: () => void;
+}
+
+export function ConnectionsList({ onOpenForm }: ListNodeProps) {
   const {
     connections,
     showCreateForm,
@@ -122,7 +127,7 @@ export function ConnectionsList() {
           </p>
           {state.nodes.length >= 2 && !showCreateForm && (
             <button
-              onClick={() => console.log('setShowCreateForm(true)')}
+              onClick={onOpenForm}
               data-testid="create-first-connection-button"
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors whitespace-nowrap"
             >

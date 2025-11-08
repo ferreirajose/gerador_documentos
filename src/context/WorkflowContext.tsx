@@ -2,7 +2,7 @@ import NodeEntitie from '@/domain/entities/NodeEntitie';
 import { Aresta } from '@/domain/entities/Aresta';
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { DocumentoAnexado } from '@/domain/entities/Workflow';
-import { ResultadoFinal } from '@/domain/entities/ResultadoFinal';
+import { ResultadoFinal, SaidaFinal } from '@/domain/entities/ResultadoFinal';
 import { Grafo } from '@/domain/entities/Grafo';
 import { Workflow } from '@/domain/entities/Workflow';
 
@@ -32,6 +32,7 @@ export type WorkflowAction =
   | { type: 'ADD_CONNECTION'; payload: Connection }
   | { type: 'UPDATE_CONNECTION'; payload: Connection }
   | { type: 'DELETE_CONNECTION'; payload: { connectionId: string } }
+  | { type: 'UPDATE_RESULTADO_FINAL'; payload: SaidaFinal }
 
 export const initialState: WorkflowState = {
   nodes: [],
@@ -96,6 +97,12 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         ...state,
         connections: state.connections.filter(conn => conn.id !== action.payload.connectionId)
       };
+    
+    case 'UPDATE_RESULTADO_FINAL':
+      return {
+        ...state,
+        resultado_final: new ResultadoFinal(action.payload)
+      }
 
     default:
       return state;
@@ -115,6 +122,7 @@ interface WorkflowContextType {
   addConnection: (connection: Connection) => void;
   updateConnection: (connection: Connection) => void;
   deleteConnection: (connectionId: string) => void;
+  updateResultadoFinal:(saida: SaidaFinal[]) => void;
   // WORKFLOW
   getWorkflowJSON: () => string;
   validateWorkflow: () => { isValid: boolean; errors: string[] };
@@ -161,6 +169,10 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
 
   const deleteConnection = (connectionId: string) => {
     dispatch({ type: 'DELETE_CONNECTION', payload: { connectionId } });
+  };
+
+  const updateResultadoFinal = (saidas: SaidaFinal[]) => {
+    dispatch({ type: 'UPDATE_RESULTADO_FINAL', payload: saidas });
   };
 
   const getWorkflowJSON = (): string => {
@@ -319,7 +331,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     addConnection,
     deleteConnection,
     updateConnection,
-
+    updateResultadoFinal,
     getWorkflowJSON,
     validateWorkflow
   };
