@@ -156,8 +156,6 @@ export function useConnectionController() {
   }, [deleteConnection]);
 
   return {
-    // State
-    state,
     connections: state.connections,
     editingConnection,
     showCreateForm,

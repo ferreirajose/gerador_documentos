@@ -2,17 +2,26 @@
 import { RiCloseLine, RiErrorWarningLine, RiCheckLine } from "@remixicon/react";
 import { useConnectionController } from "@/hooks/useConnectionController";
 
-export function FormCreateConnection() {
+
+interface FormCreateConnectioneProps {
+    onClose?: () => void;
+}
+
+export default function FormCreateConnection({ onClose }: FormCreateConnectioneProps) {
   const {
     editingConnection,
     formData,
     connectionValidation,
     handleSubmit,
-    handleCancel,
     setFormData,
     getAvailableNodes,
     getNodeName
   } = useConnectionController();
+  
+  const handleCancel = () => {
+      onClose?.(); // Fecha o formulário
+  };
+
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
