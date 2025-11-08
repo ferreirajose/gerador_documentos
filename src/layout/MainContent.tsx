@@ -1,4 +1,5 @@
 import { ViewType } from '@/types/node';
+import ConnectionManager from '@/views/ConnectionManager';
 import NodeManager from '@/views/NodeManager';
 import WorkflowExecution from '@/views/WorkflowExecution';
 interface MainContentProps {
@@ -11,6 +12,10 @@ export default function MainContent({ currentView }: MainContentProps) {
 
       {currentView === 'nodes' && (
         <NodeManager />
+      )}
+      
+      {currentView === 'connections' && (
+        <ConnectionManager />
       )}
       
       {currentView === 'execution' && (
