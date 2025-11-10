@@ -1,5 +1,5 @@
 import { Grafo } from './Grafo';
-import { ResultadoFinal } from "./ResultadoFinal";
+import { FormatoResultadoFinal } from "./ResultadoFinal";
 
 export interface DocumentoAnexado {
   chave: string;
@@ -12,7 +12,7 @@ export class Workflow {
   constructor(
     public readonly documentos_anexados: DocumentoAnexado[],
     public readonly grafo: Grafo,
-    public readonly resultado_final?: ResultadoFinal
+    public readonly formato_resultado_final?: FormatoResultadoFinal
   ) {}
 
   validate(): void {
@@ -20,8 +20,8 @@ export class Workflow {
     this.grafo.validate();
 
     // Valida resultado final se existir
-    if (this.resultado_final) {
-      this.resultado_final.validate(this.grafo.nos);
+    if (this.formato_resultado_final) {
+      this.formato_resultado_final.validate(this.grafo.nos);
     }
 
     // Valida referências de documentos nos nós
@@ -79,10 +79,9 @@ export class Workflow {
           destino: aresta.destino
         }))
       },
-      ...(this.resultado_final && {
-        resultado_final: {
-          saidas: this.resultado_final.saidas
-        }
+      ...(this.formato_resultado_final && {
+          combinacoes: this.formato_resultado_final.combinacoes,
+          saidas_individuais: this.formato_resultado_final.saidas_individuais
       })
     };
   }

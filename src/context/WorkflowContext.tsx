@@ -2,7 +2,7 @@ import NodeEntitie from '@/domain/entities/NodeEntitie';
 import { Aresta } from '@/domain/entities/Aresta';
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { DocumentoAnexado } from '@/domain/entities/Workflow';
-import { ResultadoFinal, SaidaFinal } from '@/domain/entities/ResultadoFinal';
+import { FormatoResultadoFinal, Combinacao } from '@/domain/entities/ResultadoFinal'; // Atualizado
 import { Grafo } from '@/domain/entities/Grafo';
 import { Workflow } from '@/domain/entities/Workflow';
 
@@ -19,7 +19,7 @@ export interface WorkflowState {
   nodes: NodeState[];
   connections: Connection[];
   documentos_anexados: DocumentoAnexado[];
-  resultado_final?: ResultadoFinal;
+  formato_resultado_final?: FormatoResultadoFinal;
 }
 
 // Atualize os tipos de ação
@@ -32,13 +32,13 @@ export type WorkflowAction =
   | { type: 'ADD_CONNECTION'; payload: Connection }
   | { type: 'UPDATE_CONNECTION'; payload: Connection }
   | { type: 'DELETE_CONNECTION'; payload: { connectionId: string } }
-  | { type: 'UPDATE_RESULTADO_FINAL'; payload: SaidaFinal }
+  | { type: 'UPDATE_RESULTADO_FINAL'; payload: { combinacoes: Combinacao[], saidas_individuais: string[] } }
 
 export const initialState: WorkflowState = {
   nodes: [],
   connections: [],
   documentos_anexados: [],
-  resultado_final: new ResultadoFinal([])
+  formato_resultado_final: new FormatoResultadoFinal([], [])
 };
 
 export function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
@@ -101,7 +101,10 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
     case 'UPDATE_RESULTADO_FINAL':
       return {
         ...state,
-        resultado_final: new ResultadoFinal(action.payload)
+        formato_resultado_final: new FormatoResultadoFinal(
+          action.payload.combinacoes, 
+          action.payload.saidas_individuais
+        )
       }
 
     default:
@@ -122,7 +125,7 @@ interface WorkflowContextType {
   addConnection: (connection: Connection) => void;
   updateConnection: (connection: Connection) => void;
   deleteConnection: (connectionId: string) => void;
-  updateResultadoFinal:(saida: SaidaFinal[]) => void;
+  updateResultadoFinal: (combinacoes: Combinacao[], saidas_individuais: string[]) => void;
   // WORKFLOW
   getWorkflowJSON: () => string;
   validateWorkflow: () => { isValid: boolean; errors: string[] };
@@ -171,8 +174,11 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_CONNECTION', payload: { connectionId } });
   };
 
-  const updateResultadoFinal = (saidas: SaidaFinal[]) => {
-    dispatch({ type: 'UPDATE_RESULTADO_FINAL', payload: saidas });
+   const updateResultadoFinal = (combinacoes: Combinacao[], saidas_individuais: string[]) => {
+    dispatch({ 
+      type: 'UPDATE_RESULTADO_FINAL', 
+      payload: { combinacoes, saidas_individuais } 
+    });
   };
 
   const getWorkflowJSON = (): string => {
@@ -222,11 +228,11 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       // Create graph with actual edges
       const grafo = new Grafo(nodes, edges);
 
-      // Create workflow with empty resultado_final
+      // Create workflow
       const workflow = new Workflow(
         state.documentos_anexados,
         grafo,
-        state.resultado_final
+        state.formato_resultado_final
       );
 
       return workflow.toJsonString();
@@ -294,7 +300,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       const workflow = new Workflow(
         state.documentos_anexados,
         grafo,
-        state.resultado_final
+        state.formato_resultado_final
       );
 
       // Validate the workflow

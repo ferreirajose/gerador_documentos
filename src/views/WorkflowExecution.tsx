@@ -5,6 +5,7 @@ import { GerarDocCallbacks } from '@/types/node';
 import WorkflowOutput from '@/components/common/WorkflowOutput';
 import { WORFLOW_MOCK } from '@/mock/workflow-mock';
 import { ExecuteProgress } from '@/components/common/ExecuteProgress';
+import { useWorkflow } from '@/context/WorkflowContext';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
@@ -16,6 +17,10 @@ interface NodeTimer {
 }
 
 export default function WorkflowExecution() {
+  const { getWorkflowJSON } = useWorkflow();
+  const WORFLOW = JSON.parse(getWorkflowJSON());
+
+  console.log(WORFLOW, 'WORFLOW')
   const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'completed' | 'error'>('idle');
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -26,7 +31,7 @@ export default function WorkflowExecution() {
 
   // Função para calcular o progresso baseado nos nós concluídos
   const calculateProgress = (currentCompletedNodes: string[]) => {
-    const totalNodes = WORFLOW_MOCK.grafo.nos.length;
+    const totalNodes = WORFLOW.grafo.nos.length; //WORFLOW_MOCK.grafo.nos.length;
     const completedCount = currentCompletedNodes.length;
     return Math.round((completedCount / totalNodes) * 100);
   };
@@ -47,7 +52,7 @@ export default function WorkflowExecution() {
     setExecutionState('executing');
 
     try {
-      const workflowJson = WORFLOW_MOCK;
+      const workflowJson = WORFLOW //WORFLOW_MOCK;
 
       const httpClient = new FetchAdapter();
       const workFlowGateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL, AUTH_TOKEN);
@@ -113,7 +118,9 @@ export default function WorkflowExecution() {
           //Garantir que todos os nós estejam marcados como completed
           setNodeStatus(prev => {
             const updatedStatus = { ...prev };
-            WORFLOW_MOCK.grafo.nos.forEach(node => {
+            //WORFLOW_MOCK.grafo.nos.forEach(node => {
+
+            WORFLOW.grafo.nos.forEach(node => {
               if (updatedStatus[node.nome] !== 'finished') {
                 updatedStatus[node.nome] = 'completed';
               }
@@ -146,7 +153,8 @@ export default function WorkflowExecution() {
   };
 
   // Preparar steps para o ExecuteProgress - CORREÇÃO: Mapear status para UI
-  const steps = WORFLOW_MOCK.grafo.nos.map((node, idx) => {
+  // WORFLOW_MOCK.grafo.nos.map((node, idx) => {
+  const steps = WORFLOW.grafo.nos.map((node, idx: number) => {
     const nodeName = node.nome;
     const rawStatus = nodeStatus[nodeName] || 'waiting';
     const duration = calculateNodeDuration(nodeName);
