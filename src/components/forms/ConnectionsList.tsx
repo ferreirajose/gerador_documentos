@@ -1,27 +1,37 @@
-// ConnectionsList.tsx
 import { RiArrowRightLine, RiTimeLine, RiEditLine, RiDeleteBinLine, RiCheckLine, RiLink } from "@remixicon/react";
-import { useConnectionController } from "@/hooks/useConnectionController";
-import { useWorkflow } from "@/context/WorkflowContext";
 
-
-interface ListNodeProps {
-    onOpenForm: () => void;
+interface Connection {
+  id: string;
+  origem: string;
+  destino: string;
 }
 
-export function ConnectionsList({ onOpenForm }: ListNodeProps) {
-  const {
-    connections,
-    showCreateForm,
-    getNodeName,
-    getNodeType,
-    canConnectToEnd,
-    handleEdit,
-    removeConnection,
-    handleConnectToEnd
-  } = useConnectionController();
+interface ConnectionsListProps {
+  connections: Connection[];
+  showCreateForm: boolean;
+  onOpenForm: () => void;
+  onEdit: (connection: Connection) => void;
+  onDelete: (connectionId: string) => void;
+  onConnectToEnd: (nodeId: string) => void;
+  getNodeName: (nodeId: string) => string;
+  getNodeType: (nodeId: string) => string;
+  canConnectToEnd: (nodeId: string) => { canConnect: boolean; reason: string };
+  nodesCount: number;
+}
 
-  const { state } = useWorkflow();
-
+export function ConnectionsList({
+  connections,
+  showCreateForm,
+  onOpenForm,
+  onEdit,
+  onDelete,
+  onConnectToEnd,
+  getNodeName,
+  getNodeType,
+  canConnectToEnd,
+  nodesCount
+}: ConnectionsListProps) {
+  
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -82,7 +92,7 @@ export function ConnectionsList({ onOpenForm }: ListNodeProps) {
                     {/* Não permitir editar conexões END */}
                     {connection.destino !== 'END' && (
                       <button
-                        onClick={() => handleEdit(connection)}
+                        onClick={() => onEdit(connection)}
                         data-testid={`edit-connection-${connection.id}-button`}
                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="Editar conexão"
@@ -92,7 +102,7 @@ export function ConnectionsList({ onOpenForm }: ListNodeProps) {
                     )}
 
                     <button
-                      onClick={() => removeConnection(connection.id)}
+                      onClick={() => onDelete(connection.id)}
                       data-testid={`delete-connection-${connection.id}-button`}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                       title="Excluir conexão"
@@ -103,7 +113,7 @@ export function ConnectionsList({ onOpenForm }: ListNodeProps) {
                     {/* Botão para conectar ao END */}
                     {connection.destino !== 'END' && endValidation.canConnect && (
                       <button
-                        onClick={() => handleConnectToEnd(connection.origem)}
+                        onClick={() => onConnectToEnd(connection.origem)}
                         className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
                         title={`Conectar ao END: ${endValidation.reason}`}
                       >
@@ -127,7 +137,7 @@ export function ConnectionsList({ onOpenForm }: ListNodeProps) {
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             Comece criando sua primeira conexão entre nós
           </p>
-          {state.nodes.length >= 2 && !showCreateForm && (
+          {nodesCount >= 2 && !showCreateForm && (
             <button
               onClick={onOpenForm}
               data-testid="create-first-connection-button"
