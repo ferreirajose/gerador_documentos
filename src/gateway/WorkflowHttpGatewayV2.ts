@@ -18,7 +18,7 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
     try {
       // Use o HttpClient para fazer a requisição com responseType: 'stream'
       const response = await this.httpClient.post<Response>(
-        `${this.baseUrl}/gerar_relatorio_stream/`,
+        `${this.baseUrl}/executar_workflow/`,
         requestData,
         {
           headers: {
@@ -103,6 +103,9 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
 
   private async processStreamLine(line: string, callbacks: GerarDocCallbacks): Promise<void> {
     try {
+      // Log para debug - remova em produção
+      console.log("Processando linha:", line);
+      
       if (line.startsWith("data: ")) {
         const jsonData = line.slice(6); // Remove "data: "
         
@@ -111,8 +114,17 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
         const eventData = JSON.parse(jsonData);
         this.dispatchEvent(eventData, callbacks);
         
+      } else if (line.startsWith("{")) {
+        // Trata linhas que são JSON puro (sem "data: ")
+        try {
+          const eventData = JSON.parse(line);
+          this.dispatchEvent(eventData, callbacks);
+        } catch (parseError) {
+          console.warn("Erro ao parsear JSON direto:", line, parseError);
+          callbacks.onInfo?.(`Dado recebido (JSON inválido): ${line}`);
+        }
       } else if (line.trim()) {
-        // Linhas que não começam com "data: " são tratadas como informações
+        // Linhas que não são JSON são tratadas como informações
         callbacks.onInfo?.(line);
       }
     } catch (error) {
@@ -122,31 +134,26 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
   }
 
   private dispatchEvent(eventData: any, callbacks: GerarDocCallbacks): void {
-    console.log('Event data:', eventData);
+    console.log('Event data recebido:', eventData);
+    
     if (!eventData || !eventData.type) {
       console.warn("Evento sem tipo:", eventData);
       return;
     }
 
     switch (eventData.type) {
-      case "status":
-        callbacks.onNodeStatus?.(eventData.node, eventData.status);
+      case "started":
+      case "finished":
+        
+        callbacks.onNodeStatus?.(eventData.node, eventData.type);
         break;
       
-      case "progress":
-        callbacks.onProgress?.(eventData.nodes);
-        break;
-      
-      case "resultado_final":
-        callbacks.onData?.(eventData.payload);
+      case "completed":
+        callbacks.onData?.(eventData.payload || eventData.result);
         break;
       
       case "error":
         callbacks.onError?.(eventData.message);
-        break;
-      
-      case "info":
-        callbacks.onInfo?.(eventData.message);
         break;
       
       default:
