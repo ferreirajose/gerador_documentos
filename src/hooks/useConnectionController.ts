@@ -80,10 +80,13 @@ export function useConnectionController() {
 
       // Verificar se a conexão já existe
       const connectionExists = state.connections.some(
-        conn => conn.origem === origem && conn.destino === destino
+        conn => conn.origem === origem && 
+                conn.destino === destino &&
+                // Durante a edição, ignorar a própria conexão que está sendo editada
+                conn.id !== editingConnection?.id
       );
 
-      if (connectionExists && !editingConnection) {
+      if (connectionExists) {
         errors.push('Esta conexão já existe');
       }
 
