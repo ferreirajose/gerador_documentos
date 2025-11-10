@@ -1,13 +1,9 @@
-// hooks/useOutputConfiguration.tsx
 import { useState, useEffect } from 'react';
 import { useWorkflow } from '@/context/WorkflowContext';
 import { Combinacao } from '@/domain/entities/ResultadoFinal';
 
-export interface OutputConfig {
+export interface OutputConfig extends Combinacao {
   id: string;
-  nome_da_saida: string;
-  combinar_resultados: string[];
-  manter_originais: boolean;
 }
 
 export function useOutputConfiguration() {
