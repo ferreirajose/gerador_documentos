@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { RiAddLine } from "@remixicon/react";
 
@@ -11,14 +10,47 @@ import FormCreateConnection from "@/components/forms/FormCreateConnection";
 export default function ConnectionManager() {
   const { state } = useWorkflow();
   const {
+    connections,
+    editingConnection,
     showCreateForm,
-    setShowCreateForm
+    formData,
+    connectionValidation,
+    setFormData,
+    setShowCreateForm,
+    handleSubmit,
+    handleCancel,
+    handleEdit,
+    removeConnection,
+    handleConnectToEnd,
+    getNodeName,
+    getNodeType,
+    getAvailableNodes,
+    canConnectToEnd
   } = useConnectionController();
 
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(true);
 
   const handleCloseForm = () => {
     setShowCreateForm(false);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    handleSubmit(e);
+    handleCloseForm();
+  };
+
+  const handleFormCancel = () => {
+    handleCancel();
+    handleCloseForm();
+  };
+
+  const handleConnectionEdit = (connection: any) => {
+    handleEdit(connection);
+    setShowCreateForm(true);
+  };
+
+  const handleConnectionDelete = (connectionId: string) => {
+    removeConnection(connectionId);
   };
 
   return (
@@ -48,12 +80,30 @@ export default function ConnectionManager() {
       {/* Create/Edit Form */}
       {showCreateForm && (
         <FormCreateConnection 
-         onClose={handleCloseForm} />
+          onClose={handleCloseForm}
+          onSubmit={handleFormSubmit}
+          onCancel={handleFormCancel}
+          formData={formData}
+          setFormData={setFormData}
+          editingConnection={editingConnection}
+          connectionValidation={connectionValidation}
+          getAvailableNodes={getAvailableNodes}
+          getNodeName={getNodeName}
+        />
       )}
 
       {/* Connections List */}
       <ConnectionsList
+        connections={connections}
+        showCreateForm={showCreateForm}
         onOpenForm={() => setShowCreateForm(true)}
+        onEdit={handleConnectionEdit}
+        onDelete={handleConnectionDelete}
+        onConnectToEnd={handleConnectToEnd}
+        getNodeName={getNodeName}
+        getNodeType={getNodeType}
+        canConnectToEnd={canConnectToEnd}
+        nodesCount={state.nodes.length}
       />
 
       <WorkflowOutput

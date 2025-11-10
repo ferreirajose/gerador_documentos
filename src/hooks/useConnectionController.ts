@@ -65,6 +65,7 @@ export function useConnectionController() {
   }, [state.nodes, state.connections]);
 
   // Validar conexão
+  // @TODO ADICIONAR REGRA PARA IMPEDIR QUE O NODE DO TIPO CATEGORIA SE CONECTER A OUTRO NODE CATEGORIA
   const validateConnection = useCallback((origem: string, destino: string) => {
     const errors: string[] = [];
 

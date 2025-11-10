@@ -1,27 +1,38 @@
-// FormCreateConnection.tsx
 import { RiCloseLine, RiErrorWarningLine, RiCheckLine } from "@remixicon/react";
-import { useConnectionController } from "@/hooks/useConnectionController";
 
-
-interface FormCreateConnectioneProps {
-    onClose?: () => void;
+interface FormCreateConnectionProps {
+  onClose?: () => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+  formData: {
+    origem: string;
+    destino: string;
+  };
+  setFormData: (data: { origem: string; destino: string }) => void;
+  editingConnection: any;
+  connectionValidation: {
+    isValid: boolean;
+    errors: string[];
+  } | null;
+  getAvailableNodes: (excludeNodeId?: string) => any[];
+  getNodeName: (nodeId: string) => string;
 }
 
-export default function FormCreateConnection({ onClose }: FormCreateConnectioneProps) {
-  const {
-    editingConnection,
-    formData,
-    connectionValidation,
-    handleSubmit,
-    setFormData,
-    getAvailableNodes,
-    getNodeName
-  } = useConnectionController();
-  
+export default function FormCreateConnection({
+  onClose,
+  onSubmit,
+  onCancel,
+  formData,
+  setFormData,
+  editingConnection,
+  connectionValidation,
+  getAvailableNodes,
+  getNodeName
+}: FormCreateConnectionProps) {
   const handleCancel = () => {
-      onClose?.(); // Fecha o formulário
+    onCancel();
+    onClose?.(); // Fecha o formulário
   };
-
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -38,7 +49,7 @@ export default function FormCreateConnection({ onClose }: FormCreateConnectioneP
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -48,7 +59,7 @@ export default function FormCreateConnection({ onClose }: FormCreateConnectioneP
               required
               value={formData.origem}
               data-testid="from-node-select"
-              onChange={(e) => setFormData(prev => ({ ...prev, origem: e.target.value }))}
+              onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">Selecione o nó de origem</option>
@@ -68,7 +79,7 @@ export default function FormCreateConnection({ onClose }: FormCreateConnectioneP
               required
               value={formData.destino}
               data-testid="to-node-select"
-              onChange={(e) => setFormData(prev => ({ ...prev, destino: e.target.value }))}
+              onChange={(e) => setFormData({ ...formData, destino: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">Selecione o nó de destino</option>
