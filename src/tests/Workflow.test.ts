@@ -1,7 +1,7 @@
 import { Aresta } from "@/domain/entities/Aresta";
 import { Grafo } from "@/domain/entities/Grafo";
 import NodeEntitie from "@/domain/entities/NodeEntitie";
-import { ResultadoFinal, SaidaFinal } from "@/domain/entities/ResultadoFinal";
+import { FormatoResultadoFinal, Combinacao } from "@/domain/entities/ResultadoFinal";
 import { Workflow, DocumentoAnexado } from "@/domain/entities/Workflow";
 import { describe, beforeEach, test, expect } from "vitest";
 
@@ -10,7 +10,7 @@ describe("Workflow Completo", () => {
   let nodes: NodeEntitie[];
   let arestas: Aresta[];
   let documentosAnexados: DocumentoAnexado[];
-  let resultadoFinal: ResultadoFinal;
+  let resultadoFinal: FormatoResultadoFinal;
 
   beforeEach(() => {
     // Criar os nós
@@ -156,7 +156,7 @@ describe("Workflow Completo", () => {
       },
     ];
 
-    resultadoFinal = new ResultadoFinal(saidasFinais);
+    resultadoFinal = new FormatoResultadoFinal(saidasFinais);
   });
 
   test("deve criar um workflow completo válido", () => {
@@ -173,7 +173,7 @@ describe("Workflow Completo", () => {
     expect(workflow.documentos_anexados).toHaveLength(3);
     expect(workflow.grafo.nos).toHaveLength(4);
     expect(workflow.grafo.arestas).toHaveLength(5);
-    expect(workflow.resultado_final?.saidas).toHaveLength(2);
+    expect(workflow.formato_resultado_final?.combinacoes).toHaveLength(2);
   });
 
   test("deve conter todos os nós com nomes corretos", () => {
@@ -241,7 +241,7 @@ describe("Workflow Completo", () => {
     expect(json.documentos_anexados).toHaveLength(3);
     expect(json.grafo.nos).toHaveLength(4);
     expect(json.grafo.arestas).toHaveLength(5);
-    expect(json.resultado_final?.saidas).toHaveLength(2);
+    expect(json.formato_resultado_final?.combinacoes).toHaveLength(2);
 
     expect(typeof jsonString).toBe("string");
     expect(() => JSON.parse(jsonString)).not.toThrow();
