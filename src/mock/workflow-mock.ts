@@ -1,25 +1,6 @@
 export const WORFLOW_MOCK = {
   "documentos_anexados": [
-    {
-      "chave": "auditoria_verba_cultural_2024",
-      "descricao": "Relatório de Auditoria da Verba Pública para Eventos Culturais PE 2024 - Incluindo Artistas e Valores",
-      "uuid_unico": "10831034617427640767"
-    },
-    {
-      "chave": "prestacoes_contas_cidades_2024",
-      "descricao": "Prestações de Contas dos Municípios - Eventos Culturais 2024 com Pagamento a Artistas",
-      "uuids_lista": [
-        "13333786561136215878",
-        "7065879860948131635",
-        "11529010421945660908",
-        "691210388070956173"
-      ]
-    },
-    {
-      "chave": "contratacoes_artistas_2024",
-      "descricao": "Registro de Contratações e Pagamentos a Artistas - Eventos Culturais PE 2024",
-      "uuid_unico": "88224567123456988765"
-    }
+   
   ],
   "grafo": {
     "nos": [
