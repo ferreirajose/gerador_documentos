@@ -28,7 +28,7 @@ export function ExecuteProgress({ progress, steps, title = "Gerando Relatório" 
   const isLoading = steps.some(step => step.status === "processing");
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="bg-gray-50 dark:bg-gray-900 py-8">
       <div className="mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">

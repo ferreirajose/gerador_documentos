@@ -33,7 +33,7 @@ interface WorkflowResult {
 
 export default function WorkflowExecution() {
   const { getWorkflowJSON } = useWorkflow();
-  const WORFLOW = WORFLOW_MOCK //JSON.parse(getWorkflowJSON());
+  const WORFLOW = JSON.parse(getWorkflowJSON());
 
   console.log(WORFLOW, 'WORFLOW')
   const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'completed' | 'error'>('idle');

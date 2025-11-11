@@ -100,10 +100,10 @@ export default function OutputConfiguration() {
       ) : (
         <div className="space-y-6 mb-4">
           {combinacoes.map((combinacao, index) => {
-            const isCollapsed = collapsedCards.has(combinacao.id);
+            const isCollapsed = collapsedCards.has(index);
 
             return (
-              <div key={combinacao.id} className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+              <div key={index} className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-semibold">
@@ -115,14 +115,14 @@ export default function OutputConfiguration() {
                   </div>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => toggleCardCollapse(combinacao.id)}
+                      onClick={() => toggleCardCollapse(index)}
                       className="h-8 w-8 p-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors flex items-center justify-center"
                       title={isCollapsed ? "Mostrar" : "Ocultar"}
                     >
                       {isCollapsed ? <RiEyeLine className="w-4 h-4" /> : <RiEyeOffLine className="w-4 h-4" />}
                     </button>
                     <button
-                      onClick={() => removeCombinacao(combinacao.id)}
+                      onClick={() => removeCombinacao(index)}
                       className="h-8 w-8 p-0 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors flex items-center justify-center"
                     >
                       <RiDeleteBinLine className="w-4 h-4" />
@@ -133,13 +133,13 @@ export default function OutputConfiguration() {
                 {!isCollapsed && (
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor={`nome-${combinacao.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      <label htmlFor={`nome-${index}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                         Nome da Saída Combinada *
                       </label>
                       <input
-                        id={`nome-${combinacao.id}`}
+                        id={`nome-${index}`}
                         value={combinacao.nome_da_saida}
-                        onChange={(e) => updateCombinacao(combinacao.id, "nome_da_saida", e.target.value)}
+                        onChange={(e) => updateCombinacao(index, "nome_da_saida", e.target.value)}
                         placeholder="Ex: relatorio_completo_2024, analise_consolidada"
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
@@ -148,13 +148,13 @@ export default function OutputConfiguration() {
                     <div className="flex items-center space-x-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                       <input
                         type="checkbox"
-                        id={`manter-${combinacao.id}`}
+                        id={`manter-${index}`}
                         checked={combinacao.manter_originais || false}
-                        onChange={(e) => updateCombinacao(combinacao.id, "manter_originais", e.target.checked)}
+                        onChange={(e) => updateCombinacao(index, "manter_originais", e.target.checked)}
                         className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
                       />
                       <div className="flex-1">
-                        <label htmlFor={`manter-${combinacao.id}`} className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <label htmlFor={`manter-${index}`} className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                           Manter arquivos originais
                         </label>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -174,7 +174,7 @@ export default function OutputConfiguration() {
                         <div className="relative">
                           <button
                             type="button"
-                            onClick={() => setOpenDropdown(openDropdown === combinacao.id ? null : combinacao.id)}
+                            onClick={() => setOpenDropdown(openDropdown === index ? null : index)}
                             className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                           >
                             <div className="flex flex-wrap gap-1.5 flex-1 min-h-[24px]">
@@ -189,7 +189,7 @@ export default function OutputConfiguration() {
                                       className="w-3 h-3 cursor-pointer hover:text-blue-500"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        toggleOutputInCombinar(combinacao.id, name);
+                                        toggleOutputInCombinar(index, name);
                                       }}
                                     />
                                   </span>
@@ -200,10 +200,10 @@ export default function OutputConfiguration() {
                                 </span>
                               )}
                             </div>
-                            <RiCodeLine className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === combinacao.id ? "rotate-180" : ""}`} />
+                            <RiCodeLine className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === index ? "rotate-180" : ""}`} />
                           </button>
 
-                          {openDropdown === combinacao.id && (
+                          {openDropdown === index && (
                             <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                               {availableOutputs.length === 0 ? (
                                 <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
@@ -216,7 +216,7 @@ export default function OutputConfiguration() {
                                     <button
                                       key={outputName}
                                       type="button"
-                                      onClick={() => toggleOutputInCombinar(combinacao.id, outputName)}
+                                      onClick={() => toggleOutputInCombinar(index, outputName)}
                                       className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-left"
                                     >
                                       <span className="text-sm font-mono text-gray-700 dark:text-gray-300">{outputName}</span>
