@@ -2,16 +2,12 @@ import { useState, useEffect } from 'react';
 import { useWorkflow } from '@/context/WorkflowContext';
 import { Combinacao } from '@/domain/entities/ResultadoFinal';
 
-export interface OutputConfig extends Combinacao {
-  id: string;
-}
-
 export function useOutputConfiguration() {
   const { state, updateResultadoFinal } = useWorkflow();
-  const [combinacoes, setCombinacoes] = useState<OutputConfig[]>([]);
+  const [combinacoes, setCombinacoes] = useState<Combinacao[]>([]);
   const [saidasIndividuais, setSaidasIndividuais] = useState<string[]>([]);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set());
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null); 
+  const [collapsedCards, setCollapsedCards] = useState<Set<number>>(new Set()); 
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(true);
 
   // Obter todas as saídas disponíveis dos nós
@@ -22,15 +18,7 @@ export function useOutputConfiguration() {
   // Sincronizar com o estado do contexto
   useEffect(() => {
     if (state.formato_resultado_final) {
-      // Converter combinações
-      const combinacoesConvertidas: OutputConfig[] = state.formato_resultado_final.combinacoes.map(combinacao => ({
-        id: `combinacao-${Date.now()}-${Math.random()}`,
-        nome_da_saida: combinacao.nome_da_saida,
-        combinar_resultados: combinacao.combinar_resultados || [],
-        manter_originais: combinacao.manter_originais || false
-      }));
-      
-      setCombinacoes(combinacoesConvertidas);
+      setCombinacoes(state.formato_resultado_final.combinacoes);
       setSaidasIndividuais(state.formato_resultado_final.saidas_individuais || []);
     } else {
       setCombinacoes([]);
@@ -39,19 +27,12 @@ export function useOutputConfiguration() {
   }, [state.formato_resultado_final]);
 
   // Atualizar o contexto quando as configurações mudarem
-  const atualizarContexto = (updatedCombinacoes: OutputConfig[], updatedSaidasIndividuais: string[]) => {
-    const combinacoesFinais: Combinacao[] = updatedCombinacoes.map(combinacao => ({
-      nome_da_saida: combinacao.nome_da_saida,
-      combinar_resultados: combinacao.combinar_resultados,
-      manter_originais: combinacao.manter_originais
-    }));
-
-    updateResultadoFinal(combinacoesFinais, updatedSaidasIndividuais);
+  const atualizarContexto = (updatedCombinacoes: Combinacao[], updatedSaidasIndividuais: string[]) => {
+    updateResultadoFinal(updatedCombinacoes, updatedSaidasIndividuais);
   };
 
   const addCombinacao = () => {
-    const newCombinacao: OutputConfig = {
-      id: `combinacao-${Date.now()}`,
+    const newCombinacao: Combinacao = {
       nome_da_saida: "",
       combinar_resultados: [],
       manter_originais: false,
@@ -61,15 +42,15 @@ export function useOutputConfiguration() {
     atualizarContexto(updatedCombinacoes, saidasIndividuais);
   };
 
-  const removeCombinacao = (id: string) => {
-    const updatedCombinacoes = combinacoes.filter((c) => c.id !== id);
+  const removeCombinacao = (index: number) => {
+    const updatedCombinacoes = combinacoes.filter((_, i) => i !== index);
     setCombinacoes(updatedCombinacoes);
     atualizarContexto(updatedCombinacoes, saidasIndividuais);
   };
 
-  const updateCombinacao = (id: string, field: keyof OutputConfig, value: any) => {
-    const updatedCombinacoes = combinacoes.map((c) => {
-      if (c.id === id) {
+  const updateCombinacao = (index: number, field: keyof Combinacao, value: any) => {
+    const updatedCombinacoes = combinacoes.map((c, i) => {
+      if (i === index) {
         const updated = { ...c, [field]: value };
         
         // Limpar campos conflitantes
@@ -97,8 +78,8 @@ export function useOutputConfiguration() {
     atualizarContexto(combinacoes, updatedSaidasIndividuais);
   };
 
-  const toggleOutputInCombinar = (combinacaoId: string, outputName: string) => {
-    const combinacao = combinacoes.find((c) => c.id === combinacaoId);
+  const toggleOutputInCombinar = (combinacaoIndex: number, outputName: string) => {
+    const combinacao = combinacoes[combinacaoIndex];
     if (!combinacao) return;
 
     const combinar_resultados = combinacao.combinar_resultados || [];
@@ -106,15 +87,15 @@ export function useOutputConfiguration() {
       ? combinar_resultados.filter((name) => name !== outputName)
       : [...combinar_resultados, outputName];
 
-    updateCombinacao(combinacaoId, "combinar_resultados", updatedCombinar);
+    updateCombinacao(combinacaoIndex, "combinar_resultados", updatedCombinar);
   };
 
-  const toggleCardCollapse = (id: string) => {
+  const toggleCardCollapse = (index: number) => {
     const newCollapsed = new Set(collapsedCards);
-    if (newCollapsed.has(id)) {
-      newCollapsed.delete(id);
+    if (newCollapsed.has(index)) {
+      newCollapsed.delete(index);
     } else {
-      newCollapsed.add(id);
+      newCollapsed.add(index);
     }
     setCollapsedCards(newCollapsed);
   };
