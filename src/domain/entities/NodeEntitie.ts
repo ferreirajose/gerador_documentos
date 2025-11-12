@@ -14,7 +14,7 @@ export interface InteracaoComUsuario {
 }
 export interface NodeOutput {
   nome: string;
-  formato?: "markdown" | "json";
+  formato: "markdown" | "json";
 }
 
 export default class NodeEntitie {

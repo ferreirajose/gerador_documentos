@@ -93,11 +93,21 @@ export function useNodeManagerController() {
     console.log("Dados do workflow para envio:", workflowData);
 
     try {
+      // Remover a propriedade 'habilitado' antes de salvar
+      const { habilitado, ...interacaoComUsuarioSemHabilitado } = formData.interacao_com_usuario;
+
+      const nodeData = {
+        ...formData,
+        interacao_com_usuario: formData.interacao_com_usuario.habilitado 
+          ? interacaoComUsuarioSemHabilitado 
+          : undefined
+      };
+
       if (isEditing && editingNodeId) {
         // Modo edição - atualizar nó existente
         const updatedNode: NodeState = {
           id: editingNodeId,
-          ...formData,
+          ...nodeData,
         };
         updateNode(updatedNode);
         console.log("Nó atualizado com sucesso:", updatedNode);
@@ -105,7 +115,7 @@ export function useNodeManagerController() {
         // Modo criação - adicionar novo nó
         const newNode: NodeState = {
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          ...formData,
+          ...nodeData,
         };
         addNode(newNode);
         console.log("Nó criado com sucesso:", newNode);
@@ -130,29 +140,38 @@ export function useNodeManagerController() {
     }
   };
 
-  // NOVO MÉTODO: Carregar dados do nó para edição
-  const loadNodeData = useCallback(
-    (nodeId: string) => {
-      const node = state.nodes.find((n) => n.id === nodeId);
-      if (node) {
-        setFormData({
-          nome: node.nome || "",
-          categoria: node.categoria || "",
-          entrada_grafo: node.entrada_grafo,
-          modelo_llm: node.modelo_llm || "",
-          temperatura: node.temperatura || 0,
-          ferramentas: node.ferramentas || [],
-          prompt: node.prompt || "",
-          documentosAnexados: node.documentosAnexados || [],
-          entradas: node.entradas || [],
-          saida: node.saida || { nome: "", formato: "json" },
-        });
-        setIsEditing(true);
-        setEditingNodeId(nodeId);
-      }
-    },
-    [state.nodes]
-  ); // Dependência apenas de state.nodes
+  // Carregar dados do nó para edição
+  const loadNodeData = useCallback((nodeId: string) => {
+    const node = state.nodes.find((n) => n.id === nodeId);
+    if (node) {
+      // Verificar se o nó tem interacao_com_usuario configurada
+       const hasInteracaoUsuario = !!(node.interacao_com_usuario && 
+        Object.keys(node.interacao_com_usuario).length > 0);
+      
+      setFormData({
+        nome: node.nome || "",
+        categoria: node.categoria || "",
+        entrada_grafo: node.entrada_grafo,
+        modelo_llm: node.modelo_llm || "",
+        temperatura: node.temperatura || 0,
+        ferramentas: node.ferramentas || [],
+        prompt: node.prompt || "",
+        documentosAnexados: node.documentosAnexados || [],
+        entradas: node.entradas || [],
+        saida: node.saida || { nome: "", formato: "json" },
+        interacao_com_usuario: {
+          habilitado: hasInteracaoUsuario,
+          permitir_usuario_finalizar: node.interacao_com_usuario?.permitir_usuario_finalizar || false,
+          ia_pode_concluir: node.interacao_com_usuario?.ia_pode_concluir ?? true,
+          requer_aprovacao_explicita: node.interacao_com_usuario?.requer_aprovacao_explicita || false,
+          maximo_de_interacoes: node.interacao_com_usuario?.maximo_de_interacoes || 1,
+          modo_de_saida: node.interacao_com_usuario?.modo_de_saida || "ultima_mensagem",
+        }
+      });
+      setIsEditing(true);
+      setEditingNodeId(nodeId);
+    }
+  },[state.nodes]);
 
   // NOVO MÉTODO: Reset para modo criação
   const resetToCreateMode = () => {
@@ -241,7 +260,7 @@ export function useNodeManagerController() {
     });
   };
 
-  const updateEntrada = (index: number, field: keyof Entrada, value: any) => {
+  const updateEntrada = <K extends keyof Entrada>(index: number, field: K, value: Entrada[K]) => {
     setFormData((prev) => {
       const updatedEntradas = [...prev.entradas];
       updatedEntradas[index] = {
