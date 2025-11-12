@@ -26,6 +26,13 @@ export const WORFLOW_MOCK = {
         "saida": {
           "nome": "analise_distribuicao_2024",
           "formato": "markdown"
+        },
+         "interacao_com_usuario": {
+          "permitir_usuario_finalizar": true,
+          "ia_pode_concluir": true,
+          "requer_aprovacao_explicita": true,
+          "maximo_de_interacoes": 10,
+          "modo_de_saida": "historico_completo"
         }
       },
       {
