@@ -32,7 +32,10 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
         handleInputChange,
         handleFerramentaChange,
         resetForm,
-        handleSaidaFormatoChange
+        handleSaidaFormatoChange,
+        handleInteracaoUsuarioChange,
+        handleChangeInteractions,
+        toggleInteracaoUsuario
     } = useNodeManagerController();
 
     const { state } = useWorkflow();
@@ -200,7 +203,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                 className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 whitespace-nowrap disabled:bg-green-400 disabled:cursor-not-allowed"
                                 disabled={getAvailableVariables().length === 0}
                             >
-                                <span><RiBracesLine className="h-4 mr-2" /></span> Inserir Variável 
+                                <span><RiBracesLine className="h-4 mr-2" /></span> Inserir Variável
                             </button>
 
                             {showVariableSelector && getAvailableVariables().length > 0 && (
@@ -581,6 +584,142 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                         </p>
                     </div>
 
+                </div>
+
+                {/* Interação do Usuário */}
+                <div id="input-interacao-usuario">
+                    <div className="flex items-center justify-between mb-3">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Interação do Usuário
+                        </label>
+                        <button
+                            type="button"
+                            onClick={toggleInteracaoUsuario}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.interacao_com_usuario.habilitado
+                                ? 'bg-blue-600'
+                                : 'bg-gray-200 dark:bg-gray-600'
+                                }`}
+                        >
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.interacao_com_usuario.habilitado
+                                    ? 'translate-x-6'
+                                    : 'translate-x-1'
+                                    }`}
+                            />
+                        </button>
+                    </div>
+
+                    {formData.interacao_com_usuario.habilitado && (
+                        <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Permitir Usuário Finalizar */}
+                                <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.interacao_com_usuario.permitir_usuario_finalizar}
+                                        onChange={(e) => handleInteracaoUsuarioChange('permitir_usuario_finalizar', e.target.checked)}
+                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-600"
+                                    />
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                                        Permitir usuário finalizar
+                                    </span>
+                                </div>
+
+                                {/* IA Pode Concluir */}
+                                <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.interacao_com_usuario.ia_pode_concluir}
+                                        onChange={(e) => handleInteracaoUsuarioChange('ia_pode_concluir', e.target.checked)}
+                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-600"
+                                    />
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                                        IA pode concluir automaticamente
+                                    </span>
+                                </div>
+
+                                {/* Requer Aprovação Explícita */}
+                                <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.interacao_com_usuario.requer_aprovacao_explicita}
+                                        onChange={(e) => handleInteracaoUsuarioChange('requer_aprovacao_explicita', e.target.checked)}
+                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-600"
+                                    />
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                                        Requer aprovação explícita
+                                    </span>
+                                </div>
+
+                                {/* Máximo de Interações */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                        Máximo de Interações
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="10"
+                                        value={formData.interacao_com_usuario.maximo_de_interacoes}
+                                        onChange={handleChangeInteractions}
+                                        onBlur={handleChangeInteractions}
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-white"
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Número máximo de interações permitidas (1-10)
+                                    </p>
+                                    {formData.interacao_com_usuario.maximo_de_interacoes > 10 && (
+                                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                            Valor máximo permitido: 10 interações
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Modo de Saída */}
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                        Modo de Saída
+                                    </label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <label className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                            <input
+                                                type="radio"
+                                                name="modo_saida"
+                                                checked={formData.interacao_com_usuario.modo_de_saida === 'ultima_mensagem'}
+                                                onChange={() => handleInteracaoUsuarioChange('modo_de_saida', 'ultima_mensagem')}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-600"
+                                            />
+                                            <span className="text-sm text-gray-700 dark:text-gray-300">Última Mensagem</span>
+                                        </label>
+                                        <label className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                            <input
+                                                type="radio"
+                                                name="modo_saida"
+                                                checked={formData.interacao_com_usuario.modo_de_saida === 'historico_completo'}
+                                                onChange={() => handleInteracaoUsuarioChange('modo_de_saida', 'historico_completo')}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-600"
+                                            />
+                                            <span className="text-sm text-gray-700 dark:text-gray-300">Histórico Completo</span>
+                                        </label>
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Define qual conteúdo será retornado como saída
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {!formData.interacao_com_usuario.habilitado && (
+                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">
+                                Interação com usuário desativada
+                            </p>
+                            <p className="text-gray-400 dark:text-gray-500 text-xs">
+                                Ative o toggle para configurar a interação com o usuário
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Botão de submit */}
