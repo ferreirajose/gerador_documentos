@@ -7,8 +7,8 @@ import { WORFLOW_MOCK } from '@/mock/workflow-mock';
 import { ExecuteProgress } from '@/components/common/ExecuteProgress';
 import { useWorkflow } from '@/context/WorkflowContext';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer';
-import { WorkflowError } from '@/components/common/WorkflowError'; // Importar o novo componente
-import { InteractionBot } from '@/components/common/interaction-bot';
+import { WorkflowError } from '@/components/common/WorkflowError';
+import { InteractionBot } from '@/components/common/InteractionBot';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;

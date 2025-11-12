@@ -5,7 +5,7 @@ import { Entrada, InteracaoComUsuario as InteracaoComUsuario2,
 } from "@/domain/entities/NodeEntitie";
 import WorkflowHttpGatewayV2 from "@/gateway/WorkflowHttpGatewayV2";
 import FetchAdapter from "@/infra/FetchAdapter";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface InteracaoComUsuario extends InteracaoComUsuario2 {
   habilitado: boolean;
@@ -67,7 +67,9 @@ const BASE_URL = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
 
 export function useNodeManagerController() {
-  const { state, addNode, updateNode, addDocumentoAnexo } = useWorkflow();
+  const { state, addNode, updateNode, addDocumentoAnexo, removeDocumentosPorChave } = useWorkflow();
+  const [documentsToRemove, setDocumentsToRemove] = useState<string[]>([]);
+
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [showVariableSelector, setShowVariableSelector] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -288,11 +290,27 @@ export function useNodeManagerController() {
   };
 
   const removeDocumento = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      documentosAnexados: prev.documentosAnexados.filter((_, i) => i !== index),
-    }));
+      setFormData((prev) => {
+          const documentoRemovido = prev.documentosAnexados[index];
+          // Agendar remoção do estado global
+          if (documentoRemovido?.chave) {
+              setDocumentsToRemove(prev => [...prev, documentoRemovido.chave]);
+          }
+          // Remover imediatamente do formData (UI)
+          return {
+              ...prev,
+              documentosAnexados: prev.documentosAnexados.filter((_, i) => i !== index),
+          };
+      });
   };
+
+  // Efeito para remover documentos do estado global
+  useEffect(() => {
+      if (documentsToRemove.length > 0) {
+          removeDocumentosPorChave(documentsToRemove);
+          setDocumentsToRemove([]);
+      }
+  }, [documentsToRemove, removeDocumentosPorChave]);
 
   const updateDocumento = (
     index: number,
