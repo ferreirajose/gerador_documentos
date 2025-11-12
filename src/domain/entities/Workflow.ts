@@ -72,7 +72,8 @@ export class Workflow {
           prompt: node.prompt,
           entrada_grafo: node.entrada_grafo,
           ...(node.entradas.length > 0 && { entradas: node.entradas }),
-          saida: node.saida
+          saida: node.saida,
+          interacao_com_usuario: node.interacao_com_usuario
         })),
         arestas: this.grafo.arestas.map(aresta => ({
           origem: aresta.origem,
