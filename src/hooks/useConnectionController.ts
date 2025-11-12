@@ -56,11 +56,7 @@ export function useConnectionController() {
       return { canConnect: false, reason: 'Já possui conexão final' };
     }
 
-    // Apenas nós de processamento e saída podem conectar ao END
-    if (node.categoria !== 'processamento' && node.categoria !== 'saida') {
-      return { canConnect: false, reason: 'Tipo de nó inválido para conexão final' };
-    }
-
+    // TODOS os nós podem conectar ao END (incluindo nós de entrada)
     return { canConnect: true, reason: 'Conexão válida para END' };
   }, [state.nodes, state.connections]);
 
@@ -73,9 +69,19 @@ export function useConnectionController() {
     if (!destino) errors.push('Selecione um nó de destino');
 
     if (origem && destino) {
+      const origemNode = state.nodes.find(n => n.id === origem);
+      const destinoNode = state.nodes.find(n => n.id === destino);
+      const origemIsEntrada = origemNode?.entrada_grafo;
+      const destinoIsEntrada = destinoNode?.entrada_grafo;
+      
       // Não permitir conexão com si mesmo
       if (origem === destino && destino !== 'END') {
         errors.push('Não é possível conectar um nó a si mesmo');
+      }
+
+      // NOVA REGRA: Nós com entrada_grafo=true não podem conectar a outros nós com entrada_grafo=true
+      if (origemIsEntrada && destinoIsEntrada && destino !== 'END') {
+        errors.push('Nós do tipo entrada não podem se conectar entre si');
       }
 
       // Verificar se a conexão já existe
@@ -103,7 +109,7 @@ export function useConnectionController() {
       isValid: errors.length === 0,
       errors
     };
-  }, [state.connections, editingConnection, canConnectToEnd]);
+  }, [state.nodes, state.connections, editingConnection, canConnectToEnd]);
 
   // Conexão de validação atual
   const connectionValidation = useMemo(() => {

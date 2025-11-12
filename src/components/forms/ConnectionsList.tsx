@@ -111,7 +111,7 @@ export function ConnectionsList({
                     </button>
                     
                     {/* Botão para conectar ao END */}
-                    {connection.destino !== 'END' && endValidation.canConnect && (
+                    {/* {connection.destino !== 'END' && endValidation.canConnect && (
                       <button
                         onClick={() => onConnectToEnd(connection.origem)}
                         className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
@@ -119,7 +119,7 @@ export function ConnectionsList({
                       >
                         <RiCheckLine className="w-4" />
                       </button>
-                    )}
+                    )} */}
                   </div>
                 </div>
               </div>

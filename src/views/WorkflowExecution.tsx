@@ -7,6 +7,7 @@ import { WORFLOW_MOCK } from '@/mock/workflow-mock';
 import { ExecuteProgress } from '@/components/common/ExecuteProgress';
 import { useWorkflow } from '@/context/WorkflowContext';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer';
+import { WorkflowError } from '@/components/common/WorkflowError'; // Importar o novo componente
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
@@ -31,11 +32,17 @@ interface WorkflowResult {
   [key: string]: ResultItem;
 }
 
+// Interface para o erro
+interface WorkflowErrorData {
+  type: string;
+  message: string;
+  node: string | null;
+}
+
 export default function WorkflowExecution() {
   const { getWorkflowJSON } = useWorkflow();
   const WORFLOW = JSON.parse(getWorkflowJSON());
 
-  console.log(WORFLOW, 'WORFLOW')
   const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'completed' | 'error'>('idle');
   const [progress, setProgress] = useState(0);
   const [workflowResults, setWorkflowResults] = useState<WorkflowResult>({});
@@ -44,6 +51,9 @@ export default function WorkflowExecution() {
   const [nodeTimers, setNodeTimers] = useState<Record<string, NodeTimer>>({});
   // @TODO VERIFICAR A NECESSIDADE DO completedNodes
   const [completedNodes, setCompletedNodes] = useState<string[]>([]);
+  
+  // Novo estado para armazenar o erro
+  const [workflowError, setWorkflowError] = useState<WorkflowErrorData | null>(null);
 
   // Função para calcular o progresso baseado nos nós concluídos
   const calculateProgress = (currentCompletedNodes: string[]) => {
@@ -115,6 +125,7 @@ export default function WorkflowExecution() {
     setNodeTimers({});
     setCompletedNodes([]);
     setWorkflowResults({});
+    setWorkflowError(null); // Limpar erro anterior
     setExecutionState('executing');
 
     try {
@@ -193,12 +204,38 @@ export default function WorkflowExecution() {
             });
             return updatedStatus;
           });
-
-          
         },
         
         onError: (error) => {
           console.error("Erro no workflow:", error);
+          
+          // Processar o erro recebido
+          let errorData: WorkflowErrorData;
+          
+          if (typeof error === 'string') {
+            // Se o erro for uma string, criar estrutura padrão
+            errorData = {
+              type: 'error',
+              message: error,
+              node: null
+            };
+          } else if (error && typeof error === 'object') {
+            // Se o erro for um objeto, mapear para a estrutura esperada
+            errorData = {
+              type: error.type || 'error',
+              message: error.message || 'Erro desconhecido',
+              node: error.node || null
+            };
+          } else {
+            // Fallback para erro genérico
+            errorData = {
+              type: 'error',
+              message: 'Ocorreu um erro durante a execução do workflow',
+              node: null
+            };
+          }
+          
+          setWorkflowError(errorData);
           setExecutionState('error');
         },
       };
@@ -207,6 +244,15 @@ export default function WorkflowExecution() {
 
     } catch (error) {
       console.error('Erro ao executar workflow:', error);
+      
+      // Tratar erro de execução
+      const errorData: WorkflowErrorData = {
+        type: 'execution_error',
+        message: error instanceof Error ? error.message : 'Erro desconhecido na execução',
+        node: null
+      };
+      
+      setWorkflowError(errorData);
       setExecutionState('error');
     }
   };
@@ -219,6 +265,7 @@ export default function WorkflowExecution() {
     setNodeTimers({});
     setCompletedNodes([]);
     setWorkflowResults({});
+    setWorkflowError(null); // Limpar erro ao resetar
   };
 
   // Preparar steps para o ExecuteProgress
@@ -282,7 +329,7 @@ export default function WorkflowExecution() {
 
   const buttonConfig = getButtonConfig();
   const expectedOutputs = getExpectedOutputNames();
-console.log(Object.keys(workflowResults), 'workflowResults')
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -320,6 +367,14 @@ console.log(Object.keys(workflowResults), 'workflowResults')
           </button>
         </div>
       </div>
+
+      {/* Exibir erro se houver */}
+      {workflowError && (
+        <WorkflowError 
+          error={workflowError}
+          onRetry={executionState === 'error' ? executeWorkflow : undefined}
+        />
+      )}
 
       {/* ExecuteProgress - Mostrar apenas durante execução ou quando há progresso */}
       {(executionState === 'executing' || executionState === 'completed' || progress > 0) && (
@@ -373,12 +428,6 @@ console.log(Object.keys(workflowResults), 'workflowResults')
           }
         </div>
       )}
-
-      {/* Workflow Output */}
-      {/* <WorkflowOutput
-        isWorkflowVisible={isWorkflowVisible}
-        setIsWorkflowVisible={setIsWorkflowVisible}
-      />         */}
     </div>
   );
 }
