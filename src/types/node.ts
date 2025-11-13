@@ -8,4 +8,9 @@ export interface GerarDocCallbacks {
   onComplete?: (result: any) => void;
   onError?: (error: string) => void;
   onData?: (data: any) => void;
+  onInteraction?: (data: {
+    session_id: string;
+    node: string;
+    agent_message: string;
+  }) => void;
 }

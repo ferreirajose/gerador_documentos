@@ -20,7 +20,7 @@ export function WorkflowError({ error, onRetry }: WorkflowErrorProps) {
             <h4 className="text-lg font-semibold text-red-800">
               Erro no Processamento
             </h4>
-            {onRetry && (
+            {/* {onRetry && (
               <button
                 onClick={onRetry}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2 text-sm font-medium"
@@ -28,7 +28,7 @@ export function WorkflowError({ error, onRetry }: WorkflowErrorProps) {
                 <i className="ri-refresh-line"></i>
                 <span>Tentar Novamente</span>
               </button>
-            )}
+            )} */}
           </div>
           
           <div className="space-y-3">

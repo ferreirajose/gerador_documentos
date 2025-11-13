@@ -46,7 +46,7 @@ const initialFormData: FormData = {
   nome: "",
   categoria: "entrada",
   entrada_grafo: false,
-  modelo_llm: "claude-3-5-sonnet@20240620",
+  modelo_llm: "o3",
   temperatura: 0.3,
   prompt: "",
   entradas: [],
