@@ -54,6 +54,10 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         ...state,
         nodes: state.nodes.map(node => 
           node.id === action.payload.id ? action.payload : node
+        ),
+        // Remover documentos duplicados baseado na chave
+        documentos_anexados: state.documentos_anexados.filter((doc, index, self) => 
+          index === self.findIndex(d => d.chave === doc.chave)
         )
     };
 

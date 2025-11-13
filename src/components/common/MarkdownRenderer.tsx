@@ -11,8 +11,8 @@ interface MarkdownRendererProps {
   showDownloadButton?: boolean;
 }
 
-export default function MarkdownRenderer({ 
-  content, 
+export default function MarkdownRenderer({
+  content,
   className = '',
   variant = 'default',
   filename = 'documento.md',
@@ -73,34 +73,33 @@ export default function MarkdownRenderer({
   };
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
+    <div className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
       {/* Header com botões */}
       {(showCopyButton || showDownloadButton) && (
-        <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-          <span className="text-sm font-medium text-gray-700">Visualização Markdown</span>
-          
+        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-t-lg">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Visualização Markdown</span>
+
           <div className="flex items-center space-x-2">
             {showCopyButton && (
               <button
                 onClick={handleCopyContent}
                 disabled={copyStatus !== 'idle'}
-                className={`flex items-center space-x-2 px-3 py-2 text-sm rounded-md transition-colors ${
-                  copyStatus === 'success' 
-                    ? 'bg-green-50 text-green-700 border border-green-200' 
+                className={`flex items-center space-x-2 px-3 py-2 text-sm rounded-md transition-colors ${copyStatus === 'success'
+                    ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
                     : copyStatus === 'error'
-                    ? 'bg-red-50 text-red-700 border border-red-200'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <i className={getCopyButtonIcon()}></i>
                 <span>{getCopyButtonText()}</span>
               </button>
             )}
-            
+
             {showDownloadButton && (
               <button
                 onClick={handleDownload}
-                className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors"
               >
                 <i className="ri-download-line"></i>
                 <span>Download</span>
@@ -112,10 +111,10 @@ export default function MarkdownRenderer({
 
       {/* Conteúdo Markdown */}
       <div className="p-6">
-        <div 
+        <div
           className={`${getVariantClasses()}`}
-          dangerouslySetInnerHTML={{ 
-            __html: renderMarkdown(content) 
+          dangerouslySetInnerHTML={{
+            __html: renderMarkdown(content)
           }}
         />
       </div>

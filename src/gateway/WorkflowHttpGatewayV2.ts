@@ -16,7 +16,6 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
     callbacks: GerarDocCallbacks
   ): Promise<any> {
     try {
-      // Use o HttpClient para fazer a requisição com responseType: 'stream'
       const response = await this.httpClient.post<Response>(
         `${this.baseUrl}/executar_workflow/`,
         requestData,
@@ -50,6 +49,52 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
     }
   }
 
+  // Novo método para continuar interação
+  async continuarInteracao(
+    sessionId: string,
+    userMessage: string,
+    callbacks: GerarDocCallbacks
+  ): Promise<any> {
+    try {
+      const requestData = {
+        session_id: sessionId,
+        user_response: userMessage,
+        approve: false
+      };
+
+      const response = await this.httpClient.post<Response>(
+        `${this.baseUrl}/continuar_interacao/`,
+        requestData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.token}`,
+            Accept: "text/event-stream",
+          },
+          responseType: 'stream' as const,
+        }
+      );
+
+      console.log("Response received (continuação):", response);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      if (!response.body) {
+        throw new Error("No response body available");
+      }
+
+      await this.processStream(response.body, callbacks);
+
+    } catch (error) {
+      console.error("Erro ao continuar interação:", error);
+      callbacks.onError?.(
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
+
   private async processStream(
     stream: ReadableStream<Uint8Array>,
     callbacks: GerarDocCallbacks
@@ -57,6 +102,7 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
     const reader = stream.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let hasInteraction = false; // Nova flag para controlar interações
 
     try {
       while (true) {
@@ -67,29 +113,41 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
           break;
         }
 
-        // Decodifica o chunk e adiciona ao buffer
         buffer += decoder.decode(value, { stream: true });
         
-        // Processa linhas completas
         const lines = buffer.split("\n");
-        buffer = lines.pop() || ""; // Mantém a última linha incompleta no buffer
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
-          if (line.trim() === "") continue; // Ignora linhas vazias
+          if (line.trim() === "") continue;
           
           await this.processStreamLine(line.trim(), callbacks);
+          
+          // Verifica se houve uma interação
+          if (line.includes('awaiting_interaction')) {
+            hasInteraction = true;
+          }
         }
       }
 
-      // Processa qualquer dado restante no buffer
       if (buffer.trim()) {
         await this.processStreamLine(buffer.trim(), callbacks);
+        
+        // Verifica se houve uma interação no buffer final
+        if (buffer.includes('awaiting_interaction')) {
+          hasInteraction = true;
+        }
       }
 
-      callbacks.onComplete?.({
-        success: true,
-        message: "Processamento concluído",
-      });
+      // Só chama onComplete se não houver interação pendente
+      if (!hasInteraction) {
+        callbacks.onComplete?.({
+          success: true,
+          message: "Processamento concluído",
+        });
+      } else {
+        console.log("Stream finalizado com interação pendente - não chamando onComplete");
+      }
 
     } catch (error) {
       console.error("Erro durante processamento do stream:", error);
@@ -103,19 +161,17 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
 
   private async processStreamLine(line: string, callbacks: GerarDocCallbacks): Promise<void> {
     try {
-      // Log para debug - remova em produção
       console.log("Processando linha:", line);
       
       if (line.startsWith("data: ")) {
-        const jsonData = line.slice(6); // Remove "data: "
+        const jsonData = line.slice(6);
         
-        if (jsonData.trim() === "") return; // Ignora heartbeats vazios
+        if (jsonData.trim() === "") return;
         
         const eventData = JSON.parse(jsonData);
         this.dispatchEvent(eventData, callbacks);
         
       } else if (line.startsWith("{")) {
-        // Trata linhas que são JSON puro (sem "data: ")
         try {
           const eventData = JSON.parse(line);
           this.dispatchEvent(eventData, callbacks);
@@ -124,7 +180,6 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
           callbacks.onInfo?.(`Dado recebido (JSON inválido): ${line}`);
         }
       } else if (line.trim()) {
-        // Linhas que não são JSON são tratadas como informações
         callbacks.onInfo?.(line);
       }
     } catch (error) {
@@ -144,7 +199,6 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
     switch (eventData.type) {
       case "started":
       case "finished":
-        
         callbacks.onNodeStatus?.(eventData.node, eventData.type);
         break;
       
@@ -154,6 +208,19 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
       
       case "error":
         callbacks.onError?.(eventData.message);
+        break;
+      
+      // Novos casos para interação
+      case "awaiting_interaction":
+        callbacks.onInteraction?.({
+          session_id: eventData.session_id,
+          node: eventData.node,
+          agent_message: eventData.agent_message
+        });
+        break;
+      
+      case "stream_paused":
+        callbacks.onInfo?.(eventData.message);
         break;
       
       default:
