@@ -1,7 +1,8 @@
-import { RiBracesLine, RiCloseLine, RiFileAddLine, RiFileListLine, RiRefreshLine, RiUploadLine } from "@remixicon/react";
+import { RiBracesLine, RiCloseLine, RiDeleteBinLine, RiErrorWarningLine, RiFileAddLine, RiFileListLine, RiRefreshLine, RiUploadLine } from "@remixicon/react";
 import { useNodeManagerController } from "@/hooks/useNodeManagerController";
 import { formatFileSize } from "@/libs/util";
 import { useWorkflow } from "@/context/WorkflowContext";
+import { useState } from "react";
 
 interface NodeManagerCreateProps {
     onClose?: () => void;
@@ -39,16 +40,29 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
     } = useNodeManagerController();
 
     const { state } = useWorkflow();
+    
+    const [error, setError] = useState<string | null>(null);
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        handleSubmit(e);
-        onSubmit?.(formData);
+        setError(null); // Limpa erros anteriores
+        
+        try {
+            handleSubmit(e);
+            onSubmit?.(formData);
+        } catch (error) {
+            if (error instanceof Error) {
+                setError(error.message);
+            } else {
+                setError('Erro ao criar nó. Tente novamente.');
+            }
+        }
     };
 
     const handleCancel = () => {
-        resetForm(); // Limpa os campos do formulário
-        onClose?.(); // Fecha o formulário
+        setError(null); // Limpa erro ao cancelar
+        resetForm();
+        onClose?.();
     };
 
     const documentosAnexados = formData.documentosAnexados.map(doc => ({
@@ -75,6 +89,21 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                     <RiCloseLine className="text-xl" />
                 </button>
             </div>
+
+            {/* Exibir mensagem de erro */}
+            {error && (
+                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+                    role="alert"
+                    aria-live="polite"
+                    aria-atomic="true">
+                    <div className="flex items-center">
+                        <RiErrorWarningLine className="text-red-500 mr-2" aria-hidden="true"/>
+                        <span className="text-red-700 dark:text-red-400 text-sm font-medium">
+                            {error}
+                        </span>
+                    </div>
+                </div>
+            )}
 
             <form onSubmit={handleFormSubmit} className="space-y-6">
                 {/* Primeira linha - 2 colunas */}
@@ -103,7 +132,6 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                         >
                             <option value="entrada">Entrada</option>
                             <option value="processamento">Processamento</option>
-                            <option value="saida">Saída</option>
                         </select>
                     </div>
                 </div>
@@ -272,7 +300,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                             onClick={() => removeDocumento(index)}
                                             className="text-red-500 hover:text-red-700 cursor-pointer"
                                         >
-                                            <RiCloseLine className="text-lg" />
+                                            <RiDeleteBinLine className="w-4 h-4" />
                                         </button>
                                     </div>
 
@@ -411,7 +439,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                                     onClick={() => removeArquivo(index, arquivo.id)}
                                                                     className="text-red-500 hover:text-red-700 cursor-pointer"
                                                                 >
-                                                                    <RiCloseLine className="text-lg" />
+                                                                    <RiDeleteBinLine className="text-lg" />
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -455,9 +483,8 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                         <button
                                             type="button"
                                             onClick={() => removeEntrada(index)}
-                                            className="text-red-500 hover:text-red-700 cursor-pointer"
-                                        >
-                                            <RiCloseLine className="text-lg" />
+                                            className="text-red-500 hover:text-red-700 cursor-pointer">
+                                            <RiDeleteBinLine className="w-4 h-4" />
                                         </button>
                                     </div>
 
@@ -478,7 +505,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
 
                                         <div>
                                             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                                fonte dos Dados
+                                                Fonte dos Dados
                                             </label>
                                             <select
                                                 value={entrada.origem}
@@ -486,7 +513,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-600 dark:text-white"
                                             >
                                                 <option value="documento_anexado">Documento Anexado</option>
-                                                <option value="resultado_no_anterior">Saída de Nó Anterior</option>
+                                                <option value="resultado_no_anterior">Resultado do Anterior</option>
                                             </select>
                                         </div>
 
@@ -738,6 +765,21 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                         Criar Nó
                     </button>
                 </div>
+                
+                {/* Exibir mensagem de erro */}
+                {error && (
+                    <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+                        role="alert"
+                        aria-live="polite"
+                        aria-atomic="true">
+                        <div className="flex items-center">
+                            <RiErrorWarningLine className="text-red-500 mr-2" aria-hidden="true"/>
+                            <span className="text-red-700 dark:text-red-400 text-sm font-medium">
+                                {error}
+                            </span>
+                        </div>
+                    </div>
+                )}
             </form>
         </div>
     );

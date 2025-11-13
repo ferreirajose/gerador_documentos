@@ -132,7 +132,7 @@ export default function OutputConfiguration() {
 
                 {!isCollapsed && (
                   <div className="space-y-4">
-                    <div>
+                    <div id="input-name-combined-exit">
                       <label htmlFor={`nome-${index}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                         Nome da Saída Combinada *
                       </label>
@@ -163,8 +163,7 @@ export default function OutputConfiguration() {
                       </div>
                     </div>
 
-                    {!combinacao.manter_originais && (
-                      <div>
+                      <div id="input-combine-results">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Combinar Resultados
                           <span className="text-xs text-gray-500 dark:text-gray-400 font-normal ml-2">
@@ -229,7 +228,7 @@ export default function OutputConfiguration() {
                           )}
                         </div>
                       </div>
-                    )}
+                    
                   </div>
                 )}
               </div>

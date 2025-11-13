@@ -1,5 +1,4 @@
-// NodeManagerEdit.tsx (atualizado)
-import { RiCloseLine, RiFileAddLine, RiFileListLine, RiRefreshLine, RiUploadLine } from "@remixicon/react";
+import { RiCloseLine, RiDeleteBinLine, RiFileAddLine, RiFileListLine, RiRefreshLine, RiUploadLine } from "@remixicon/react";
 import { useNodeManagerController } from "@/hooks/useNodeManagerController";
 import { formatFileSize } from "@/libs/util";
 import { useWorkflow } from "@/context/WorkflowContext";
@@ -129,7 +128,6 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                         >
                             <option value="entrada">Entrada</option>
                             <option value="processamento">Processamento</option>
-                            <option value="saida">Saída</option>
                         </select>
                     </div>
                 </div>
@@ -297,9 +295,8 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                                         <button
                                             type="button"
                                             onClick={() => handleDeleteDocument(index)}
-                                            className="text-red-500 hover:text-red-700 cursor-pointer"
-                                        >
-                                            <RiCloseLine className="text-lg" />
+                                            className="text-red-500 hover:text-red-700 cursor-pointer">
+                                            <RiDeleteBinLine className="w-4 h-4" />
                                         </button>
                                     </div>
 
@@ -438,7 +435,7 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                                                                     onClick={() => removeArquivo(index, arquivo.id)}
                                                                     className="text-red-500 hover:text-red-700 cursor-pointer"
                                                                 >
-                                                                    <RiCloseLine className="text-lg" />
+                                                                    <RiDeleteBinLine className="w-4 h-4" />
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -484,7 +481,7 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                                             onClick={() => handleDeleteInput(index)}
                                             className="text-red-500 hover:text-red-700 cursor-pointer"
                                         >
-                                            <RiCloseLine className="text-lg" />
+                                            <RiDeleteBinLine className="w-4 h-4" />
                                         </button>
                                     </div>
 
@@ -513,7 +510,7 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-600 dark:text-white"
                                             >
                                                 <option value="documento_anexado">Documento Anexado</option>
-                                                <option value="resultado_no_anterior">Saída de Nó Anterior</option>
+                                                <option value="resultado_no_anterior">Resultado do Anterior</option>
                                             </select>
                                         </div>
 

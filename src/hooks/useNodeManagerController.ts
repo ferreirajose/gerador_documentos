@@ -89,6 +89,22 @@ export function useNodeManagerController() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // VALIDAÇÃO DE NOME ÚNICO NO FRONTEND
+    const existingNodes = state.nodes;
+    if (isEditing) {
+      // Em modo edição, exclui o próprio nó da verificação
+      const otherNodes = existingNodes.filter(node => node.id !== editingNodeId);
+      const duplicateNode = otherNodes.find(node => node.nome === formData.nome);
+      if (duplicateNode) {
+        throw new Error(`Já existe um nó com o nome "${formData.nome}"`);
+      }
+    } else {
+      // Em modo criação, verifica todos os nós
+      const duplicateNode = existingNodes.find(node => node.nome === formData.nome);
+      if (duplicateNode) {
+        throw new Error(`Já existe um nó com o nome "${formData.nome}"`);
+      }
+    }
 
     const workflowData = buildAttachedDocument();
 
@@ -124,10 +140,7 @@ export function useNodeManagerController() {
       }
 
       // Adicionar cada documento individualmente
-      if (
-        workflowData.documentosAnexados &&
-        Array.isArray(workflowData.documentosAnexados)
-      ) {
+      if (workflowData.documentosAnexados && Array.isArray(workflowData.documentosAnexados)) {
         workflowData.documentosAnexados.forEach((documento: any) => {
           if (documento) {
             addDocumentoAnexo(documento);
