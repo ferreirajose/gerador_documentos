@@ -23,9 +23,10 @@ export default function ConnectionManager() {
     removeConnection,
     handleConnectToEnd,
     getNodeName,
-    getNodeType,
+    getNodeTypeInfo, // Alterado: agora é getNodeTypeInfo
     getAvailableNodes,
-    canConnectToEnd
+    canConnectToEnd,
+    nodes // Adicionado: para passar para ConnectionsList
   } = useConnectionController();
 
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(true);
@@ -89,6 +90,7 @@ export default function ConnectionManager() {
           connectionValidation={connectionValidation}
           getAvailableNodes={getAvailableNodes}
           getNodeName={getNodeName}
+          getNodeTypeInfo={getNodeTypeInfo} // Nova prop adicionada
         />
       )}
 
@@ -101,9 +103,10 @@ export default function ConnectionManager() {
         onDelete={handleConnectionDelete}
         onConnectToEnd={handleConnectToEnd}
         getNodeName={getNodeName}
-        getNodeType={getNodeType}
+        getNodeTypeInfo={getNodeTypeInfo} // Alterado: agora é getNodeTypeInfo
         canConnectToEnd={canConnectToEnd}
         nodesCount={state.nodes.length}
+        nodes={nodes} // Nova prop adicionada
       />
 
       <WorkflowOutput

@@ -117,7 +117,7 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                         />
                     </div>
 
-                    <div id="input-categoria">
+                    {/* <div id="input-categoria">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Categoria
                         </label>
@@ -129,6 +129,25 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                             <option value="entrada">Entrada</option>
                             <option value="processamento">Processamento</option>
                         </select>
+                    </div> */}
+
+                    {/* Entrada de Grafo - Checkboxes */}
+                    <div id="input-graph">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                            Informe se o Nó sera um  Entrada de Grafo.
+                        </label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.entrada_grafo}
+                                    onChange={(e) => handleInputChange('entrada_grafo', e.target.checked)}
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">Entrada de Grafo</span>
+                            </label>
+
+                        </div>
                     </div>
                 </div>
 
@@ -196,24 +215,7 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                     </div>
                 </div>
 
-                {/* Entrada de Grafo - Checkboxes */}
-                <div id="input-graph">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                        Informe se o Nó sera um  Entrada de Grafo.
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <label className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <input
-                                type="checkbox"
-                                checked={formData.entrada_grafo}
-                                onChange={(e) => handleInputChange('entrada_grafo', e.target.checked)}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
-                            />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Entrada de Grafo</span>
-                        </label>
-
-                    </div>
-                </div>
+                
 
                 {/* Prompt - largura total */}
                 <div id="input-text-prompt">

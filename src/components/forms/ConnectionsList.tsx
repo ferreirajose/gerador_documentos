@@ -14,9 +14,10 @@ interface ConnectionsListProps {
   onDelete: (connectionId: string) => void;
   onConnectToEnd: (nodeId: string) => void;
   getNodeName: (nodeId: string) => string;
-  getNodeType: (nodeId: string) => string;
+  getNodeTypeInfo: (node: any) => { label: string }; // Alterar esta prop
   canConnectToEnd: (nodeId: string) => { canConnect: boolean; reason: string };
   nodesCount: number;
+  nodes: any[]; // Adicionar prop para acessar os nós completos
 }
 
 export function ConnectionsList({
@@ -25,13 +26,17 @@ export function ConnectionsList({
   onOpenForm,
   onEdit,
   onDelete,
-  onConnectToEnd,
   getNodeName,
-  getNodeType,
-  canConnectToEnd,
-  nodesCount
+  getNodeTypeInfo, // Alterar esta prop
+  nodesCount,
+  nodes // Adicionar esta prop
 }: ConnectionsListProps) {
   
+  // Função auxiliar para obter o nó completo pelo ID
+  const getNodeById = (nodeId: string) => {
+    return nodes.find(node => node.id === nodeId);
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -43,10 +48,16 @@ export function ConnectionsList({
       {connections.length > 0 ? (
         <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {connections.map((connection) => {
-            const endValidation = canConnectToEnd(connection.origem);
             const origemNome = getNodeName(connection.origem);
             const destinoNome = connection.destino === 'END' ? 'END' : getNodeName(connection.destino);
             
+            // Obter os nós completos para determinar os tipos
+            const origemNode = getNodeById(connection.origem);
+            const destinoNode = connection.destino === 'END' ? null : getNodeById(connection.destino);
+            
+            const origemType = origemNode ? getNodeTypeInfo(origemNode).label : 'Desconhecido';
+            const destinoType = destinoNode ? getNodeTypeInfo(destinoNode).label : 'END';
+
             return (
               <div key={connection.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <div className="flex items-start justify-between">
@@ -78,11 +89,7 @@ export function ConnectionsList({
                       </div>
                       <div className="flex items-center space-x-1">
                         <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">
-                          {getNodeType(connection.origem) === 'entrada' ? 'Entrada' : 
-                           getNodeType(connection.origem) === 'processamento' ? 'Processamento' : 'Saída'} → 
-                          {connection.destino === 'END' ? 'END' : 
-                           getNodeType(connection.destino) === 'entrada' ? 'Entrada' : 
-                           getNodeType(connection.destino) === 'processamento' ? 'Processamento' : 'Saída'}
+                          {origemType} → {destinoType}
                         </span>
                       </div>
                     </div>
@@ -109,17 +116,6 @@ export function ConnectionsList({
                     >
                       <RiDeleteBinLine className="w-4" />
                     </button>
-                    
-                    {/* Botão para conectar ao END */}
-                    {/* {connection.destino !== 'END' && endValidation.canConnect && (
-                      <button
-                        onClick={() => onConnectToEnd(connection.origem)}
-                        className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
-                        title={`Conectar ao END: ${endValidation.reason}`}
-                      >
-                        <RiCheckLine className="w-4" />
-                      </button>
-                    )} */}
                   </div>
                 </div>
               </div>
