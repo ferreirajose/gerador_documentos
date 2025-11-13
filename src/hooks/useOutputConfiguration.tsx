@@ -51,16 +51,7 @@ export function useOutputConfiguration() {
   const updateCombinacao = (index: number, field: keyof Combinacao, value: any) => {
     const updatedCombinacoes = combinacoes.map((c, i) => {
       if (i === index) {
-        const updated = { ...c, [field]: value };
-        
-        // Limpar campos conflitantes
-        if (field === 'manter_originais' && value === true) {
-          updated.combinar_resultados = [];
-        } else if (field === 'combinar_resultados' && value && value.length > 0) {
-          updated.manter_originais = false;
-        }
-        
-        return updated;
+        return { ...c, [field]: value };
       }
       return c;
     });

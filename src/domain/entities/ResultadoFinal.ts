@@ -14,9 +14,9 @@ export class FormatoResultadoFinal {
   validate(nodes: NodeEntitie[]): void {
     // Validar combinações
     this.combinacoes.forEach(combinacao => {
-      if (combinacao.manter_originais && combinacao.combinar_resultados.length > 0) {
-        throw new Error(`Combinação '${combinacao.nome_da_saida}': não pode ter manter_originais e combinar_resultados simultaneamente`);
-      }
+      // if (combinacao.manter_originais && combinacao.combinar_resultados.length > 0) {
+      //   throw new Error(`Combinação '${combinacao.nome_da_saida}': não pode ter manter_originais e combinar_resultados simultaneamente`);
+      // }
 
       // Verifica se as referências de combinação existem
       combinacao.combinar_resultados.forEach(ref => {
