@@ -41,6 +41,7 @@ export class Workflow {
     // Valida variáveis no prompt (código existente mantido)
     this.grafo.nos.forEach(node => {
       const promptVariables = this.extractPromptVariables(node.prompt);
+      console.log(promptVariables, 'promptVariables')
       const inputVariables = node.entradas.map(input => input.variavel_prompt);
       
       const missingVariables = promptVariables.filter(variable => 
@@ -51,11 +52,29 @@ export class Workflow {
         throw new Error(`Nó '${node.nome}': variáveis no prompt sem entrada correspondente: ${missingVariables.join(', ')}`);
       }
     });
+  
   }
 
   private extractPromptVariables(prompt: string): string[] {
+    // Remove blocos de código JSON
+    const jsonBlockRegex = /```json[\s\S]*?```/g;
+    let cleanPrompt = prompt.replace(jsonBlockRegex, '');
+    
+    // Remove blocos de código genéricos
+    const codeBlockRegex = /```[\s\S]*?```/g;
+    cleanPrompt = cleanPrompt.replace(codeBlockRegex, '');
+    
+    // Remove JSONs stringificados com chaves duplas ({{ }})
+    const jsonStringifyRegex = /\{\{[\s\S]*?\}\}/g;
+    cleanPrompt = cleanPrompt.replace(jsonStringifyRegex, '');
+    
+    // Remove objetos JSON simples que podem estar no prompt
+    const jsonObjectRegex = /\{\s*"[^"]*"\s*:\s*[^}]*\}/g;
+    cleanPrompt = cleanPrompt.replace(jsonObjectRegex, '');
+    
+    // Agora extrai as variáveis reais do prompt
     const variableRegex = /\{([^}]+)\}/g;
-    const matches = prompt.match(variableRegex);
+    const matches = cleanPrompt.match(variableRegex);
     return matches ? matches.map(match => match.slice(1, -1)) : [];
   }
 

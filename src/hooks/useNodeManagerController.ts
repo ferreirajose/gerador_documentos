@@ -48,7 +48,7 @@ const initialFormData: FormData = {
   temperatura: 0.3,
   prompt: "",
   entradas: [],
-  saida: { nome: "", formato: "json" },
+  saida: { nome: "", formato: "markdown" },
   ferramentas: [],
   documentosAnexados: [],
   interacao_com_usuario: {
