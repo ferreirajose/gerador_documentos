@@ -12,7 +12,6 @@ export function useConnectionController() {
     addConnection,
     deleteConnection,
     updateConnection,
-
   } = useWorkflow();
   
   const [editingConnection, setEditingConnection] = useState<Connection | null>(null);
@@ -28,11 +27,37 @@ export function useConnectionController() {
     return node ? node.nome : 'Nó não encontrado';
   }, [state.nodes]);
 
-  // Obter tipo do nó
-  const getNodeType = useCallback((nodeId: string): string => {
-    const node = state.nodes.find(n => n.id === nodeId);
-    return node ? node.categoria : 'desconhecido';
-  }, [state.nodes]);
+  // Função para obter informações do tipo do nó (igual ao ListNode)
+  const getNodeTypeInfo = useCallback((node: any) => {
+    const hasInteracaoUsuario = node.interacao_com_usuario && 
+        Object.keys(node.interacao_com_usuario).length > 0;
+
+    // Critério 1: entrada_grafo = true E interacao_com_usuario habilitado
+    if (node.entrada_grafo && hasInteracaoUsuario) {
+        return {
+            label: 'Entrada com Interação'
+        };
+    }
+    
+    // Critério 2: interacao_com_usuario habilitado (sem ser entrada_grafo)
+    if (hasInteracaoUsuario) {
+        return {
+            label: 'Interativo'
+        };
+    }
+    
+    // Critério 3: entrada_grafo = true (apenas entrada)
+    if (node.entrada_grafo) {
+        return {
+            label: 'Entrada'
+        };
+    }
+    
+    // Critério 4: Nenhum dos acima (processamento padrão)
+    return {
+        label: 'Processamento'
+    };
+  }, []);
 
   // Obter nós disponíveis para conexão
   const getAvailableNodes = useCallback((excludeNodeId?: string) => {
@@ -61,7 +86,6 @@ export function useConnectionController() {
   }, [state.nodes, state.connections]);
 
   // Validar conexão
-  // @TODO ADICIONAR REGRA PARA IMPEDIR QUE O NODE DO TIPO CATEGORIA SE CONECTER A OUTRO NODE CATEGORIA
   const validateConnection = useCallback((origem: string, destino: string) => {
     const errors: string[] = [];
 
@@ -171,6 +195,7 @@ export function useConnectionController() {
     showCreateForm,
     formData,
     connectionValidation,
+    nodes: state.nodes, // Adicionar nodes para o ConnectionsList
     
     // Setters
     setFormData,
@@ -187,7 +212,7 @@ export function useConnectionController() {
     
     // Helpers
     getNodeName,
-    getNodeType,
+    getNodeTypeInfo, // Alterar para getNodeTypeInfo
     getAvailableNodes,
     canConnectToEnd
   };

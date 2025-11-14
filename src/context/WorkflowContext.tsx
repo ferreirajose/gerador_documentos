@@ -8,7 +8,6 @@ import { Workflow } from '@/domain/entities/Workflow';
 
 export interface NodeState extends Omit<NodeEntitie, 'validate'> {
   id: string;
-  categoria: 'entrada' | 'processamento' | 'saida';
 }
 
 export interface Connection extends Aresta {

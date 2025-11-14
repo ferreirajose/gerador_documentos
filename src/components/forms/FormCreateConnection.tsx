@@ -16,6 +16,7 @@ interface FormCreateConnectionProps {
   } | null;
   getAvailableNodes: (excludeNodeId?: string) => any[];
   getNodeName: (nodeId: string) => string;
+  getNodeTypeInfo: (node: any) => { label: string }; // Adicionar esta prop
 }
 
 export default function FormCreateConnection({
@@ -27,11 +28,17 @@ export default function FormCreateConnection({
   editingConnection,
   connectionValidation,
   getAvailableNodes,
-  getNodeName
+  getNodeName,
+  getNodeTypeInfo // Adicionar esta prop
 }: FormCreateConnectionProps) {
   const handleCancel = () => {
     onCancel();
     onClose?.(); // Fecha o formulário
+  };
+
+  // Função para obter o label do tipo do nó
+  const getNodeTypeLabel = (node: any) => {
+    return getNodeTypeInfo(node).label;
   };
 
   return (
@@ -65,7 +72,7 @@ export default function FormCreateConnection({
               <option value="">Selecione o nó de origem</option>
               {getAvailableNodes(formData.destino).map(node => (
                 <option key={node.id} value={node.id}>
-                  {node.nome} ({node.categoria === 'entrada' ? 'Entrada' : node.categoria === 'processamento' ? 'Processamento' : 'Saída'})
+                  {node.nome} ({getNodeTypeLabel(node)})
                 </option>
               ))}
             </select>
@@ -86,7 +93,7 @@ export default function FormCreateConnection({
               <option value="END">END (Final do Workflow)</option>
               {getAvailableNodes(formData.origem).map(node => (
                 <option key={node.id} value={node.id}>
-                  {node.nome} ({node.categoria === 'entrada' ? 'Entrada' : node.categoria === 'processamento' ? 'Processamento' : 'Saída'})
+                  {node.nome} ({getNodeTypeLabel(node)})
                 </option>
               ))}
             </select>

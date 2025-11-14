@@ -30,7 +30,6 @@ interface ArquivoUpload {
 
 export interface FormData {
   nome: string;
-  categoria: "entrada" | "processamento" | "saida";
   entrada_grafo: boolean;
   modelo_llm: string;
   temperatura: number;
@@ -44,7 +43,6 @@ export interface FormData {
 
 const initialFormData: FormData = {
   nome: "",
-  categoria: "entrada",
   entrada_grafo: false,
   modelo_llm: "o3",
   temperatura: 0.3,
@@ -165,7 +163,6 @@ export function useNodeManagerController() {
       
       setFormData({
         nome: node.nome || "",
-        categoria: node.categoria || "",
         entrada_grafo: node.entrada_grafo,
         modelo_llm: node.modelo_llm || "",
         temperatura: node.temperatura || 0,
