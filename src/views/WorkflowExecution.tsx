@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'; // Adicione useEffect
+import { useState, useEffect } from 'react';
 import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
 import FetchAdapter from '@/infra/FetchAdapter';
 import { GerarDocCallbacks } from '@/types/node';
-import { WORFLOW_INTER, WORFLOW_MINUTA_INTERACAO, WORFLOW_MOCK } from '@/mock/workflow-mock';
+import { WORFLOW_INTER_PIADA, WORFLOW_MINUTA_INTERACAO_SEM_DOC, WORFLOW_MINUTA_INTERACAO_COM_DOC, WORFLOW_MOCK } from '@/mock/workflow-mock';
 
 import { ExecuteProgress } from '@/components/common/ExecuteProgress';
 import { useWorkflow } from '@/context/WorkflowContext';
@@ -59,9 +59,9 @@ export default function WorkflowExecution() {
   const [nodeStatus, setNodeStatus] = useState<Record<string, string>>({});
   const [nodeTimers, setNodeTimers] = useState<Record<string, NodeTimer>>({});
   const [completedNodes, setCompletedNodes] = useState<string[]>([]);
-  
+
   const [workflowError, setWorkflowError] = useState<WorkflowErrorData | null>(null);
-  
+
   // Novos estados para interação
   const [interactionData, setInteractionData] = useState<InteractionData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -91,26 +91,26 @@ export default function WorkflowExecution() {
   // Função para obter os nomes das saídas esperadas do workflow
   const getExpectedOutputNames = (): string[] => {
     const outputNames: string[] = [];
-    
+
     // Adicionar saídas combinadas
     if (WORFLOW.formato_resultado_final?.combinacoes) {
       WORFLOW.formato_resultado_final.combinacoes.forEach((combinacao: any) => {
         outputNames.push(combinacao.nome_da_saida);
       });
     }
-    
+
     // Adicionar saídas individuais
     if (WORFLOW.formato_resultado_final?.saidas_individuais) {
       outputNames.push(...WORFLOW.formato_resultado_final.saidas_individuais);
     }
-    
+
     return outputNames;
   };
 
   // Função para renderizar o conteúdo baseado no formato
   const renderContentByFormat = (resultKey: string, resultItem: ResultItem) => {
     const { value, metadata } = resultItem;
-    
+
     if (metadata.format === 'markdown') {
       const content = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
       return (
@@ -129,7 +129,7 @@ export default function WorkflowExecution() {
         </pre>
       );
     }
-    
+
     return (
       <pre className="min-h-[200px] max-h-[600px] overflow-y-auto p-4 bg-gray-50 dark:bg-gray-800 rounded border dark:border-gray-700 text-sm">
         <code>{typeof value === 'string' ? value : JSON.stringify(value, null, 2)}</code>
@@ -141,7 +141,7 @@ export default function WorkflowExecution() {
   const continueInteraction = async (userMessage: string) => {
     console.log("🚀 continueInteraction CHAMADO! Mensagem:", userMessage);
     console.log("📋 SessionId:", sessionId);
-    
+
     if (!sessionId) {
       console.error("❌ SessionId não definido!");
       return;
@@ -150,20 +150,20 @@ export default function WorkflowExecution() {
     try {
       const httpClient = new FetchAdapter();
       const workFlowGateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL, AUTH_TOKEN);
-      
+
       // Mudar estado para executando enquanto processa a resposta
       setExecutionState('executing');
-      
+
       console.log("🔄 Chamando continuarInteracao no gateway...");
-      
+
       await workFlowGateway.continuarInteracao(
-        sessionId, 
-        userMessage, 
+        sessionId,
+        userMessage,
         createInteractionCallbacks()
       );
-      
+
       console.log("✅ continuarInteracao concluído");
-      
+
     } catch (error) {
       console.error('❌ Erro ao continuar interação:', error);
       const errorData: WorkflowErrorData = {
@@ -182,9 +182,9 @@ export default function WorkflowExecution() {
       onInfo: (message) => {
         console.log('Info (interação):', message);
       },
-      
+
       onNodeStatus: (node, status) => {
-        const currentTime = Date.now();          
+        const currentTime = Date.now();
         setNodeStatus(prev => ({
           ...prev,
           [node]: status
@@ -200,11 +200,11 @@ export default function WorkflowExecution() {
             const endTime = currentTime;
             const startTime = prev[node]?.start || endTime;
             const duration = endTime - startTime;
-            
+
             return {
               ...prev,
-              [node]: { 
-                start: startTime, 
+              [node]: {
+                start: startTime,
                 end: endTime,
                 duration: duration
               }
@@ -222,19 +222,19 @@ export default function WorkflowExecution() {
           });
         }
       },
-      
+
       onData: (data) => {
         console.log("Data recebida (interação):", data);
         if (data) {
           setWorkflowResults(data);
         }
       },
-      
+
       onComplete: (result) => {
         console.log("Processamento completo (interação):", result);
         setExecutionState('completed');
         setProgress(100);
-        
+
         setNodeStatus(prev => {
           const updatedStatus = { ...prev };
           WORFLOW.grafo.nos.forEach((node: any) => {
@@ -245,12 +245,12 @@ export default function WorkflowExecution() {
           return updatedStatus;
         });
       },
-      
+
       onError: (error) => {
         console.error("Erro no workflow (interação):", error);
-        
+
         let errorData: WorkflowErrorData;
-        
+
         if (typeof error === 'string') {
           errorData = {
             type: 'error',
@@ -270,7 +270,7 @@ export default function WorkflowExecution() {
             node: null
           };
         }
-        
+
         setWorkflowError(errorData);
         setExecutionState('error');
       },
@@ -311,9 +311,9 @@ export default function WorkflowExecution() {
         onInfo: (message) => {
           console.log('Info:', message);
         },
-        
+
         onNodeStatus: (node, status) => {
-          const currentTime = Date.now();          
+          const currentTime = Date.now();
           setNodeStatus(prev => ({
             ...prev,
             [node]: status
@@ -329,11 +329,11 @@ export default function WorkflowExecution() {
               const endTime = currentTime;
               const startTime = prev[node]?.start || endTime;
               const duration = endTime - startTime;
-              
+
               return {
                 ...prev,
-                [node]: { 
-                  start: startTime, 
+                [node]: {
+                  start: startTime,
                   end: endTime,
                   duration: duration
                 }
@@ -351,20 +351,20 @@ export default function WorkflowExecution() {
             });
           }
         },
-        
+
         onData: (data) => {
           console.log("Data recebida:", data);
           if (data) {
             setWorkflowResults(data);
           }
         },
-        
+
         onComplete: (result) => {
           console.log("Processamento completo:", result);
           // Só muda para completed se não estiver aguardando interação
           setExecutionState(prev => prev === 'awaiting_interaction' ? 'awaiting_interaction' : 'completed');
           setProgress(100);
-          
+
           setNodeStatus(prev => {
             const updatedStatus = { ...prev };
             WORFLOW.grafo.nos.forEach((node: any) => {
@@ -375,12 +375,12 @@ export default function WorkflowExecution() {
             return updatedStatus;
           });
         },
-        
+
         onError: (error) => {
           console.error("Erro no workflow:", error);
-          
+
           let errorData: WorkflowErrorData;
-          
+
           if (typeof error === 'string') {
             errorData = {
               type: 'error',
@@ -400,7 +400,7 @@ export default function WorkflowExecution() {
               node: null
             };
           }
-          
+
           setWorkflowError(errorData);
           setExecutionState('error');
         },
@@ -419,13 +419,13 @@ export default function WorkflowExecution() {
 
     } catch (error) {
       console.error('Erro ao executar workflow:', error);
-      
+
       const errorData: WorkflowErrorData = {
         type: 'execution_error',
         message: error instanceof Error ? error.message : 'Erro desconhecido na execução',
         node: null
       };
-      
+
       setWorkflowError(errorData);
       setExecutionState('error');
     }
@@ -450,7 +450,7 @@ export default function WorkflowExecution() {
     const nodeName = node.nome;
     const rawStatus = nodeStatus[nodeName] || 'waiting';
     const duration = calculateNodeDuration(nodeName);
-    
+
     const getUIStatus = (status: string): "waiting" | "processing" | "completed" | "error" => {
       switch (status) {
         case 'started': return 'processing';
@@ -460,7 +460,7 @@ export default function WorkflowExecution() {
         default: return 'waiting';
       }
     };
-    
+
     return {
       id: idx,
       name: nodeName,
@@ -477,45 +477,47 @@ export default function WorkflowExecution() {
       case 'executing':
         return {
           text: 'Executando...',
-          icon: RiLoader4Line, // Componente React
+          icon: RiLoader4Line,
           className: 'bg-blue-600 text-white hover:bg-blue-700',
           disabled: true
         };
       case 'awaiting_interaction':
         return {
           text: 'Aguardando Interação...',
-          icon: RiChat3Line, // Componente React
+          icon: RiChat3Line,
           className: 'bg-purple-600 text-white hover:bg-purple-700',
           disabled: true
         };
       case 'completed':
         return {
           text: 'Executar Novamente',
-          icon: RiRestartLine, // Componente React
+          icon: RiRestartLine,
           className: 'bg-green-600 text-white hover:bg-green-700',
           disabled: false
         };
       case 'error':
         return {
           text: 'Tentar Novamente',
-          icon: RiRefreshLine, // Componente React
+          icon: RiRefreshLine,
           className: 'bg-red-600 text-white hover:bg-red-700',
           disabled: false
         };
       default: // idle
         return {
           text: 'Executar Workflow',
-          icon: RiPlayCircleLine, // Componente React
+          icon: RiPlayCircleLine,
           className: 'bg-green-600 text-white hover:bg-green-700',
-          disabled: false //!canExecute
+          disabled: !canExecute //false
         };
     }
   };
 
   const buttonConfig = getButtonConfig();
   const expectedOutputs = getExpectedOutputNames();
+
+  const hasInteracaoUsuario = WORFLOW.grafo.nos.some(node =>
+    node.interacao_com_usuario && Object.keys(node.interacao_com_usuario).length > 0);
   
-  console.log(executionState, 'executionState')
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -542,9 +544,8 @@ export default function WorkflowExecution() {
             onClick={executeWorkflow}
             data-testid="execute-workflow-button"
             disabled={buttonConfig.disabled}
-            className={`px-6 py-2 rounded-lg transition-colors flex items-center space-x-2 whitespace-nowrap font-medium ${buttonConfig.className} ${
-              buttonConfig.disabled ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className={`px-6 py-2 rounded-lg transition-colors flex items-center space-x-2 whitespace-nowrap font-medium ${buttonConfig.className} ${buttonConfig.disabled ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
           >
             {buttonConfig.icon && <buttonConfig.icon className={executionState === 'executing' ? 'animate-spin' : ''} />}
             <span data-testid="text-executing">
@@ -556,7 +557,7 @@ export default function WorkflowExecution() {
 
       {/* Exibir erro se houver */}
       {workflowError && (
-        <WorkflowError 
+        <WorkflowError
           error={workflowError}
           onRetry={executionState === 'error' ? executeWorkflow : undefined}
         />
@@ -564,7 +565,7 @@ export default function WorkflowExecution() {
 
       {/* ExecuteProgress - Mostrar apenas durante execução ou quando há progresso */}
       {(executionState === 'executing' || executionState === 'completed' || progress > 0) && (
-        <ExecuteProgress 
+        <ExecuteProgress
           progress={progress}
           title="Processando Workflow"
           steps={steps}
@@ -575,7 +576,7 @@ export default function WorkflowExecution() {
       {Object.keys(workflowResults).length > 0 && (
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Resultados do Processamento</h3>
-          
+
           {expectedOutputs.map((outputName) => {
             const resultItem = workflowResults[outputName];
             if (!resultItem) return null;
@@ -614,16 +615,18 @@ export default function WorkflowExecution() {
           }
         </div>
       )}
-      
+
       {/* InteractionBot com suporte para interação de workflow */}
-      <InteractionBot 
-        onSendMessage={continueInteraction} // Sempre passa a função, ela só será usada quando necessário
-        interactionContext={interactionData}
-        isWorkflowInteraction={executionState === 'awaiting_interaction'}
-        isOpen={isChatOpen}
-        setIsOpen={setIsChatOpen}
-        autoOpen={executionState === 'awaiting_interaction'}
-      />
+      {hasInteracaoUsuario && (
+        <InteractionBot
+          onSendMessage={continueInteraction} 
+          interactionContext={interactionData}
+          isWorkflowInteraction={executionState === 'awaiting_interaction'}
+          isOpen={isChatOpen}
+          setIsOpen={setIsChatOpen}
+          autoOpen={executionState === 'awaiting_interaction'}
+        />
+      )}
 
     </div>
   );
