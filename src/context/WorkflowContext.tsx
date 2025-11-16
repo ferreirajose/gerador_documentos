@@ -2,7 +2,7 @@ import NodeEntitie from '@/domain/entities/NodeEntitie';
 import { Aresta } from '@/domain/entities/Aresta';
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { DocumentoAnexado } from '@/domain/entities/Workflow';
-import { FormatoResultadoFinal, Combinacao } from '@/domain/entities/ResultadoFinal'; // Atualizado
+import { FormatoResultadoFinal, Combinacao } from '@/domain/entities/ResultadoFinal'; 
 import { Grafo } from '@/domain/entities/Grafo';
 import { Workflow } from '@/domain/entities/Workflow';
 
@@ -32,6 +32,8 @@ export type WorkflowAction =
   | { type: 'UPDATE_CONNECTION'; payload: Connection }
   | { type: 'DELETE_CONNECTION'; payload: { connectionId: string } }
   | { type: 'UPDATE_RESULTADO_FINAL'; payload: { combinacoes: Combinacao[], saidas_individuais: string[] } }
+  | { type: 'RESET_WORKFLOW' };
+
 
 export const initialState: WorkflowState = {
   nodes: [],
@@ -110,6 +112,11 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         )
       }
 
+    case 'RESET_WORKFLOW':
+      return {
+        ...initialState
+      }
+
     default:
       return state;
   }
@@ -130,6 +137,7 @@ interface WorkflowContextType {
   deleteConnection: (connectionId: string) => void;
   updateResultadoFinal: (combinacoes: Combinacao[], saidas_individuais: string[]) => void;
   // WORKFLOW
+  resetWorkflow: () => void;
   getWorkflowJSON: () => string;
   validateWorkflow: () => { isValid: boolean; errors: string[] };
 }
@@ -182,6 +190,10 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       type: 'UPDATE_RESULTADO_FINAL', 
       payload: { combinacoes, saidas_individuais } 
     });
+  };
+
+  const resetWorkflow = () => {
+    dispatch({ type: 'RESET_WORKFLOW' });
   };
 
   const getWorkflowJSON = (): string => {
@@ -343,6 +355,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     deleteConnection,
     updateConnection,
     updateResultadoFinal,
+    resetWorkflow,
     getWorkflowJSON,
     validateWorkflow
   };

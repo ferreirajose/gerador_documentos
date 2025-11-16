@@ -49,7 +49,7 @@ interface InteractionData {
 }
 
 export default function WorkflowExecution() {
-  const { state, getWorkflowJSON } = useWorkflow();
+  const { state, resetWorkflow, getWorkflowJSON } = useWorkflow();
   const WORFLOW = JSON.parse(getWorkflowJSON());
 
   const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'completed' | 'error' | 'awaiting_interaction'>('idle');
@@ -286,9 +286,8 @@ export default function WorkflowExecution() {
     };
   };
 
-  // No WorkflowExecution.tsx, modifique a função executeWorkflow:
   const executeWorkflow = async () => {
-    //if (state.nodes.length === 0) return null;
+    if (state.nodes.length === 0) return null;
     // Resetar estados
     setProgress(0);
     setNodeStatus({});
@@ -443,6 +442,7 @@ export default function WorkflowExecution() {
     setInteractionData(null);
     setSessionId(null);
     setIsChatOpen(false); // Fechar chat ao resetar
+    resetWorkflow();
   };
 
   // Preparar steps para o ExecuteProgress

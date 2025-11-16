@@ -41,7 +41,6 @@ export class Workflow {
     // Valida variáveis no prompt (código existente mantido)
     this.grafo.nos.forEach(node => {
       const promptVariables = this.extractPromptVariables(node.prompt);
-      console.log(promptVariables, 'promptVariables')
       const inputVariables = node.entradas.map(input => input.variavel_prompt);
       
       const missingVariables = promptVariables.filter(variable => 
