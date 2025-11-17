@@ -1,4 +1,3 @@
-// hooks/useWorkflowChat.ts
 import { useState, useRef, useEffect, useCallback } from "react";
 
 interface Message {
@@ -15,7 +14,7 @@ interface UseWorkflowChatReturn {
   setInputValue: (value: string) => void;
   isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
   handleSendMessage: (onSend?: (message: string) => void) => void;
   handleKeyPress: (e: React.KeyboardEvent, onSend?: (message: string) => void) => void;
   formatTime: (date: Date) => string;
@@ -27,7 +26,7 @@ export function useChatBotController(): UseWorkflowChatReturn {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -103,7 +102,7 @@ export function useChatBotController(): UseWorkflowChatReturn {
     setInputValue,
     isLoading,
     messagesEndRef: messagesEndRef as React.RefObject<HTMLDivElement | null>,
-    inputRef: inputRef as React.RefObject<HTMLInputElement | null>,
+    inputRef,
     handleSendMessage,
     handleKeyPress,
     formatTime,

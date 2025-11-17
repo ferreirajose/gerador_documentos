@@ -1,4 +1,3 @@
-
 import { useChatBotController } from '@/hooks/useChatBotController';
 import { RiCloseFill, RiRobotFill, RiSendPlaneFill, RiUserFill } from '@remixicon/react'
 import { useEffect, useState } from 'react'
@@ -28,16 +27,15 @@ export function InteractionBot({
 
     const {
         messages,
-        setMessages,
         inputValue,
-        setInputValue,
         isLoading,
         messagesEndRef,
         inputRef,
+        setInputValue,
+        setMessages,
         handleSendMessage,
         handleKeyPress,
         formatTime,
-        addBotMessage,
     } = useChatBotController();
 
     // Efeito para abrir automaticamente quando necessário
@@ -142,7 +140,7 @@ export function InteractionBot({
             aria-label={isWorkflowInteraction ? "Chat para interação com workflow" : "Chat com assistente de workflow"}
             aria-modal="true"
             onKeyDown={handleKeyDown}
-            className="fixed bottom-6 right-6 w-96 h-[32rem] bg-card dark:bg-card/95 border border-border dark:border-gray-700 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-4 duration-300 backdrop-blur-sm dark:shadow-xl"
+            className="fixed bottom-6 right-6 w-100 h-[32rem] bg-card dark:bg-card/95 border border-border dark:border-gray-700 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-4 duration-300 backdrop-blur-sm dark:shadow-xl"
         >
             {/* Área para anunciar novas mensagens para screen readers */}
             <div 
@@ -253,21 +251,21 @@ export function InteractionBot({
 
             {/* Input Area */}
             <div id="footer" className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900/80 backdrop-blur-sm">
-                <div className="flex gap-2">
+                <div id="input-area" className="flex gap-2 items-center">
                     <label htmlFor="chat-input" className="sr-only">
                         {isWorkflowInteraction ? 'Digite sua resposta para continuar o workflow' : 'Digite sua mensagem'}
                     </label>
-                    <input
+                    <textarea
                         id="chat-input"
                         ref={inputRef}
-                        type="text"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         onKeyPress={handleKeyPressWrapper}
                         placeholder={isWorkflowInteraction ? 'Digite sua resposta para continuar...' : 'Digite sua mensagem...'}
-                        className="flex-1 px-4 py-3 border border-input dark:border-gray-600 rounded-xl bg-background dark:bg-gray-800 text-foreground dark:text-gray-100 placeholder:text-muted-foreground dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 focus:border-purple-500/50 dark:focus:border-purple-400/50 transition-all"
+                        className="flex-1 px-4 py-3 border border-input dark:border-gray-600 rounded-xl bg-background dark:bg-gray-800 text-foreground dark:text-gray-100 placeholder:text-muted-foreground dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 focus:border-purple-500/50 dark:focus:border-purple-400/50 transition-all resize-none min-h-[3rem] max-h-32"
                         disabled={isLoading}
                         aria-describedby="chat-instructions"
+                        rows={3}
                     />
                     <button
                         onClick={handleSend}
