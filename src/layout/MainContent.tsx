@@ -3,14 +3,15 @@ import ConnectionManager from '@/views/ConnectionManager';
 import NodeManager from '@/views/NodeManager';
 import OutputConfiguration from '@/views/OutputConfiguration';
 import WorkflowExecution from '@/views/WorkflowExecution';
+
 interface MainContentProps {
   currentView: ViewType;
+  onNavigationLock?: (locked: boolean) => void; // Nova prop
 }
 
-export default function MainContent({ currentView }: MainContentProps) {
+export default function MainContent({ currentView, onNavigationLock }: MainContentProps) {
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
       {currentView === 'nodes' && (
         <NodeManager />
       )}
@@ -23,11 +24,9 @@ export default function MainContent({ currentView }: MainContentProps) {
         <OutputConfiguration />
       )}
       
-
       {currentView === 'execution' && (
-        <WorkflowExecution />
+        <WorkflowExecution onNavigationLock={onNavigationLock} />
       )}
-      
     </main>
   );
 }

@@ -49,7 +49,11 @@ interface InteractionData {
   agent_message: string;
 }
 
-export default function WorkflowExecution() {
+interface WorkflowExecutionProps {
+  onNavigationLock?: (locked: boolean) => void;
+}
+
+export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutionProps) {
   const { state, resetWorkflow, getWorkflowJSON } = useWorkflow();
   const WORFLOW = JSON.parse(getWorkflowJSON());
 
@@ -74,6 +78,22 @@ export default function WorkflowExecution() {
       setIsChatOpen(true);
     }
   }, [executionState, interactionData]);
+
+  // Efeito para controlar o bloqueio da navegação
+  useEffect(() => {
+    if (onNavigationLock) {
+      // Bloqueia a navegação quando estiver executando ou aguardando interação
+      const shouldLock = executionState === 'executing' || executionState === 'awaiting_interaction';
+      onNavigationLock(shouldLock);
+    }
+
+    // Cleanup: desbloqueia a navegação quando o componente desmontar
+    return () => {
+      if (onNavigationLock) {
+        onNavigationLock(false);
+      }
+    };
+  }, [executionState, onNavigationLock]);
 
   // Função para calcular o progresso baseado nos nós concluídos
   const calculateProgress = (currentCompletedNodes: string[]) => {
@@ -142,6 +162,11 @@ export default function WorkflowExecution() {
   const continueInteraction = async (userMessage: string) => {
     console.log("🚀 continueInteraction CHAMADO! Mensagem:", userMessage);
     console.log("📋 SessionId:", sessionId);
+
+     // Bloquear navegação durante a interação
+    if (onNavigationLock) {
+      onNavigationLock(true);
+    }
 
     if (!sessionId) {
       console.error("❌ SessionId não definido!");
@@ -289,6 +314,11 @@ export default function WorkflowExecution() {
 
   const executeWorkflow = async () => {
     if (state.nodes.length === 0) return null;
+
+     // Bloquear navegação
+    if (onNavigationLock) {
+      onNavigationLock(true);
+    }
     // Resetar estados
     setProgress(0);
     setNodeStatus({});
@@ -433,6 +463,12 @@ export default function WorkflowExecution() {
 
   const resetExecution = () => {
     console.log('resetExecution');
+
+    // Desbloquear navegação
+    if (onNavigationLock) {
+      onNavigationLock(false);
+    }
+
     setExecutionState('idle');
     setProgress(0);
     setNodeStatus({});
