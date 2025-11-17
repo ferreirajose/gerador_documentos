@@ -1,10 +1,18 @@
-import NodeEntitie, { NodeOutput, Entrada } from "@/domain/entities/NodeEntitie";
+import NodeEntitie, { NodeOutput, Entrada, InteracaoComUsuario } from "@/domain/entities/NodeEntitie";
 import { describe, it, expect } from "vitest";
 
 describe('NodeEntitie', () => {
   const baseNodeOutput: NodeOutput = {
     nome: 'saida_teste',
     formato: 'markdown'
+  };
+
+  const baseInteracaoComUsuario: InteracaoComUsuario = {
+    permitir_usuario_finalizar: false,
+    ia_pode_concluir: true,
+    requer_aprovacao_explicita: false,
+    maximo_de_interacoes: 1,
+    modo_de_saida: 'ultima_mensagem'
   };
 
   const baseEntrada: Entrada = {
@@ -20,6 +28,7 @@ describe('NodeEntitie', () => {
         'prompt_teste',
         false,
         baseNodeOutput,
+        baseInteracaoComUsuario,
         [baseEntrada],
         'gpt-4',
         0.7,
@@ -30,6 +39,7 @@ describe('NodeEntitie', () => {
       expect(node.prompt).toBe('prompt_teste');
       expect(node.entrada_grafo).toBe(false);
       expect(node.saida).toEqual(baseNodeOutput);
+      expect(node.interacao_com_usuario).toEqual(baseInteracaoComUsuario);
       expect(node.entradas).toEqual([baseEntrada]);
       expect(node.modelo_llm).toBe('gpt-4');
       expect(node.temperatura).toBe(0.7);
@@ -44,6 +54,7 @@ describe('NodeEntitie', () => {
         baseNodeOutput
       );
 
+      expect(node.interacao_com_usuario).toBeUndefined();
       expect(node.entradas).toEqual([]);
       expect(node.modelo_llm).toBeUndefined();
       expect(node.temperatura).toBeUndefined();
@@ -57,7 +68,7 @@ describe('NodeEntitie', () => {
         'nome_valido',
         'prompt_valido',
         false,
-        { nome: 'saida_valida' }
+        { nome: 'saida_valida', formato: 'markdown' }
       );
 
       expect(() => node.validate()).not.toThrow();
@@ -68,7 +79,7 @@ describe('NodeEntitie', () => {
         '',
         'prompt_valido',
         false,
-        { nome: 'saida_valida' }
+        { nome: 'saida_valida', formato: 'markdown' }
       );
 
       expect(() => node.validate()).toThrow('Nome do nó é obrigatório');
@@ -79,7 +90,7 @@ describe('NodeEntitie', () => {
         '   ',
         'prompt_valido',
         false,
-        { nome: 'saida_valida' }
+        { nome: 'saida_valida', formato: 'markdown' }
       );
 
       expect(() => node.validate()).toThrow('Nome do nó é obrigatório');
@@ -90,7 +101,7 @@ describe('NodeEntitie', () => {
         'nome_valido',
         '',
         false,
-        { nome: 'saida_valida' }
+        { nome: 'saida_valida', formato: 'markdown' }
       );
 
       expect(() => node.validate()).toThrow('Prompt é obrigatório');
@@ -101,7 +112,7 @@ describe('NodeEntitie', () => {
         'nome_valido',
         'prompt_valido',
         false,
-        { nome: '' }
+        { nome: '', formato: 'markdown' }
       );
 
       expect(() => node.validate()).toThrow('Nome da saída é obrigatório');
@@ -112,7 +123,7 @@ describe('NodeEntitie', () => {
         'nome_valido',
         'prompt_valido',
         false,
-        { nome: '   ' }
+        { nome: '   ', formato: 'markdown' }
       );
 
       expect(() => node.validate()).toThrow('Nome da saída é obrigatório');
@@ -125,14 +136,14 @@ describe('NodeEntitie', () => {
         'nome_duplicado',
         'prompt_existente',
         false,
-        { nome: 'saida_existente' }
+        { nome: 'saida_existente', formato: 'markdown' }
       );
 
       const newNode = new NodeEntitie(
         'nome_duplicado',
         'prompt_novo',
         false,
-        { nome: 'saida_nova' }
+        { nome: 'saida_nova', formato: 'markdown' }
       );
 
       expect(() => newNode.validate([existingNode]))
@@ -144,7 +155,7 @@ describe('NodeEntitie', () => {
         'nome_unico',
         'prompt_valido',
         false,
-        { nome: 'saida_valida' }
+        { nome: 'saida_valida', formato: 'markdown' }
       );
 
       expect(() => node.validate([node])).not.toThrow();
@@ -155,14 +166,14 @@ describe('NodeEntitie', () => {
         'node1',
         'prompt1',
         false,
-        { nome: 'saida1' }
+        { nome: 'saida1', formato: 'markdown' }
       );
 
       const node2 = new NodeEntitie(
         'node2',
         'prompt2',
         false,
-        { nome: 'saida2' }
+        { nome: 'saida2', formato: 'markdown' }
       );
 
       expect(() => node2.validate([node1])).not.toThrow();
@@ -187,6 +198,7 @@ describe('NodeEntitie', () => {
         'prompt_teste',
         false,
         baseNodeOutput,
+        undefined,
         entradas
       );
 
@@ -211,6 +223,7 @@ describe('NodeEntitie', () => {
         'prompt_teste',
         false,
         baseNodeOutput,
+        undefined,
         entradas
       );
 
@@ -236,6 +249,7 @@ describe('NodeEntitie', () => {
         'prompt_teste',
         false,
         baseNodeOutput,
+        undefined,
         entradas
       );
 
@@ -281,11 +295,25 @@ describe('NodeEntitie', () => {
         'prompt_teste',
         false,
         baseNodeOutput,
+        undefined,
         [entrada]
       );
 
       expect(node.entradas[0].origem).toBe('resultado_no_anterior');
       expect(node.entradas[0].nome_no_origem).toBe('no_anterior');
+      expect(() => node.validate()).not.toThrow();
+    });
+
+    it('deve validar nó com interacao_com_usuario', () => {
+      const node = new NodeEntitie(
+        'no_interativo',
+        'prompt_teste',
+        false,
+        baseNodeOutput,
+        baseInteracaoComUsuario
+      );
+
+      expect(node.interacao_com_usuario).toEqual(baseInteracaoComUsuario);
       expect(() => node.validate()).not.toThrow();
     });
   });

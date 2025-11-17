@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { RiChat3Line, RiLoader4Line, RiPlayCircleLine, RiRefreshLine, RiRestartLine } from '@remixicon/react';
 import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
 import FetchAdapter from '@/infra/FetchAdapter';
 import { GerarDocCallbacks } from '@/types/node';
@@ -9,7 +10,7 @@ import { useWorkflow } from '@/context/WorkflowContext';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer';
 import { WorkflowError } from '@/components/common/WorkflowError';
 import { InteractionBot } from '@/components/common/InteractionBot';
-import { RiChat3Line, RiLoader4Line, RiPlayCircleLine, RiRefreshLine, RiRestartLine } from '@remixicon/react';
+import { EmptyState } from '@/components/common/EmptyState';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
@@ -528,7 +529,6 @@ export default function WorkflowExecution() {
         </div>
 
         <div className="flex items-center space-x-3">
-          {executionState !== 'idle' && (
             <button
               onClick={resetExecution}
               data-testid="reset-execution-button"
@@ -538,7 +538,7 @@ export default function WorkflowExecution() {
               <i className="ri-close-line mr-2"></i>
               Limpar
             </button>
-          )}
+          
 
           <button
             onClick={executeWorkflow}
@@ -614,6 +614,10 @@ export default function WorkflowExecution() {
             ))
           }
         </div>
+      )}
+
+      { WORFLOW.grafo.nos.length === 0 && (
+        <EmptyState  />
       )}
 
       {/* InteractionBot com suporte para interação de workflow */}
