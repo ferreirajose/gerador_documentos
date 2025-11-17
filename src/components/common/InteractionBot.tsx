@@ -101,7 +101,6 @@ export function InteractionBot({
 
     // Função para handleKeyPress
     const handleKeyPressWrapper = (e: React.KeyboardEvent) => {
-        console.log("Tecla pressionada:", e.key);
         handleKeyPress(e, isWorkflowInteraction ? onSendMessage : undefined);
     }
 

@@ -12,6 +12,7 @@
     "test": "vitest --dom",
     "test:node": "vitest src/tests/NodeEntitie",
     "test:grafo": "vitest src/tests/Grafo",
+    "test:aresta": "vitest src/tests/Aresta",
     "test:workflow": "vitest src/tests/Workflow"
   },
   "dependencies": {

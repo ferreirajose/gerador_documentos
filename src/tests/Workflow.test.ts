@@ -1,6 +1,6 @@
 import { Aresta } from "@/domain/entities/Aresta";
 import { Grafo } from "@/domain/entities/Grafo";
-import NodeEntitie from "@/domain/entities/NodeEntitie";
+import NodeEntitie, { InteracaoComUsuario } from "@/domain/entities/NodeEntitie";
 import { FormatoResultadoFinal, Combinacao } from "@/domain/entities/ResultadoFinal";
 import { Workflow, DocumentoAnexado } from "@/domain/entities/Workflow";
 import { describe, beforeEach, test, expect } from "vitest";
@@ -12,6 +12,14 @@ describe("Workflow Completo", () => {
   let documentosAnexados: DocumentoAnexado[];
   let resultadoFinal: FormatoResultadoFinal;
 
+  const baseInteracaoComUsuario: InteracaoComUsuario = {
+    permitir_usuario_finalizar: false,
+    ia_pode_concluir: true,
+    requer_aprovacao_explicita: false,
+    maximo_de_interacoes: 1,
+    modo_de_saida: 'ultima_mensagem'
+  };
+
   beforeEach(() => {
     // Criar os nós
     nodes = [
@@ -20,6 +28,7 @@ describe("Workflow Completo", () => {
         "Analise o documento {documento_auditoria} e identifique os principais pontos de auditoria. Foque em: {foco_analise}",
         false,
         { nome: "analise_auditoria", formato: "markdown" },
+        undefined,
         [
           {
             variavel_prompt: "documento_auditoria",
@@ -42,6 +51,7 @@ describe("Workflow Completo", () => {
         "Com base na análise {analise_auditoria} e nas defesas {analise_defesas}, elabore um voto técnico considerando: {aspectos_voto}",
         true,
         { nome: "voto_tecnico", formato: "markdown" },
+        baseInteracaoComUsuario,
         [
           {
             variavel_prompt: "analise_auditoria",
@@ -70,6 +80,7 @@ describe("Workflow Completo", () => {
         "Analise as defesas apresentadas no documento {documento_defesas} e identifique os argumentos principais: {parametros_analise}",
         false,
         { nome: "analise_defesas", formato: "json" },
+        undefined,
         [
           {
             variavel_prompt: "documento_defesas",
@@ -92,6 +103,7 @@ describe("Workflow Completo", () => {
         "Extraia dados estruturados do documento {documento_base} seguindo o formato: {formato_extração}",
         false,
         { nome: "dados_estruturados", formato: "json" },
+        undefined,
         [
           {
             variavel_prompt: "documento_base",
@@ -149,8 +161,6 @@ describe("Workflow Completo", () => {
         nome_da_saida: "relatorio_consolidado",
         combinar_resultados: ["analise_auditoria", "analise_defesas", "voto_tecnico"],
         manter_originais: false,
-        // @ts-expect-error - Template property needs to be added to Combinacao interface
-        template: "Template de consolidação: {analise_auditoria} | {analise_defesas} | {voto_tecnico}",
       },
     ];
 
@@ -265,6 +275,7 @@ describe("Workflow Completo", () => {
         "Analise {documento_inexistente}",
         false,
         { nome: "saida_teste", formato: "markdown" },
+        undefined,
         [
           {
             variavel_prompt: "documento_inexistente",
@@ -344,6 +355,7 @@ describe("Workflow Completo", () => {
       expect(node.prompt).toBeDefined();
       expect(node.saida).toBeDefined();
       expect(node.saida.nome).toBeDefined();
+      expect(node.saida.formato).toBeDefined();
     });
 
     // Verificar se todas as arestas têm origem e destino
@@ -376,6 +388,7 @@ describe("Workflow Completo", () => {
         "Prompt 1",
         false,
         { nome: "saida1", formato: "markdown" },
+        undefined,
         []
       ),
       new NodeEntitie(
@@ -383,6 +396,7 @@ describe("Workflow Completo", () => {
         "Prompt 2",
         false,
         { nome: "saida2", formato: "markdown" },
+        undefined,
         []
       ),
     ];
@@ -390,7 +404,6 @@ describe("Workflow Completo", () => {
     expect(() => {
       nodesDuplicados.forEach(node => node.validate(nodesDuplicados));
     }).toThrow(/Já existe um nó com o nome "Nome Duplicado"/i);
-
   });
 
   test("deve detectar múltiplas entradas com executar_em_paralelo", () => {
@@ -399,6 +412,7 @@ describe("Workflow Completo", () => {
       "Prompt {var1} {var2}",
       false,
       { nome: "saida_teste", formato: "markdown" },
+      undefined,
       [
         { variavel_prompt: "var1", origem: "resultado_no_anterior", nome_no_origem: "Node 1", executar_em_paralelo: true },
         { variavel_prompt: "var2", origem: "resultado_no_anterior", nome_no_origem: "Node 2", executar_em_paralelo: true },
@@ -406,5 +420,35 @@ describe("Workflow Completo", () => {
     );
 
     expect(() => nodeInvalido.validate()).toThrow(/pode ter apenas uma entrada com executar_em_paralelo/i);
+  });
+
+  test("deve validar nó com interacao_com_usuario", () => {
+    const grafo = new Grafo(nodes, arestas);
+    workflow = new Workflow(documentosAnexados, grafo, resultadoFinal);
+
+    const noComInteracao = workflow.grafo.nos.find(node => node.interacao_com_usuario);
+    
+    expect(noComInteracao).toBeDefined();
+    expect(noComInteracao?.nome).toBe("Elaboração do Voto");
+    expect(noComInteracao?.interacao_com_usuario).toEqual(baseInteracaoComUsuario);
+  });
+
+  test("deve validar workflow sem resultado final", () => {
+    const grafo = new Grafo(nodes, arestas);
+    const workflowSemResultado = new Workflow(documentosAnexados, grafo);
+
+    expect(() => workflowSemResultado.validate()).not.toThrow();
+    expect(workflowSemResultado.formato_resultado_final).toBeUndefined();
+  });
+
+  test("deve validar nós com diferentes formatos de saída", () => {
+    const grafo = new Grafo(nodes, arestas);
+    workflow = new Workflow(documentosAnexados, grafo, resultadoFinal);
+
+    const nosMarkdown = workflow.grafo.nos.filter(node => node.saida.formato === "markdown");
+    const nosJson = workflow.grafo.nos.filter(node => node.saida.formato === "json");
+
+    expect(nosMarkdown).toHaveLength(2);
+    expect(nosJson).toHaveLength(2);
   });
 });
