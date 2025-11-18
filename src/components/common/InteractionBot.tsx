@@ -102,9 +102,16 @@ export function InteractionBot({
         handleKeyPress(e, isWorkflowInteraction ? onSendMessage : undefined);
     }
 
-    // Função para fechar com ESC
+    // Função para fechar com ESC - não permite fechar durante interação de workflow
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && !isWorkflowInteraction) {
+            setIsOpen(false);
+        }
+    }
+
+    // Função para fechar o chat - não permite durante interação de workflow
+    const handleCloseChat = () => {
+        if (!isWorkflowInteraction) {
             setIsOpen(false);
         }
     }
@@ -140,7 +147,7 @@ export function InteractionBot({
             aria-label={isWorkflowInteraction ? "Chat para interação com workflow" : "Chat com assistente de workflow"}
             aria-modal="true"
             onKeyDown={handleKeyDown}
-            className="fixed bottom-6 right-6 w-100 h-[32rem] bg-card dark:bg-card/95 border border-border dark:border-gray-700 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-4 duration-300 backdrop-blur-sm dark:shadow-xl"
+            className="fixed bottom-6 right-6 w-96 h-[32rem] bg-card dark:bg-card/95 border border-border dark:border-gray-700 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-4 duration-300 backdrop-blur-sm dark:shadow-xl"
         >
             {/* Área para anunciar novas mensagens para screen readers */}
             <div 
@@ -174,14 +181,23 @@ export function InteractionBot({
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setIsOpen(false)}
-                        className="w-8 h-8 bg-white/20 hover:bg-white/30 dark:bg-white/10 dark:hover:bg-white-20 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-purple-600 dark:focus:ring-offset-purple-700"
-                        aria-label="Fechar chat de conversa"
-                    >
-                        <RiCloseFill className="w-5 h-5" aria-hidden="true" />
-                        <span className="sr-only">Fechar chat</span>
-                    </button>
+                    {/* Botão de fechar - desabilitado durante interação de workflow */}
+                    {!isWorkflowInteraction && (
+                        <button
+                            onClick={handleCloseChat}
+                            className="w-8 h-8 bg-white/20 hover:bg-white/30 dark:bg-white/10 dark:hover:bg-white-20 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-purple-600 dark:focus:ring-offset-purple-700"
+                            aria-label="Fechar chat de conversa"
+                        >
+                            <RiCloseFill className="w-5 h-5" aria-hidden="true" />
+                            <span className="sr-only">Fechar chat</span>
+                        </button>
+                    )}
+                    {/* Indicador visual quando não pode fechar */}
+                    {isWorkflowInteraction && (
+                        <div className="w-8 h-8 flex items-center justify-center" title="Complete a interação para fechar">
+                            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -197,6 +213,24 @@ export function InteractionBot({
                         <div className="text-center text-gray-500 dark:text-gray-400">
                             <RiRobotFill className="w-12 h-12 mx-auto mb-2 opacity-50" />
                             <p>Inicie uma conversa com o assistente</p>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Mensagem informativa sobre interação obrigatória */}
+                {isWorkflowInteraction && (
+                    <div className="flex justify-start items-end gap-2">
+                        <div 
+                            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-yellow-500"
+                            aria-hidden="true"
+                        >
+                            <RiRobotFill className="w-3 h-3 text-white" />
+                        </div>
+                        <div className="max-w-[80%] px-4 py-3 rounded-2xl bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 rounded-bl-md shadow-sm">
+                            <p className="text-sm leading-relaxed">
+                                <strong>Interação Obrigatória</strong><br/>
+                                Você precisa responder para continuar a execução do workflow.
+                            </p>
                         </div>
                     </div>
                 )}
@@ -287,6 +321,12 @@ export function InteractionBot({
                         : 'Digite sua pergunta sobre workflows e processos. Pressione Enter para enviar.'
                     }
                 </p>
+                {/* Aviso adicional durante interação de workflow */}
+                {isWorkflowInteraction && (
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                        ⚠️ Esta interação é obrigatória para continuar o workflow
+                    </p>
+                )}
             </div>
         </div>
     )
