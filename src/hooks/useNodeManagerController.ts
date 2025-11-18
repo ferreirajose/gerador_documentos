@@ -110,13 +110,20 @@ export function useNodeManagerController() {
 
     try {
       // Remover a propriedade 'habilitado' antes de salvar
-      const { habilitado, ...interacaoComUsuarioSemHabilitado } = formData.interacao_com_usuario;
+      let interacaoComUsuarioFinal;
+
+      if (formData.interacao_com_usuario.habilitado) {
+        // Se habilitado, remove apenas a propriedade 'habilitado'
+        const { habilitado, ...interacaoComUsuarioSemHabilitado } = formData.interacao_com_usuario;
+        interacaoComUsuarioFinal = interacaoComUsuarioSemHabilitado;
+      } else {
+        // Se desabilitado, sempre define como undefined
+        interacaoComUsuarioFinal = undefined;
+      }
 
       const nodeData = {
         ...formData,
-        interacao_com_usuario: formData.interacao_com_usuario.habilitado 
-          ? interacaoComUsuarioSemHabilitado 
-          : undefined
+        interacao_com_usuario: interacaoComUsuarioFinal
       };
 
       if (isEditing && editingNodeId) {
@@ -156,16 +163,19 @@ export function useNodeManagerController() {
   // Carregar dados do nó para edição
   const loadNodeData = useCallback((nodeId: string) => {
     const node = state.nodes.find((n) => n.id === nodeId);
+    console.log(node, 'interacaoUsuario')
     if (node) {
       // Verificar se o nó tem interacao_com_usuario configurada
-       const hasInteracaoUsuario = !!(node.interacao_com_usuario && 
+      const hasInteracaoUsuario = !!(node.interacao_com_usuario && 
         Object.keys(node.interacao_com_usuario).length > 0);
       
+      // Garantir que todos os campos de interação com usuário sejam carregados corretamente
+      const interacaoUsuario = node.interacao_com_usuario || {};
       setFormData({
         nome: node.nome || "",
-        entrada_grafo: node.entrada_grafo,
+        entrada_grafo: node.entrada_grafo || false,
         modelo_llm: node.modelo_llm || "",
-        temperatura: node.temperatura || 0,
+        temperatura: node.temperatura || 0.3,
         ferramentas: node.ferramentas || [],
         prompt: node.prompt || "",
         documentosAnexados: node.documentosAnexados || [],
@@ -173,17 +183,17 @@ export function useNodeManagerController() {
         saida: node.saida || { nome: "", formato: "json" },
         interacao_com_usuario: {
           habilitado: hasInteracaoUsuario,
-          permitir_usuario_finalizar: node.interacao_com_usuario?.permitir_usuario_finalizar || false,
-          ia_pode_concluir: node.interacao_com_usuario?.ia_pode_concluir ?? true,
-          requer_aprovacao_explicita: node.interacao_com_usuario?.requer_aprovacao_explicita || false,
-          maximo_de_interacoes: node.interacao_com_usuario?.maximo_de_interacoes || 1,
-          modo_de_saida: node.interacao_com_usuario?.modo_de_saida || "ultima_mensagem",
+          permitir_usuario_finalizar: interacaoUsuario.permitir_usuario_finalizar || false,
+          ia_pode_concluir: interacaoUsuario.ia_pode_concluir !== undefined ? interacaoUsuario.ia_pode_concluir : true,
+          requer_aprovacao_explicita: interacaoUsuario.requer_aprovacao_explicita || false,
+          maximo_de_interacoes: interacaoUsuario.maximo_de_interacoes || 1,
+          modo_de_saida: interacaoUsuario.modo_de_saida || "ultima_mensagem",
         }
       });
       setIsEditing(true);
       setEditingNodeId(nodeId);
     }
-  },[state.nodes]);
+  }, [state.nodes]);
 
   // NOVO MÉTODO: Reset para modo criação
   const resetToCreateMode = () => {
