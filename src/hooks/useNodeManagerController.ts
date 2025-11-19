@@ -75,8 +75,6 @@ export function useNodeManagerController() {
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [uploadedFiles, setUploadedFiles] = useState<ArquivoUpload[]>([]);
-
   // Inicializar HTTP client
   const httpClient = new FetchAdapter();
   const workflowGateway = new WorkflowHttpGatewayV2(
@@ -170,7 +168,7 @@ export function useNodeManagerController() {
         Object.keys(node.interacao_com_usuario).length > 0);
       
       // Garantir que todos os campos de interação com usuário sejam carregados corretamente
-      const interacaoUsuario = node.interacao_com_usuario || {};
+      const interacaoUsuario: any = node.interacao_com_usuario || {};
       setFormData({
         nome: node.nome || "",
         entrada_grafo: node.entrada_grafo || false,
@@ -178,7 +176,7 @@ export function useNodeManagerController() {
         temperatura: node.temperatura || 0.3,
         ferramentas: node.ferramentas || [],
         prompt: node.prompt || "",
-        documentosAnexados: node.documentosAnexados || [],
+        documentosAnexados: (node as any).documentosAnexados || [],
         entradas: node.entradas || [],
         saida: node.saida || { nome: "", formato: "json" },
         interacao_com_usuario: {

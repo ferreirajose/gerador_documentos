@@ -146,7 +146,7 @@ export function useConnectionController() {
     
     if (!connectionValidation?.isValid) return;
 
-    const newConnection: Connection = {
+    const newConnection: any = {
       id: editingConnection?.id || `conn-${Date.now()}`,
       origem: formData.origem,
       destino: formData.destino
@@ -177,7 +177,7 @@ export function useConnectionController() {
   }, []);
 
   const handleConnectToEnd = useCallback((nodeId: string) => {
-    const newConnection: Connection = {
+    const newConnection: any = {
       id: `conn-${Date.now()}`,
       origem: nodeId,
       destino: 'END'

@@ -3,7 +3,7 @@ import { RiChat3Line, RiLoader4Line, RiPlayCircleLine, RiRefreshLine, RiRestartL
 import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
 import FetchAdapter from '@/infra/FetchAdapter';
 import { GerarDocCallbacks } from '@/types/node';
-import { WORFLOW_INTER_PIADA, WORFLOW_MINUTA_INTERACAO_SEM_DOC, WORFLOW_MINUTA_INTERACAO_COM_DOC, WORFLOW_MOCK } from '@/mock/workflow-mock';
+//import { WORFLOW_INTER_PIADA, WORFLOW_MINUTA_INTERACAO_SEM_DOC, WORFLOW_MINUTA_INTERACAO_COM_DOC, WORFLOW_MOCK } from '@/mock/workflow-mock';
 
 import { ExecuteProgress } from '@/components/common/ExecuteProgress';
 import { useWorkflow } from '@/context/WorkflowContext';
@@ -64,24 +64,16 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
 
   const [nodeStatus, setNodeStatus] = useState<Record<string, string>>({});
   const [nodeTimers, setNodeTimers] = useState<Record<string, NodeTimer>>({});
-  const [completedNodes, setCompletedNodes] = useState<string[]>([]);
+  const [_, setCompletedNodes] = useState<string[]>([]);
 
   const [workflowError, setWorkflowError] = useState<WorkflowErrorData | null>(null);
 
   // Novos estados para interação
   const [interactionData, setInteractionData] = useState<InteractionData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  //const [isChatOpen, setIsChatOpen] = useState(false); // Novo estado para controlar abertura do chat
   
   // Usar estado global do chat
   const isChatOpen = state.chat.isChatOpen;
-
-  // Efeito para abrir o chat automaticamente quando houver interação
-  // useEffect(() => {
-  //   if (executionState === 'awaiting_interaction' && interactionData) {
-  //     setIsChatOpen(true);
-  //   }
-  // }, [executionState, interactionData]);
 
   // Efeito para controlar o bloqueio da navegação
   useEffect(() => {
@@ -279,7 +271,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
         });
       },
 
-      onError: (error) => {
+      onError: (error: any) => {
         console.error("Erro no workflow (interação):", error);
 
         let errorData: WorkflowErrorData;
@@ -419,7 +411,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
           });
         },
 
-        onError: (error) => {
+        onError: (error: any) => {
           console.error("Erro no workflow:", error);
 
           let errorData: WorkflowErrorData;
@@ -570,7 +562,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
   const buttonConfig = getButtonConfig();
   const expectedOutputs = getExpectedOutputNames();
 
-  const hasInteracaoUsuario = WORFLOW.grafo.nos.some(node =>
+  const hasInteracaoUsuario = WORFLOW.grafo.nos.some((node: any) =>
     node.interacao_com_usuario && Object.keys(node.interacao_com_usuario).length > 0);
   
   return (
