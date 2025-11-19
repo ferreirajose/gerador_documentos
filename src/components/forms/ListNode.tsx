@@ -8,7 +8,8 @@ import {
     RiInputMethodLine,
     RiSettingsLine,
     RiLoginCircleLine,
-    RiChatSettingsLine
+    RiChatSettingsLine,
+    RiLink
 } from "@remixicon/react";
 import { llmModelsByProvider } from "@/data/llmodels";
 import { NodeState, WorkflowState } from "@/context/WorkflowContext";
@@ -18,9 +19,9 @@ interface ListNodeProps {
     state: WorkflowState;
     onEditNode?: (nodeId: string) => void;
     onDeleteNode?: (nodeId: string) => void;
+    hasNodeConnections: (node: NodeState) => boolean;
 }
 
-// Função para obter informações do tipo de nó
 // Função para obter informações do tipo de nó
 const getNodeTypeInfo = (node: NodeState) => {
     const hasInteracaoUsuario = node.interacao_com_usuario &&
@@ -61,7 +62,7 @@ const getNodeTypeInfo = (node: NodeState) => {
     };
 };
 
-export function ListNode({ onOpenForm, state, onEditNode, onDeleteNode }: ListNodeProps) {
+export function ListNode({ onOpenForm, state, onEditNode, onDeleteNode, hasNodeConnections }: ListNodeProps) {
 
     return (
 
@@ -78,6 +79,7 @@ export function ListNode({ onOpenForm, state, onEditNode, onDeleteNode }: ListNo
                     <div className="divide-y divide-gray-200 dark:divide-gray-700">
                         {state.nodes.map((node) => {
                             const typeInfo = getNodeTypeInfo(node);
+                            const isConnected = hasNodeConnections(node);
                             const IconComponent = typeInfo.icon;
                             return (
                                 <div key={node.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -99,6 +101,14 @@ export function ListNode({ onOpenForm, state, onEditNode, onDeleteNode }: ListNo
                                                                     : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
                                                         }`}>
                                                         {typeInfo.label}
+                                                    </span>
+                                                    <span
+                                                        className={`px-2 py-1 text-xs font-medium rounded-full ${isConnected
+                                                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+                                                            : 'hidden'
+                                                            }`}
+                                                    >
+                                                        <RiLink className="inline-block w-3 h-3 mr-1" /> Conectado
                                                     </span>
                                                 </div>
 
@@ -161,8 +171,9 @@ export function ListNode({ onOpenForm, state, onEditNode, onDeleteNode }: ListNo
 
                                             {onDeleteNode && (
                                                 <button
-                                                    onClick={() => onDeleteNode(node.id)}
-                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                                    onClick={() => !isConnected && onDeleteNode(node.id)}
+                                                    disabled={isConnected}
+                                                    className="p-2 text-gray-400 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed enabled:hover:text-red-600 enabled:hover:bg-red-50 dark:enabled:hover:bg-red-900/30"
                                                     title="Excluir nó"
                                                 >
                                                     <RiDeleteBinLine className="w-4" />
