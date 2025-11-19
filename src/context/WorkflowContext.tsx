@@ -328,10 +328,14 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         // Se for END, usar "END" como destino, senão encontrar o nó de destino
         let destinoNome = connection.destino;
         if (connection.destino !== 'END') {
-          const destinoNode = state.nodes.find(node => node.id === connection.destino);
+          // Tenta encontrar o nó de destino primeiro por ID, depois por nome
+          const destinoNode = state.nodes.find(node => node.id === connection.destino || node.nome === connection.destino);
+
           if (!destinoNode) {
             throw new Error(`Nó de destino não encontrado para ID: ${connection.destino}`);
           }
+
+          // Garante que estamos usando o nome do nó para criar a Aresta
           destinoNome = destinoNode.nome;
         }
 
@@ -397,10 +401,14 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
         // Se for END, usar "END" como destino, senão encontrar o nó de destino
         let destinoNome = connection.destino;
         if (connection.destino !== 'END') {
-          const destinoNode = state.nodes.find(node => node.id === connection.destino);
+          // Tenta encontrar o nó de destino primeiro por ID, depois por nome
+          const destinoNode = state.nodes.find(node => node.id === connection.destino || node.nome === connection.destino);
+
           if (!destinoNode) {
             throw new Error(`Nó de destino não encontrado para ID: ${connection.destino}`);
           }
+
+          // Garante que estamos usando o nome do nó para criar a Aresta
           destinoNome = destinoNode.nome;
         }
 

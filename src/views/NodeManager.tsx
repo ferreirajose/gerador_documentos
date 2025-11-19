@@ -3,7 +3,7 @@ import { ListNode } from "@/components/forms/ListNode";
 import NodeManagerCreate from "@/components/forms/NodeManagerCreate";
 import NodeManagerEdit from "@/components/forms/NodeManagerEdit";
 import { useWorkflow } from "@/context/WorkflowContext";
-import { RiAddLine, RiNodeTree } from "@remixicon/react";
+import { RiAddLine, RiNodeTree, RiErrorWarningLine } from "@remixicon/react";
 import { useEffect, useState } from 'react';
 
 export default function NodeManager() {
@@ -11,6 +11,7 @@ export default function NodeManager() {
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<{ nodeId: string, message: string } | null>(null);
 
   const handleCreateNode = (formData: any) => {
     console.log('Nó criado:', formData);
@@ -28,15 +29,28 @@ export default function NodeManager() {
 
   const handleDeleteNode = (nodeId: string) => {
     const nodeToDelete = state.nodes.find(node => node.id === nodeId);
-
+    
     if (nodeToDelete) {
+      // Verificar se o nó tem conexões
+      const hasConnections = state.connections.some(edge => 
+        edge.origem === nodeToDelete.id || edge.destino === nodeToDelete.id
+      );
+
+      if (hasConnections) {
+        const connections = getNodeConnections(nodeToDelete);
+        const connectionsText = formatConnections(connections);
+        
+        setDeleteError({
+          nodeId,
+           message: `Não é possível remover o nó <span class='text-xl font-bold text-red-600 dark:text-red-400'>${nodeToDelete.nome}</span> porque ele possui conexões: <span class='font-medium text-blue-600 dark:text-blue-400'>${connectionsText}</span>. Remova as conexões primeiro.`
+        });
+        return;
+      }
+
       // Extrair todas as chaves de documentos usadas nas entradas do nó
       const chavesDocumentos = nodeToDelete.entradas
         .filter(entrada => entrada.origem === 'documento_anexado' && entrada.chave_documento_origem)
         .map(entrada => entrada.chave_documento_origem!);
-
-      console.log('🗑️ Deletando nó:', nodeToDelete.nome);
-      console.log('📄 Chaves de documentos a remover:', chavesDocumentos);
 
       // Deletar o nó e os documentos relacionados
       deleteNode(nodeId, chavesDocumentos);
@@ -46,12 +60,54 @@ export default function NodeManager() {
     }
   };
 
+  // Função para obter as conexões de um nó
+  const getNodeConnections = (node: any): {type: 'source' | 'target', edge: any}[] => {
+    const connections: {type: 'source' | 'target', edge: any}[] = [];
+    
+    state.connections.forEach(edge => {
+      if (edge.origem === node.nome) {
+        connections.push({ type: 'source', edge });
+      }
+      if (edge.destino === node.nome) {
+        connections.push({ type: 'target', edge });
+      }
+    });
+    
+    return connections;
+  };
+
+  // Função para formatar as conexões em texto amigável
+  const formatConnections = (connections: {type: 'source' | 'target', edge: any}[]): string => {
+    if (connections.length === 0) return '';
+
+    const connectionTexts = connections.map(conn => {
+      if (conn.type === 'source') {
+        return `${conn.edge.source} → ${conn.edge.target}`;
+      } else {
+        return `${conn.edge.source} → ${conn.edge.target}`;
+      }
+    });
+
+    return connectionTexts.join(', ');
+  };
+
+  // Função para verificar se um nó tem conexões
+  const hasNodeConnections = (node: any): boolean => {
+    return state.connections.some(edge => 
+      edge.origem === node.nome || edge.destino === node.nome
+    );
+  };
+
   const handleCloseForm = () => {
     setShowCreateForm(false);
   };
 
   const handleCloseEditForm = () => {
     setEditingNodeId(null);
+  };
+
+  const closeDeleteError = () => {
+    setDeleteError(null);
   };
 
   // Fechar formulários quando o estado mudar
@@ -64,12 +120,46 @@ export default function NodeManager() {
     }
   }, [showCreateForm, editingNodeId]);
 
-  useEffect(() => {
-    console.log(state, 'Estado Atual');
-  });
-
   return (
     <div className="space-y-6">
+      {/* Modal de Erro de Deleção */}
+      {deleteError && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                <RiErrorWarningLine className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Não é possível remover o nó
+              </h3>
+            </div>
+            
+            <p className="text-gray-600 dark:text-gray-300 mb-2 text-sm leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: deleteError.message }}/>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={closeDeleteError}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Entendi
+              </button>
+              {/* <button
+                onClick={() => {
+                  closeDeleteError();
+                  // Aqui você pode adicionar lógica para focar no grafo
+                  // ou navegar para a aba de conexões
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Ver Conexões
+              </button> */}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -112,6 +202,7 @@ export default function NodeManager() {
           state={state}
           onEditNode={handleEditNode}
           onDeleteNode={handleDeleteNode}
+          hasNodeConnections={hasNodeConnections}
         />
       )}
 

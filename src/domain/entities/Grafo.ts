@@ -36,4 +36,47 @@ export class Grafo {
     }
   }
 
+  hasConnectionsToNode(nodeName: string): boolean {
+    return this.arestas.some(aresta => 
+      aresta.origem === nodeName || aresta.destino === nodeName
+    );
+  }
+
+  getConnectionsToNode(nodeName: string): Aresta[] {
+    return this.arestas.filter(aresta => 
+      aresta.origem === nodeName || aresta.destino === nodeName
+    );
+  }
+
+  // Método para remover nó com validação
+  removeNode(nodeName: string): void {
+    if (this.hasConnectionsToNode(nodeName)) {
+      const connections = this.getConnectionsToNode(nodeName);
+      const connectionNames = connections.map(a => 
+        a.origem === nodeName ? `→ ${a.destino}` : `${a.origem} →`
+      ).join(', ');
+      
+      throw new Error(
+        `Não é possível remover o nó '${nodeName}' porque ele possui conexões: ${connectionNames}. ` +
+        `Remova as conexões primeiro.`
+      );
+    }
+
+    const index = this.nos.findIndex(node => node.nome === nodeName);
+    if (index !== -1) {
+      this.nos.splice(index, 1);
+    }
+  }
+
+  // Método para remover aresta
+  removeAresta(origem: string, destino: string): void {
+    const index = this.arestas.findIndex(aresta => 
+      aresta.origem === origem && aresta.destino === destino
+    );
+    
+    if (index !== -1) {
+      this.arestas.splice(index, 1);
+    }
+  }
+
 }

@@ -77,6 +77,29 @@ export class Workflow {
     return matches ? matches.map(match => match.slice(1, -1)) : [];
   }
 
+   // Método para remover nó do workflow com validação
+  removeNode(nodeName: string): void {
+    this.grafo.removeNode(nodeName);
+  }
+
+  // Método para remover aresta do workflow
+  removeAresta(origem: string, destino: string): void {
+    this.grafo.removeAresta(origem, destino);
+  }
+
+  // Método para verificar se um nó pode ser removido (sem conexões)
+  canRemoveNode(nodeName: string): boolean {
+    return !this.grafo.hasConnectionsToNode(nodeName);
+  }
+
+  // Método para obter informações das conexões de um nó
+  getNodeConnections(nodeName: string): { origem: string, destino: string }[] {
+    return this.grafo.getConnectionsToNode(nodeName).map(aresta => ({
+      origem: aresta.origem,
+      destino: aresta.destino
+    }));
+  }
+
   // Converte para o formato JSON esperado
   toJSON() {
     return {
