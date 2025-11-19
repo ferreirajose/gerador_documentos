@@ -1,4 +1,4 @@
-import { RiCloseLine, RiDeleteBinLine, RiFileAddLine, RiFileListLine, RiRefreshLine, RiUploadLine } from "@remixicon/react";
+import { RiCloseLine, RiDeleteBinLine, RiFileAddLine, RiFileListLine, RiRefreshLine } from "@remixicon/react";
 import { useNodeManagerController } from "@/hooks/useNodeManagerController";
 import { formatFileSize } from "@/libs/util";
 import { useWorkflow } from "@/context/WorkflowContext";
@@ -116,20 +116,6 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                             required
                         />
                     </div>
-
-                    {/* <div id="input-categoria">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Categoria
-                        </label>
-                        <select
-                            value={formData.categoria}
-                            onChange={(e) => handleInputChange('categoria', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-700 dark:text-white"
-                        >
-                            <option value="entrada">Entrada</option>
-                            <option value="processamento">Processamento</option>
-                        </select>
-                    </div> */}
 
                     {/* Entrada de Grafo - Checkboxes */}
                     <div id="input-graph">
@@ -365,14 +351,6 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
                                                     Upload de Arquivos
                                                 </label>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors flex items-center space-x-1"
-                                                >
-                                                    <RiUploadLine />
-                                                    <span>Selecionar Arquivos</span>
-                                                </button>
                                             </div>
 
                                             <div
@@ -383,7 +361,7 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                                                     <RiFileAddLine className="text-white text-xl" />
                                                 </div>
                                                 <p className="text-blue-600 dark:text-blue-400 font-medium mb-2">Selecionar Arquivo</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">Formatos suportados: PDF, DOC, DOCX, TXT, JSON</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">Formatos suportados: PDF, DOC, DOCX</p>
                                             </div>
 
                                             <input

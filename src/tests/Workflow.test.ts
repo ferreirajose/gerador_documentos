@@ -342,7 +342,7 @@ describe("Workflow Completo", () => {
     );
     expect(Array.isArray(docComListaUUID?.uuids_lista)).toBe(true);
     expect(
-      docComListaUUID.uuids_lista.every((uuid: string) =>
+      (docComListaUUID?.uuids_lista || []).every((uuid: string) =>
         uuid.match(
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
         )

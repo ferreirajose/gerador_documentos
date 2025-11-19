@@ -14,11 +14,25 @@ export interface Connection extends Aresta {
   id: string;
 }
 
+// Adicionar interface para mensagens do chat
+export interface ChatMessage {
+  id: string;
+  text: string;
+  sender: 'user' | 'bot';
+  timestamp: Date;
+}
+export interface ChatState {
+  messages: ChatMessage[];
+  inputValue: string;
+  isChatOpen: boolean;
+}
+
 export interface WorkflowState {
   nodes: NodeState[];
   connections: Connection[];
   documentos_anexados: DocumentoAnexado[];
   formato_resultado_final?: FormatoResultadoFinal;
+  chat: ChatState; // Novo estado do chat
 }
 
 // Atualize os tipos de ação
@@ -32,14 +46,24 @@ export type WorkflowAction =
   | { type: 'UPDATE_CONNECTION'; payload: Connection }
   | { type: 'DELETE_CONNECTION'; payload: { connectionId: string } }
   | { type: 'UPDATE_RESULTADO_FINAL'; payload: { combinacoes: Combinacao[], saidas_individuais: string[] } }
-  | { type: 'RESET_WORKFLOW' };
+  | { type: 'RESET_WORKFLOW' }
+  | { type: 'ADD_CHAT_MESSAGE'; payload: ChatMessage }
+  | { type: 'SET_CHAT_INPUT_VALUE'; payload: string }
+  | { type: 'SET_CHAT_OPEN'; payload: boolean }
+  | { type: 'CLEAR_CHAT_MESSAGES' }
+  | { type: 'SET_CHAT_MESSAGES'; payload: ChatMessage[] };
 
 
 export const initialState: WorkflowState = {
   nodes: [],
   connections: [],
   documentos_anexados: [],
-  formato_resultado_final: new FormatoResultadoFinal([], [])
+  formato_resultado_final: new FormatoResultadoFinal([], []),
+  chat: {
+    messages: [],
+    inputValue: '',
+    isChatOpen: false
+  }
 };
 
 export function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
@@ -117,6 +141,52 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         ...initialState
       }
 
+     // Novos casos para o chat
+    case 'ADD_CHAT_MESSAGE':
+      return {
+        ...state,
+        chat: {
+          ...state.chat,
+          messages: [...state.chat.messages, action.payload]
+        }
+      };
+
+    case 'SET_CHAT_INPUT_VALUE':
+      return {
+        ...state,
+        chat: {
+          ...state.chat,
+          inputValue: action.payload
+        }
+      };
+
+    case 'SET_CHAT_OPEN':
+      return {
+        ...state,
+        chat: {
+          ...state.chat,
+          isChatOpen: action.payload
+        }
+      };
+
+    case 'CLEAR_CHAT_MESSAGES':
+      return {
+        ...state,
+        chat: {
+          ...state.chat,
+          messages: []
+        }
+      };
+
+    case 'SET_CHAT_MESSAGES':
+      return {
+        ...state,
+        chat: {
+          ...state.chat,
+          messages: action.payload
+        }
+      };
+
     default:
       return state;
   }
@@ -136,6 +206,12 @@ interface WorkflowContextType {
   updateConnection: (connection: Connection) => void;
   deleteConnection: (connectionId: string) => void;
   updateResultadoFinal: (combinacoes: Combinacao[], saidas_individuais: string[]) => void;
+   // Chat actions
+  addChatMessage: (message: ChatMessage) => void;
+  setChatInputValue: (value: string) => void;
+  setChatOpen: (isOpen: boolean) => void;
+  clearChatMessages: () => void;
+  setChatMessages: (messages: ChatMessage[]) => void;
   // WORKFLOW
   resetWorkflow: () => void;
   getWorkflowJSON: () => string;
@@ -194,6 +270,27 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
 
   const resetWorkflow = () => {
     dispatch({ type: 'RESET_WORKFLOW' });
+  };
+
+  // Novas funções para o chat
+  const addChatMessage = (message: ChatMessage) => {
+    dispatch({ type: 'ADD_CHAT_MESSAGE', payload: message });
+  };
+
+  const setChatInputValue = (value: string) => {
+    dispatch({ type: 'SET_CHAT_INPUT_VALUE', payload: value });
+  };
+
+  const setChatOpen = (isOpen: boolean) => {
+    dispatch({ type: 'SET_CHAT_OPEN', payload: isOpen });
+  };
+
+  const clearChatMessages = () => {
+    dispatch({ type: 'CLEAR_CHAT_MESSAGES' });
+  };
+
+  const setChatMessages = (messages: ChatMessage[]) => {
+    dispatch({ type: 'SET_CHAT_MESSAGES', payload: messages });
   };
 
   const getWorkflowJSON = (): string => {
@@ -355,6 +452,13 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     deleteConnection,
     updateConnection,
     updateResultadoFinal,
+    // Adicionar as novas funções do chat
+    addChatMessage,
+    setChatInputValue,
+    setChatOpen,
+    clearChatMessages,
+    setChatMessages,
+    // WORKFLOW
     resetWorkflow,
     getWorkflowJSON,
     validateWorkflow

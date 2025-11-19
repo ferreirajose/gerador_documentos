@@ -3,7 +3,7 @@ import { RiChat3Line, RiLoader4Line, RiPlayCircleLine, RiRefreshLine, RiRestartL
 import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
 import FetchAdapter from '@/infra/FetchAdapter';
 import { GerarDocCallbacks } from '@/types/node';
-import { WORFLOW_INTER_PIADA, WORFLOW_MINUTA_INTERACAO_SEM_DOC, WORFLOW_MINUTA_INTERACAO_COM_DOC, WORFLOW_MOCK } from '@/mock/workflow-mock';
+//import { WORFLOW_INTER_PIADA, WORFLOW_MINUTA_INTERACAO_SEM_DOC, WORFLOW_MINUTA_INTERACAO_COM_DOC, WORFLOW_MOCK } from '@/mock/workflow-mock';
 
 import { ExecuteProgress } from '@/components/common/ExecuteProgress';
 import { useWorkflow } from '@/context/WorkflowContext';
@@ -54,8 +54,9 @@ interface WorkflowExecutionProps {
 }
 
 export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutionProps) {
-  const { state, resetWorkflow, getWorkflowJSON } = useWorkflow();
+  const { state, resetWorkflow, getWorkflowJSON, setChatOpen, clearChatMessages } = useWorkflow();
   const WORFLOW = JSON.parse(getWorkflowJSON());
+
 
   const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'completed' | 'error' | 'awaiting_interaction'>('idle');
   const [progress, setProgress] = useState(0);
@@ -63,21 +64,16 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
 
   const [nodeStatus, setNodeStatus] = useState<Record<string, string>>({});
   const [nodeTimers, setNodeTimers] = useState<Record<string, NodeTimer>>({});
-  const [completedNodes, setCompletedNodes] = useState<string[]>([]);
+  const [_, setCompletedNodes] = useState<string[]>([]);
 
   const [workflowError, setWorkflowError] = useState<WorkflowErrorData | null>(null);
 
   // Novos estados para interação
   const [interactionData, setInteractionData] = useState<InteractionData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(false); // Novo estado para controlar abertura do chat
-
-  // Efeito para abrir o chat automaticamente quando houver interação
-  useEffect(() => {
-    if (executionState === 'awaiting_interaction' && interactionData) {
-      setIsChatOpen(true);
-    }
-  }, [executionState, interactionData]);
+  
+  // Usar estado global do chat
+  const isChatOpen = state.chat.isChatOpen;
 
   // Efeito para controlar o bloqueio da navegação
   useEffect(() => {
@@ -163,7 +159,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
     console.log("🚀 continueInteraction CHAMADO! Mensagem:", userMessage);
     console.log("📋 SessionId:", sessionId);
 
-     // Bloquear navegação durante a interação
+    // Bloquear navegação durante a interação
     if (onNavigationLock) {
       onNavigationLock(true);
     }
@@ -179,6 +175,9 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
 
       // Mudar estado para executando enquanto processa a resposta
       setExecutionState('executing');
+      
+      // Garantir que o chat esteja aberto durante a interação
+      setChatOpen(true);
 
       console.log("🔄 Chamando continuarInteracao no gateway...");
 
@@ -272,7 +271,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
         });
       },
 
-      onError: (error) => {
+      onError: (error: any) => {
         console.error("Erro no workflow (interação):", error);
 
         let errorData: WorkflowErrorData;
@@ -307,7 +306,6 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
         setInteractionData(data);
         setSessionId(data.session_id);
         setExecutionState('awaiting_interaction');
-        setIsChatOpen(true); // Garantir que o chat abra
       }
     };
   };
@@ -328,7 +326,6 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
     setWorkflowError(null);
     setInteractionData(null);
     setSessionId(null);
-    setIsChatOpen(false);
     setExecutionState('executing');
 
     try {
@@ -391,9 +388,17 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
 
         onComplete: (result) => {
           console.log("Processamento completo:", result);
+          
           // Só muda para completed se não estiver aguardando interação
-          setExecutionState(prev => prev === 'awaiting_interaction' ? 'awaiting_interaction' : 'completed');
+          if (executionState !== 'awaiting_interaction') {
+            setExecutionState('completed');
+          }
           setProgress(100);
+
+          // Se não há interação com usuário no workflow, podemos fechar o chat
+          if (!hasInteracaoUsuario) {
+            setChatOpen(false);
+          }
 
           setNodeStatus(prev => {
             const updatedStatus = { ...prev };
@@ -406,7 +411,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
           });
         },
 
-        onError: (error) => {
+        onError: (error: any) => {
           console.error("Erro no workflow:", error);
 
           let errorData: WorkflowErrorData;
@@ -441,7 +446,6 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
           setInteractionData(data);
           setSessionId(data.session_id);
           setExecutionState('awaiting_interaction');
-          setIsChatOpen(true);
         }
       };
 
@@ -462,13 +466,14 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
   };
 
   const resetExecution = () => {
-    console.log('resetExecution');
+    console.log('Resetando execução e limpando estado do chat');
 
     // Desbloquear navegação
     if (onNavigationLock) {
       onNavigationLock(false);
     }
 
+    // Resetar todos os estados locais
     setExecutionState('idle');
     setProgress(0);
     setNodeStatus({});
@@ -478,7 +483,12 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
     setWorkflowError(null);
     setInteractionData(null);
     setSessionId(null);
-    setIsChatOpen(false); // Fechar chat ao resetar
+    
+    // Limpar estado do chat global
+    setChatOpen(false);
+    clearChatMessages();
+    
+    // Resetar workflow
     resetWorkflow();
   };
 
@@ -552,7 +562,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
   const buttonConfig = getButtonConfig();
   const expectedOutputs = getExpectedOutputNames();
 
-  const hasInteracaoUsuario = WORFLOW.grafo.nos.some(node =>
+  const hasInteracaoUsuario = WORFLOW.grafo.nos.some((node: any) =>
     node.interacao_com_usuario && Object.keys(node.interacao_com_usuario).length > 0);
   
   return (
@@ -663,7 +673,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
           interactionContext={interactionData}
           isWorkflowInteraction={executionState === 'awaiting_interaction'}
           isOpen={isChatOpen}
-          setIsOpen={setIsChatOpen}
+          setIsOpen={setChatOpen}
           autoOpen={executionState === 'awaiting_interaction'}
         />
       )}

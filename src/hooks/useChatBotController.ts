@@ -1,15 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-
-interface Message {
-  id: string;
-  text: string;
-  sender: "bot" | "user";
-  timestamp: Date;
-}
+import { useCallback, useRef, useEffect, useState } from "react";
+import { useWorkflow, ChatMessage } from '@/context/WorkflowContext';
 
 interface UseWorkflowChatReturn {
-  messages: Message[];
-  setMessages: (messages: Message[]) => void;
+  messages: ChatMessage[];
+  setMessages: (messages: ChatMessage[]) => void;
   inputValue: string;
   setInputValue: (value: string) => void;
   isLoading: boolean;
@@ -19,11 +13,23 @@ interface UseWorkflowChatReturn {
   handleKeyPress: (e: React.KeyboardEvent, onSend?: (message: string) => void) => void;
   formatTime: (date: Date) => string;
   addBotMessage: (text: string) => void;
+  clearMessages: () => void;
 }
 
 export function useChatBotController(): UseWorkflowChatReturn {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState("");
+  const { 
+    state, 
+    addChatMessage, 
+    setChatInputValue, 
+    clearChatMessages, 
+    setChatMessages 
+  } = useWorkflow();
+
+  // Usar estado global do chat
+  const messages = Array.isArray(state.chat.messages) ? state.chat.messages : [];
+  const inputValue = typeof state.chat.inputValue === 'string' ? state.chat.inputValue : '';
+
+  
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -36,37 +42,42 @@ export function useChatBotController(): UseWorkflowChatReturn {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Focar no input quando o chat abrir
+  // Focar no input quando o chat abrir ou quando mensagens mudarem
   useEffect(() => {
     if (inputRef.current) {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 300);
     }
-  }, [messages]); // Focar quando mensagens mudarem
+  }, [messages, state.chat.isChatOpen]);
 
   const handleSendMessage = useCallback((onSend?: (message: string) => void) => {
     const message = inputValue.trim();
     if (!message) return;
 
-    // Adiciona mensagem do usuário ao chat
-    const userMessage: Message = {
-      id: Date.now().toString(),
+    // Adiciona mensagem do usuário ao chat usando estado global
+    const userMessage: ChatMessage = {
+      id: 'user-' + Date.now(),
       text: message,
       sender: "user",
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue("");
+    addChatMessage(userMessage);
+    setChatInputValue("");
     
     console.log("Enviando mensagem para workflow:", message);
     
     // Chama a função de callback do workflow se for fornecida
     if (onSend) {
-      onSend(message);
+      setIsLoading(true);
+      try {
+        onSend(message);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [inputValue]);
+  }, [inputValue, addChatMessage, setChatInputValue]);
 
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent, onSend?: (message: string) => void) => {
@@ -86,20 +97,24 @@ export function useChatBotController(): UseWorkflowChatReturn {
   }, []);
 
   const addBotMessage = useCallback((text: string) => {
-    const botMessage: Message = {
-      id: Date.now().toString(),
+    const botMessage: ChatMessage = {
+      id: 'bot-' + Date.now(),
       text: text,
       sender: "bot",
       timestamp: new Date(),
     };
-    setMessages(prev => [...prev, botMessage]);
-  }, []);
+    addChatMessage(botMessage);
+  }, [addChatMessage]);
+
+  const clearMessages = useCallback(() => {
+    clearChatMessages();
+  }, [clearChatMessages]);
 
   return {
     messages,
-    setMessages,
+    setMessages: setChatMessages, 
     inputValue,
-    setInputValue,
+    setInputValue: setChatInputValue,
     isLoading,
     messagesEndRef: messagesEndRef as React.RefObject<HTMLDivElement | null>,
     inputRef,
@@ -107,5 +122,6 @@ export function useChatBotController(): UseWorkflowChatReturn {
     handleKeyPress,
     formatTime,
     addBotMessage,
+    clearMessages, 
   };
 }

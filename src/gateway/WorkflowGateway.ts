@@ -1,4 +1,4 @@
-import { GerarDocCallbacks } from "@/types/nodes";
+import { GerarDocCallbacks } from "@/types/node";
 
 export default interface WorkflowGateway {
   uploadAndProcess(file: File): Promise<any>;

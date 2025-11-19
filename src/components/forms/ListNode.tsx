@@ -1,4 +1,3 @@
-// ListNode.tsx
 import {
     RiNodeTree,
     RiEditLine,
@@ -8,7 +7,6 @@ import {
     RiFileTextLine,
     RiInputMethodLine,
     RiSettingsLine,
-    RiOutletLine,
     RiLoginCircleLine,
     RiChatSettingsLine
 } from "@remixicon/react";

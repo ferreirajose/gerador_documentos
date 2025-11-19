@@ -1,4 +1,4 @@
-import { RiArrowRightLine, RiTimeLine, RiEditLine, RiDeleteBinLine, RiCheckLine, RiLink } from "@remixicon/react";
+import { RiArrowRightLine, RiTimeLine, RiEditLine, RiDeleteBinLine, RiLink } from "@remixicon/react";
 
 interface Connection {
   id: string;

@@ -96,9 +96,6 @@ export default class WorkflowHttpGateway implements WorkflowGateway {
       case 'status':
         callbacks.onNodeStatus?.(eventData.node, eventData.status);
         break;
-      case 'progress':
-        callbacks.onProgress?.(eventData.nodes);
-        break;
       case 'data':
         callbacks.onData?.(eventData.data);
         break;

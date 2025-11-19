@@ -19,11 +19,6 @@ export function InteractionBot({
   setIsOpen: externalSetIsOpen,
   autoOpen = false
 }: InteractionBotProps) {
-    const [internalIsOpen, setInternalIsOpen] = useState(false);
-    
-    // Usar controle externo ou interno do estado isOpen
-    const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
-    const setIsOpen = externalSetIsOpen !== undefined ? externalSetIsOpen : setInternalIsOpen;
 
     const {
         messages,
@@ -32,11 +27,22 @@ export function InteractionBot({
         messagesEndRef,
         inputRef,
         setInputValue,
-        setMessages,
+        addBotMessage,
         handleSendMessage,
         handleKeyPress,
         formatTime,
+        clearMessages
     } = useChatBotController();
+
+     const [internalIsOpen, setInternalIsOpen] = useState(false);
+    
+    // Usar controle externo ou interno do estado isOpen
+    const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+    const setIsOpen = externalSetIsOpen !== undefined ? externalSetIsOpen : setInternalIsOpen;
+    const safeMessages = Array.isArray(messages) ? messages : [];
+
+    
+
 
     // Efeito para abrir automaticamente quando necessário
     useEffect(() => {
@@ -47,6 +53,7 @@ export function InteractionBot({
     }, [autoOpen, isOpen, setIsOpen]);
 
     // Adicionar mensagem de contexto de workflow quando houver interação
+    // InteractionBot.tsx - Solução mais robusta
     useEffect(() => {
         if (isWorkflowInteraction && interactionContext && isOpen) {
             console.log("Interação do workflow detectada:", interactionContext);
@@ -58,26 +65,27 @@ export function InteractionBot({
                 timestamp: new Date(),
             };
             
-            // Verifica se a mensagem de contexto já foi adicionada
-            const hasContextMessage = messages.some(msg => 
+            // Usar addBotMessage do hook em vez de setMessages diretamente
+            const hasContextMessage = safeMessages.some(msg => 
                 msg.id.startsWith('workflow-context') && 
                 msg.text.includes(interactionContext.agent_message.substring(0, 50))
             );
             
             if (!hasContextMessage) {
                 console.log("Adicionando mensagem de contexto do workflow");
-                setMessages(prev => [...prev, contextMessage]);
+                addBotMessage(contextMessage.text); // ← Usar addBotMessage
             }
         }
-    }, [isWorkflowInteraction, interactionContext, isOpen, messages, setMessages]);
+    }, [isWorkflowInteraction, interactionContext, isOpen]);
 
-    // Limpar mensagens quando o chat fechar ou quando não for mais interação de workflow
-    useEffect(() => {
-        if (!isOpen) {
-            console.log("Limpando mensagens ao fechar chat");
-            setMessages([]);
-        }
-    }, [isOpen, setMessages]);
+    // CORREÇÃO: Remover completamente este useEffect que causa o loop
+    // ⚠️ REMOVER ESTE BLOCO ⚠️
+    // useEffect(() => {
+    //     if (!isOpen && messages.length > 0) {
+    //         console.log("Limpando mensagens ao fechar chat");
+    //         clearMessages();
+    //     }
+    // }, []); // Remover clearMessages das dependências
 
     // Função para enviar mensagem
     const handleSend = () => {
@@ -112,12 +120,15 @@ export function InteractionBot({
     // Função para fechar o chat - não permite durante interação de workflow
     const handleCloseChat = () => {
         if (!isWorkflowInteraction) {
+            // Limpar mensagens apenas quando fechar manualmente (não durante workflow)
+            console.log("Fechando chat e limpando mensagens");
+            clearMessages();
             setIsOpen(false);
         }
     }
 
     // Última mensagem para aria-live
-    const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+    const lastMessage = safeMessages.length > 0 ? safeMessages[safeMessages.length - 1] : null;
 
     if (!isOpen) {
         return (
@@ -208,7 +219,7 @@ export function InteractionBot({
                 aria-label="Histórico de mensagens"
                 className="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-gray-900"
             >
-                {messages.length === 0 && !isWorkflowInteraction && (
+                {safeMessages.length === 0 && !isWorkflowInteraction && (
                     <div className="flex justify-center items-center h-full">
                         <div className="text-center text-gray-500 dark:text-gray-400">
                             <RiRobotFill className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -235,7 +246,7 @@ export function InteractionBot({
                     </div>
                 )}
                 
-                {messages.map((message) => (
+                {safeMessages.map((message) => (
                     <div 
                         key={message.id} 
                         className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"} items-end gap-2`}

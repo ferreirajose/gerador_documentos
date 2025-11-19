@@ -7,7 +7,7 @@ interface WorkflowErrorProps {
   onRetry?: () => void;
 }
 
-export function WorkflowError({ error, onRetry }: WorkflowErrorProps) {
+export function WorkflowError({ error }: WorkflowErrorProps) {
   return (
     <div className="bg-red-50 border border-red-200 rounded-lg p-6">
       <div className="flex items-start space-x-3">

@@ -166,7 +166,7 @@ const renderJSONTree = (
       {!isEmpty && !isExpanded && (
         <div className="flex">
           <span className={`${bracketColor} ml-1`}>
-            {isArray ? `... ${node.children.length} items]` : `... ${node.children.length} keys}`}
+            {isArray ? `... ${node.children?.length} items]` : `... ${node.children?.length} keys}`}
           </span>
           {showComma && <span className="text-gray-800 dark:text-gray-200">,</span>}
         </div>
