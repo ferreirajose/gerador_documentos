@@ -62,7 +62,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, onClose }) => {
   };
 
   return (
-    <div className="absolute bottom-2 right-4 w-96 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-300/50 dark:border-gray-600/50 overflow-hidden z-20">
+    <div className="absolute bottom-2 right-4 w-[403px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-300/50 dark:border-gray-600/50 overflow-hidden z-20">
       {/* Header com gradiente */}
       <div className={`bg-gradient-to-r ${
         nodeTypeColor === 'green' ? 'from-green-500 to-green-600' :
@@ -78,7 +78,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, onClose }) => {
             {node.interacao_com_usuario && <RiChatSmile2Line className="w-5 h-5" />}
             {node.modelo_llm && !node.interacao_com_usuario && <RiBrainLine className="w-5 h-5" />}
             {!node.entrada_grafo && node.id !== 'END' && !node.interacao_com_usuario && !node.modelo_llm && <RiCodeBoxLine className="w-5 h-5" />}
-            <h2 className="text-lg font-bold truncate">{node.nome}</h2>
+            <h2 className="text-lg font-bold break-words whitespace-normal leading-tight">{node.nome}</h2>
           </div>
           <button
             onClick={onClose}

@@ -1,4 +1,5 @@
 import { useChatBotController } from '@/hooks/useChatBotController';
+import { renderMarkdown } from '@/libs/util';
 import { RiCloseFill, RiRobotFill, RiSendPlaneFill, RiUserFill, RiExpandDiagonalLine, RiCollapseDiagonalLine } from '@remixicon/react'
 import { useEffect, useState } from 'react'
 
@@ -283,7 +284,15 @@ export function InteractionBot({
                                     : "bg-muted dark:bg-gray-800 text-foreground dark:text-gray-100 rounded-bl-md border dark:border-gray-700 shadow-sm"
                             }`}
                         >
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                            {
+                                message.sender === "bot" ? (
+                                    <div className="text-sm leading-relaxed whitespace-pre-wrap"
+                                        dangerouslySetInnerHTML={{ __html: renderMarkdown(message.text) }} />
+                                ) : (
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                                )
+                            }   
+                           
                             <span className={`text-xs opacity-70 mt-2 block text-right ${
                                 message.sender === "user" 
                                     ? isWorkflowInteraction ? "text-purple-100" : "text-blue-100"
