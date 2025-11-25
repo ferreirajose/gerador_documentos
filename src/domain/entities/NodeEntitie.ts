@@ -1,8 +1,17 @@
 export interface Entrada {
   variavel_prompt: string;
-  origem: "documento_anexado" | "resultado_no_anterior";
+  origem: "documento_anexado" | "resultado_no_anterior" | "documento_upload_execucao";
+
+  // Campos para documento pré-anexado (origem: "documento_anexado")
   chave_documento_origem?: string;
+
+  // Campos para documento com upload durante execução (origem: "documento_upload_execucao")
+  quantidade_arquivos?: "zero" | "um" | "varios";
+
+  // Campos para resultado de nó anterior (origem: "resultado_no_anterior")
   nome_no_origem?: string;
+
+  // Campo comum
   executar_em_paralelo?: boolean;
 }
 export interface InteracaoComUsuario {
@@ -63,5 +72,28 @@ export default class NodeEntitie {
         `Nó '${this.nome}' pode ter apenas uma entrada com executar_em_paralelo: true`
       );
     }
+
+    // Validação dos campos de entrada de acordo com a origem
+    this.entradas.forEach((entrada, index) => {
+      if (entrada.origem === "documento_upload_execucao") {
+        if (!entrada.quantidade_arquivos) {
+          throw new Error(
+            `Entrada ${index + 1} do nó '${this.nome}': campo 'quantidade_arquivos' é obrigatório quando origem é 'documento_upload_execucao'`
+          );
+        }
+      } else if (entrada.origem === "documento_anexado") {
+        if (!entrada.chave_documento_origem) {
+          throw new Error(
+            `Entrada ${index + 1} do nó '${this.nome}': campo 'chave_documento_origem' é obrigatório quando origem é 'documento_anexado'`
+          );
+        }
+      } else if (entrada.origem === "resultado_no_anterior") {
+        if (!entrada.nome_no_origem) {
+          throw new Error(
+            `Entrada ${index + 1} do nó '${this.nome}': campo 'nome_no_origem' é obrigatório quando origem é 'resultado_no_anterior'`
+          );
+        }
+      }
+    });
   }
 }

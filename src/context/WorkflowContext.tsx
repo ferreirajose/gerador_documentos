@@ -47,6 +47,7 @@ export type WorkflowAction =
   | { type: 'DELETE_CONNECTION'; payload: { connectionId: string } }
   | { type: 'UPDATE_RESULTADO_FINAL'; payload: { combinacoes: Combinacao[], saidas_individuais: string[] } }
   | { type: 'RESET_WORKFLOW' }
+  | { type: 'LOAD_WORKFLOW'; payload: { nodes: NodeState[], connections: Connection[], documentos_anexados: DocumentoAnexado[], formato_resultado_final?: FormatoResultadoFinal } }
   | { type: 'ADD_CHAT_MESSAGE'; payload: ChatMessage }
   | { type: 'SET_CHAT_INPUT_VALUE'; payload: string }
   | { type: 'SET_CHAT_OPEN'; payload: boolean }
@@ -141,6 +142,15 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         ...initialState
       }
 
+    case 'LOAD_WORKFLOW':
+      return {
+        ...state,
+        nodes: action.payload.nodes,
+        connections: action.payload.connections,
+        documentos_anexados: action.payload.documentos_anexados,
+        formato_resultado_final: action.payload.formato_resultado_final || new FormatoResultadoFinal([], [])
+      }
+
      // Novos casos para o chat
     case 'ADD_CHAT_MESSAGE':
       return {
@@ -214,6 +224,7 @@ interface WorkflowContextType {
   setChatMessages: (messages: ChatMessage[]) => void;
   // WORKFLOW
   resetWorkflow: () => void;
+  loadWorkflow: (workflowData: any) => void;
   getWorkflowJSON: () => string;
   validateWorkflow: () => { isValid: boolean; errors: string[] };
 }
@@ -270,6 +281,69 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
 
   const resetWorkflow = () => {
     dispatch({ type: 'RESET_WORKFLOW' });
+  };
+
+  const loadWorkflow = (workflowData: any) => {
+    try {
+      // Converter nós do JSON para NodeState (adicionar IDs)
+      const nodes: NodeState[] = workflowData.grafo.nos.map((node: any, index: number) => ({
+        ...node,
+        id: `node-${Date.now()}-${index}` // Gerar ID único
+      }));
+
+      // Criar mapa de nome -> ID para converter as arestas
+      const nodeNameToId = new Map<string, string>();
+      nodes.forEach(node => {
+        nodeNameToId.set(node.nome, node.id);
+      });
+
+      // Converter arestas do JSON para Connection (usando IDs)
+      const connections: Connection[] = workflowData.grafo.arestas.map((aresta: any, index: number) => {
+        const origemId = nodeNameToId.get(aresta.origem);
+        const destinoId = aresta.destino === 'END' ? 'END' : nodeNameToId.get(aresta.destino);
+
+        if (!origemId) {
+          throw new Error(`Nó de origem não encontrado: ${aresta.origem}`);
+        }
+        if (!destinoId && aresta.destino !== 'END') {
+          throw new Error(`Nó de destino não encontrado: ${aresta.destino}`);
+        }
+
+        return {
+          id: `connection-${Date.now()}-${index}`,
+          origem: origemId!,
+          destino: destinoId || 'END'
+        };
+      });
+
+      // Carregar documentos anexados
+      const documentos_anexados: DocumentoAnexado[] = workflowData.documentos_anexados || [];
+
+      // Carregar formato resultado final se existir
+      let formato_resultado_final: FormatoResultadoFinal | undefined;
+      if (workflowData.combinacoes || workflowData.saidas_individuais) {
+        formato_resultado_final = new FormatoResultadoFinal(
+          workflowData.combinacoes || [],
+          workflowData.saidas_individuais || []
+        );
+      }
+
+      // Dispatch da ação LOAD_WORKFLOW
+      dispatch({
+        type: 'LOAD_WORKFLOW',
+        payload: {
+          nodes,
+          connections,
+          documentos_anexados,
+          formato_resultado_final
+        }
+      });
+
+      console.log('✅ Workflow carregado com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao carregar workflow:', error);
+      throw error;
+    }
   };
 
   // Novas funções para o chat
@@ -468,6 +542,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     setChatMessages,
     // WORKFLOW
     resetWorkflow,
+    loadWorkflow,
     getWorkflowJSON,
     validateWorkflow
   };

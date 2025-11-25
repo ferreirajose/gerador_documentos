@@ -1,4 +1,4 @@
-export type ViewType = "nodes" | "connections" | "output-configuration" | "execution";
+export type ViewType = "nodes" | "connections" | "output-configuration" | "visualization" | "execution";
 
 type NodeStatus = "started" | "finished" | "error" | "completed" | "waiting" | "processing";
 

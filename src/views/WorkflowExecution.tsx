@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RiChat3Line, RiLoader4Line, RiPlayCircleLine, RiRefreshLine, RiRestartLine } from '@remixicon/react';
+import { RiChat3Line, RiLoader4Line, RiPlayCircleLine, RiRefreshLine, RiRestartLine, RiSave3Line, RiFolderOpenLine } from '@remixicon/react';
 import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
 import FetchAdapter from '@/infra/FetchAdapter';
 import { GerarDocCallbacks } from '@/types/node';
@@ -11,6 +11,9 @@ import MarkdownRenderer from '@/components/common/MarkdownRenderer';
 import { WorkflowError } from '@/components/common/WorkflowError';
 import { InteractionBot } from '@/components/common/InteractionBot';
 import { EmptyState } from '@/components/common/EmptyState';
+import { FileUploadDuringExecution } from '@/components/common/FileUploadDuringExecution';
+import SaveWorkflowModal from '@/components/modals/SaveWorkflowModal';
+import LoadWorkflowModal from '@/components/modals/LoadWorkflowModal';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
@@ -49,16 +52,23 @@ interface InteractionData {
   agent_message: string;
 }
 
+// Interface para uploads necessários
+interface UploadNeeded {
+  nodeNome: string;
+  variavelPrompt: string;
+  quantidadeArquivos: "zero" | "um" | "varios";
+}
+
 interface WorkflowExecutionProps {
   onNavigationLock?: (locked: boolean) => void;
 }
 
 export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutionProps) {
-  const { state, resetWorkflow, getWorkflowJSON, setChatOpen, clearChatMessages } = useWorkflow();
+  const { state, resetWorkflow, getWorkflowJSON, loadWorkflow, setChatOpen, clearChatMessages } = useWorkflow();
   const WORFLOW = JSON.parse(getWorkflowJSON());
 
 
-  const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'completed' | 'error' | 'awaiting_interaction'>('idle');
+  const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'completed' | 'error' | 'awaiting_interaction' | 'awaiting_uploads'>('idle');
   const [progress, setProgress] = useState(0);
   const [workflowResults, setWorkflowResults] = useState<WorkflowResult>({});
 
@@ -71,15 +81,23 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
   // Novos estados para interação
   const [interactionData, setInteractionData] = useState<InteractionData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  
+
+  // Estados para uploads durante execução
+  const [uploadsNeeded, setUploadsNeeded] = useState<UploadNeeded[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, string[]>>({});
+
+  // Estados para modais de salvar/carregar
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
+
   // Usar estado global do chat
   const isChatOpen = state.chat.isChatOpen;
 
   // Efeito para controlar o bloqueio da navegação
   useEffect(() => {
     if (onNavigationLock) {
-      // Bloqueia a navegação quando estiver executando ou aguardando interação
-      const shouldLock = executionState === 'executing' || executionState === 'awaiting_interaction';
+      // Bloqueia a navegação quando estiver executando, aguardando interação ou aguardando uploads
+      const shouldLock = executionState === 'executing' || executionState === 'awaiting_interaction' || executionState === 'awaiting_uploads';
       onNavigationLock(shouldLock);
     }
 
@@ -96,6 +114,114 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
     const totalNodes = WORFLOW.grafo.nos.length;
     const completedCount = currentCompletedNodes.length;
     return Math.round((completedCount / totalNodes) * 100);
+  };
+
+  /**
+   * Detecta quais uploads são necessários antes da execução do workflow
+   * Analisa todos os nós e suas entradas para identificar uploads durante execução
+   * @param workflowJson JSON do workflow a ser analisado
+   * @returns Array de uploads necessários com informações sobre cada um
+   */
+  const detectUploadsNeeded = (workflowJson: any): UploadNeeded[] => {
+    const uploads: UploadNeeded[] = [];
+
+    // Percorrer todos os nós do workflow
+    workflowJson.grafo?.nos?.forEach((node: any) => {
+      // Verificar se o nó tem entradas
+      node.entradas?.forEach((entrada: any) => {
+        // Se a origem for documento_upload_execucao, adicionar à lista
+        if (entrada.origem === "documento_upload_execucao") {
+          uploads.push({
+            nodeNome: node.nome,
+            variavelPrompt: entrada.variavel_prompt,
+            quantidadeArquivos: entrada.quantidade_arquivos || "um"
+          });
+        }
+      });
+    });
+
+    console.log(`Detectados ${uploads.length} upload(s) necessário(s):`, uploads);
+    return uploads;
+  };
+
+  /**
+   * Modifica o workflow JSON substituindo entradas de upload por documentos anexados
+   * Transforma entradas com origem "documento_upload_execucao" para "documento_anexado"
+   * usando as chaves dos documentos que foram enviados
+   * @param workflow JSON do workflow original
+   * @param uploads Mapa de uploads realizados {nodeNome__variavelPrompt: [document_keys]}
+   * @returns Workflow modificado com documentos anexados
+   */
+  const modifyWorkflowWithUploads = (workflow: any, uploads: Record<string, string[]>): any => {
+    const modified = JSON.parse(JSON.stringify(workflow)); // Deep clone
+
+    // Mapa para agrupar documentos por chave (nodeNome + variavelPrompt)
+    const documentGroups = new Map<string, { chave: string; descricao: string; uuids: string[] }>();
+
+    modified.grafo?.nos?.forEach((node: any) => {
+      node.entradas?.forEach((entrada: any) => {
+        if (entrada.origem === "documento_upload_execucao") {
+          const key = `${node.nome}__${entrada.variavel_prompt}`;
+          const documentKeys = uploads[key] || [];
+
+          console.log(`Transformando entrada ${key}:`, documentKeys);
+
+          // Para múltiplos arquivos, criar um grupo
+          if (documentKeys.length > 1) {
+            const groupKey = `${node.nome}_${entrada.variavel_prompt}`;
+            documentGroups.set(groupKey, {
+              chave: groupKey,
+              descricao: `Documentos para ${node.nome} - ${entrada.variavel_prompt}`,
+              uuids: documentKeys
+            });
+
+            // Transformar em documento_anexado apontando para o grupo
+            entrada.origem = "documento_anexado";
+            entrada.chave_documento_origem = groupKey;
+          } 
+          // Para único arquivo, manter como uuid_unico
+          else if (documentKeys.length === 1) {
+            const singleKey = documentKeys[0];
+            documentGroups.set(singleKey, {
+              chave: singleKey,
+              descricao: `Documento enviado: ${singleKey}`,
+              uuids: [singleKey]
+            });
+
+            entrada.origem = "documento_anexado";
+            entrada.chave_documento_origem = singleKey;
+          }
+
+          // Remover campo de quantidade de arquivos
+          delete entrada.quantidade_arquivos;
+        }
+      });
+    });
+
+    // Reconstruir documentos_anexados com a estrutura correta
+    modified.documentos_anexados = [];
+
+    documentGroups.forEach((documentGroup, key) => {
+      if (documentGroup.uuids.length === 1) {
+        // Documento único - usar uuid_unico
+        modified.documentos_anexados.push({
+          chave: documentGroup.chave,
+          descricao: documentGroup.descricao,
+          uuid_unico: documentGroup.uuids[0]
+        });
+      } else {
+        // Múltiplos documentos - usar uuids_lista
+        modified.documentos_anexados.push({
+          chave: documentGroup.chave,
+          descricao: documentGroup.descricao,
+          uuids_lista: documentGroup.uuids
+        });
+      }
+    });
+
+    console.log("Workflow modificado com uploads:", modified);
+    console.log("Documentos anexados:", modified.documentos_anexados);
+    return modified;
   };
 
   // Função para calcular a duração de um nó
@@ -310,13 +436,18 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
     };
   };
 
+  /**
+   * Inicia a execução do workflow
+   * Detecta uploads necessários e exibe UI de upload ou prossegue diretamente
+   */
   const executeWorkflow = async () => {
     if (state.nodes.length === 0) return null;
 
-     // Bloquear navegação
+    // Bloquear navegação
     if (onNavigationLock) {
       onNavigationLock(true);
     }
+
     // Resetar estados
     setProgress(0);
     setNodeStatus({});
@@ -326,10 +457,36 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
     setWorkflowError(null);
     setInteractionData(null);
     setSessionId(null);
+    setUploadedDocuments({});
+
+    // Detectar uploads necessários
+    const uploads = detectUploadsNeeded(WORFLOW);
+
+    if (uploads.length > 0) {
+      console.log("Uploads necessários detectados. Aguardando upload de arquivos...");
+      setUploadsNeeded(uploads);
+      setExecutionState('awaiting_uploads');
+      return; // Não executar ainda
+    }
+
+    // Se não houver uploads, executar diretamente
+    console.log("Nenhum upload necessário. Executando workflow...");
+    proceedWithExecution();
+  };
+
+  /**
+   * Prossegue com a execução do workflow após uploads (se houver)
+   * Contém a lógica principal de execução do workflow
+   */
+  const proceedWithExecution = async () => {
     setExecutionState('executing');
 
     try {
-      const workflowJson = WORFLOW;
+      // Modificar workflow se houver uploads
+      let workflowJson = WORFLOW;
+      if (Object.keys(uploadedDocuments).length > 0) {
+        workflowJson = modifyWorkflowWithUploads(WORFLOW, uploadedDocuments);
+      }
 
       const httpClient = new FetchAdapter();
       const workFlowGateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL, AUTH_TOKEN);
@@ -483,13 +640,53 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
     setWorkflowError(null);
     setInteractionData(null);
     setSessionId(null);
-    
+
     // Limpar estado do chat global
     setChatOpen(false);
     clearChatMessages();
-    
+
     // Resetar workflow
     resetWorkflow();
+  };
+
+  // Handlers para salvar e carregar workflow
+  const handleOpenSaveModal = () => {
+    setIsSaveModalOpen(true);
+  };
+
+  const handleCloseSaveModal = () => {
+    setIsSaveModalOpen(false);
+  };
+
+  const handleOpenLoadModal = () => {
+    setIsLoadModalOpen(true);
+  };
+
+  const handleCloseLoadModal = () => {
+    setIsLoadModalOpen(false);
+  };
+
+  const handleLoadWorkflow = (workflowData: any) => {
+    try {
+      loadWorkflow(workflowData);
+      console.log('✅ Workflow carregado com sucesso!');
+
+      // Resetar execução após carregar
+      setExecutionState('idle');
+      setProgress(0);
+      setNodeStatus({});
+      setNodeTimers({});
+      setCompletedNodes([]);
+      setWorkflowResults({});
+      setWorkflowError(null);
+      setInteractionData(null);
+      setSessionId(null);
+      setChatOpen(false);
+      clearChatMessages();
+    } catch (error) {
+      console.error('❌ Erro ao carregar workflow:', error);
+      alert(`Erro ao carregar workflow: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    }
   };
 
   // Preparar steps para o ExecuteProgress
@@ -575,17 +772,40 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
         </div>
 
         <div className="flex items-center space-x-3">
-            <button
-              onClick={resetExecution}
-              data-testid="reset-execution-button"
-              disabled={executionState === 'executing'}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700"
-            >
-              <i className="ri-close-line mr-2"></i>
-              Limpar
-            </button>
-          
+          {/* Botão Carregar Workflow */}
+          <button
+            onClick={handleOpenLoadModal}
+            disabled={executionState === 'executing'}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center space-x-2"
+            title="Carregar workflow de arquivo"
+          >
+            <RiFolderOpenLine className="w-4 h-4" />
+            <span>Carregar</span>
+          </button>
 
+          {/* Botão Salvar Workflow */}
+          <button
+            onClick={handleOpenSaveModal}
+            disabled={executionState === 'executing' || state.nodes.length === 0}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center space-x-2"
+            title="Salvar workflow em arquivo"
+          >
+            <RiSave3Line className="w-4 h-4" />
+            <span>Salvar</span>
+          </button>
+
+          {/* Botão Limpar */}
+          <button
+            onClick={resetExecution}
+            data-testid="reset-execution-button"
+            disabled={executionState === 'executing'}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700"
+          >
+            <i className="ri-close-line mr-2"></i>
+            Limpar
+          </button>
+
+          {/* Botão Executar */}
           <button
             onClick={executeWorkflow}
             data-testid="execute-workflow-button"
@@ -607,6 +827,115 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
           error={workflowError}
           onRetry={executionState === 'error' ? executeWorkflow : undefined}
         />
+      )}
+
+      {/* UI de Upload Pré-Execução */}
+      {executionState === 'awaiting_uploads' && uploadsNeeded.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+          <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <RiPlayCircleLine className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              Uploads Necessários
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Este workflow requer que você faça upload de {uploadsNeeded.length} arquivo(s) antes da execução.
+              Por favor, envie os arquivos necessários abaixo.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {uploadsNeeded.map((upload, index) => {
+              const key = `${upload.nodeNome}__${upload.variavelPrompt}`;
+              const uploadedKeys = uploadedDocuments[key] || [];
+
+              return (
+                <div key={key} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Upload {index + 1} de {uploadsNeeded.length}
+                    </h4>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      Nó: <span className="font-mono font-semibold">{upload.nodeNome}</span>
+                    </p>
+                  </div>
+
+                  <FileUploadDuringExecution
+                    quantidadeArquivos={upload.quantidadeArquivos}
+                    variavelPrompt={upload.variavelPrompt}
+                    onFilesUploaded={(keys) => {
+                      console.log(`Upload completo para ${key}:`, keys);
+                      setUploadedDocuments(prev => ({
+                        ...prev,
+                        [key]: keys
+                      }));
+                    }}
+                    uploadFile={async (file) => {
+                      const httpClient = new FetchAdapter();
+                      const gateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL, AUTH_TOKEN);
+                      return await gateway.uploadDocument(file);
+                    }}
+                  />
+
+                  {uploadedKeys.length > 0 && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+                      <i className="ri-checkbox-circle-line"></i>
+                      <span>{uploadedKeys.length} arquivo(s) pronto(s)</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex justify-between items-center">
+            <button
+              onClick={() => {
+                // Cancelar e voltar
+                setExecutionState('idle');
+                setUploadsNeeded([]);
+                setUploadedDocuments({});
+                if (onNavigationLock) {
+                  onNavigationLock(false);
+                }
+              }}
+              className="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancelar
+            </button>
+
+            <button
+              onClick={() => {
+                // Verificar se todos uploads foram feitos
+                const allUploaded = uploadsNeeded.every(upload => {
+                  const key = `${upload.nodeNome}__${upload.variavelPrompt}`;
+                  const keys = uploadedDocuments[key];
+
+                  // Se quantidade for "zero", não precisa de uploads
+                  if (upload.quantidadeArquivos === "zero") return true;
+
+                  // Caso contrário, verificar se há pelo menos um documento
+                  return keys && keys.length > 0;
+                });
+
+                if (allUploaded) {
+                  console.log("Todos uploads completos. Prosseguindo com execução...");
+                  proceedWithExecution();
+                } else {
+                  alert("Por favor, faça upload de todos os arquivos necessários antes de continuar.");
+                }
+              }}
+              disabled={!uploadsNeeded.every(upload => {
+                const key = `${upload.nodeNome}__${upload.variavelPrompt}`;
+                const keys = uploadedDocuments[key];
+                return upload.quantidadeArquivos === "zero" || (keys && keys.length > 0);
+              })}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600"
+            >
+              <RiPlayCircleLine className="w-5 h-5" />
+              Continuar com Execução
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ExecuteProgress - Mostrar apenas durante execução ou quando há progresso */}
@@ -666,10 +995,23 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
         <EmptyState  />
       )}
 
+      {/* Modais de Salvar e Carregar Workflow */}
+      <SaveWorkflowModal
+        isOpen={isSaveModalOpen}
+        onClose={handleCloseSaveModal}
+        workflowData={JSON.parse(getWorkflowJSON())}
+      />
+
+      <LoadWorkflowModal
+        isOpen={isLoadModalOpen}
+        onClose={handleCloseLoadModal}
+        onLoad={handleLoadWorkflow}
+      />
+
       {/* InteractionBot com suporte para interação de workflow */}
       {hasInteracaoUsuario && (
         <InteractionBot
-          onSendMessage={continueInteraction} 
+          onSendMessage={continueInteraction}
           interactionContext={interactionData}
           isWorkflowInteraction={executionState === 'awaiting_interaction'}
           isOpen={isChatOpen}

@@ -1,73 +1,119 @@
-# React + TypeScript + Vite
+# 📄 Gerador de Documentos
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicação **React + TypeScript** construída com **Vite**, voltada para geração personalizada de documentos.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Tecnologias Utilizadas
 
-## React Compiler
+- **React 19.1.1** – Biblioteca para construção de interfaces.
+- **TypeScript** – Superset do JavaScript com tipagem estática.
+- **Vite 7.1.7** – Ferramenta de build e desenvolvimento rápido.
+- **Tailwind CSS 3.4.17** – Framework CSS utilitário.
+- **Vitest 3.2.4** – Framework de testes unitários.
+- **React Router DOM 7.9.4** – Roteamento para aplicações React.
+- **Axios 1.12.2** – Cliente HTTP para requisições à API.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 📋 Pré-requisitos
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### ✔️ Versão do Node.js
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Este projeto requer **Node.js 18 ou superior**.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+**Versões recomendadas:**  
+- Node.js **18.x**  
+- Node.js **20.x** (LTS)  
+- Node.js **22.x** (LTS)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 🔍 Verificar versão instalada
+
+```bash
+node --version
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Como instalar/atualizar o Node.js:
+Windows/Mac: Baixe o instalador do [site oficial](https://nodejs.org/pt)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Linux: Use o gerenciador de pacotes da sua distribuição
+
+Via NVM (recomendado para desenvolvimento): [site oficial]( https://www.nvmnode.com/guide/introduction.html)
+
+[Como usar NVM](https://medium.com/reactbrasil/usando-nvm-no-windows-d46f018935ef)
+```bash
+# Instalar e usar Node.js 18
+nvm install 18
+nvm use 18
+
+# Ou para a versão mais recente LTS
+nvm install --lts
+nvm use --lts
 ```
+
+## ⚙️ Configuração do Projeto
+
+### 1. Clonar o Repositório
+
+```bash
+git clone <url-do-repositorio>
+cd gerador_documentos
+
+```
+
+### 2. Instalar Dependências
+```bash
+npm install
+```
+### 3. Configurar Variáveis de Ambiente
+Crie um arquivo .env na raiz do projeto com as seguintes variáveis:
+```bash
+VITE_API_URL=sua_url_da_api_principal
+VITE_API_URL_MINUTA=sua_url_da_api_minuta
+VITE_API_AUTH_TOKEN=seu_token_de_autenticacao
+```
+Exemplo:
+
+```bash
+VITE_API_URL=https://api.exemplo.com/v1
+VITE_API_URL_MINUTA=https://api.exemplo.com/minuta
+VITE_API_AUTH_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+```
+
+### 4. Scripts Disponíveis
+
+# Modo desenvolvimento
+```bash
+npm run dev
+````
+# Build para produção
+```bash
+npm run build
+````
+
+### 5. Executar Todos os Testes
+```bash
+npm run test
+````
+
+### 6. Executar Testes Específicos
+```bash
+
+# Testes da entidade Node
+npm run test:node
+
+# Testes do Grafo
+npm run test:grafo
+
+# Testes da Aresta
+npm run test:aresta
+
+# Testes do Workflow
+npm run test:workflow
+````
+
+Executar Testes com Coverage
+```bash
+npx vitest --coverage
+````

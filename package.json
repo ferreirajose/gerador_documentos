@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development vite",
     "local": "cross-env NODE_ENV=local vite",
-    "build": "cross-env NODE_ENV=production tsc -b && vite build",
+    "build": "cross-env NODE_ENV=production && vite build",
+    "start": "serve -s dist -l 5960",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest --dom",
@@ -18,12 +19,16 @@
   "dependencies": {
     "@radix-ui/react-progress": "^1.1.7",
     "@remixicon/react": "^4.6.0",
+    "@types/dagre": "^0.7.53",
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.12.2",
     "clsx": "^2.1.1",
+    "dagre": "^0.8.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.4",
+    "reactflow": "^11.11.4",
+    "serve": "^14.2.5",
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {

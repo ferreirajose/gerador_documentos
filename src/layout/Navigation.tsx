@@ -1,5 +1,5 @@
 import { ViewType } from '@/types/node';
-import { RiNodeTree, RiLink, RiCodeLine, RiPlayCircleFill, RiLockLine } from '@remixicon/react'
+import { RiNodeTree, RiLink, RiCodeLine, RiPlayCircleFill, RiLockLine, RiFlowChart } from '@remixicon/react'
 
 interface NavigationProps {
   currentView: ViewType;
@@ -12,6 +12,7 @@ export default function Navigation({ currentView, onViewChange, isNavigationLock
     { key: 'nodes' as ViewType, icon: RiNodeTree, label: 'Gerenciar Nós' },
     { key: 'connections' as ViewType, icon: RiLink, label: 'Gerenciar Conexões' },
     { key: 'output-configuration' as ViewType, icon: RiCodeLine, label: 'Configuração de Saídas'},
+    { key: 'visualization' as ViewType, icon: RiFlowChart, label: 'Visualizar Workflow' },
     { key: 'execution' as ViewType, icon: RiPlayCircleFill, label: 'Executar Workflow' },
   ];
 

@@ -255,6 +255,54 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
     }
   }
 
+  /**
+   * Faz upload de um documento e retorna a chave do documento
+   * Usado para upload durante execução de workflow
+   * @param file Arquivo a ser enviado
+   * @returns Promise com a chave do documento
+   * @throws Error se o upload falhar ou se a chave não for retornada
+   */
+  async uploadDocument(file: File): Promise<string> {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await this.httpClient.post<{ document_key: string }>(
+        `${this.baseUrl}/upload_documento/`,
+        formData,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${this.token}`,
+          },
+        }
+      );
+
+      if (!response || !response.document_key) {
+        throw new Error("Upload falhou: chave do documento não retornada pela API");
+      }
+
+      console.log(`Documento ${file.name} enviado com sucesso. Chave: ${response.document_key}`);
+      return response.document_key;
+
+    } catch (error: any) {
+      console.error("Erro ao fazer upload do documento:", error);
+
+      // Re-lançar erro com mensagem mais clara
+      if (error.status === 413) {
+        throw new Error("Arquivo muito grande. Tamanho máximo permitido excedido.");
+      } else if (error.status === 415) {
+        throw new Error("Formato de arquivo não suportado.");
+      } else if (error.status === 401 || error.status === 403) {
+        throw new Error("Não autorizado. Verifique suas credenciais.");
+      } else {
+        throw new Error(
+          error.message || "Erro desconhecido ao fazer upload do arquivo"
+        );
+      }
+    }
+  }
+
   private handleError(error: any) {
     if (error.name === "AbortError" || error.code === "ERR_CANCELED" || error.cancelled) {
       return {

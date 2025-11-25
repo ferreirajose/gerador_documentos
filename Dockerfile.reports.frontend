@@ -1,0 +1,46 @@
+# --- Estágio 1: Builder ---
+FROM node:20-alpine3.19 AS builder
+
+# 1. Declare os argumentos que você espera receber do docker-compose
+ARG VITE_API_URL
+ARG VITE_API_URL_MINUTA
+ARG VITE_API_AUTH_TOKEN
+
+# 2. Transforme esses argumentos em variáveis de ambiente reais
+#    para que os comandos RUN possam acessá-las
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_API_URL_MINUTA=$VITE_API_URL_MINUTA
+ENV VITE_API_AUTH_TOKEN=$VITE_API_AUTH_TOKEN
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY . .
+
+# 3. Agora, quando o build rodar, ele terá acesso às variáveis e as substituirá no código
+RUN npm run build
+
+
+# --- Estágio 2: Production ---
+# Este é o estágio final. Ele começa do zero com uma imagem limpa do Node.
+FROM node:20-alpine3.19
+
+WORKDIR /app
+
+# Copia os package.json para saber quais dependências de PRODUÇÃO instalar
+COPY package.json package-lock.json* ./
+
+# Instala SOMENTE as dependências de produção + o 'serve'
+RUN npm install --omit=dev serve
+
+# Copia a pasta 'dist' que foi gerada no estágio 'builder'
+COPY --from=builder /app/dist ./dist
+
+# Expõe a porta onde a aplicação vai rodar
+EXPOSE 5960
+
+# O comando final! Roda o script 'start' que criamos.
+# Este comando inicia o servidor e fica rodando, mantendo o contêiner ativo.
+CMD ["npm", "run", "start"]
