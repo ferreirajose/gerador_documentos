@@ -1,5 +1,6 @@
 import { useChatBotController } from '@/hooks/useChatBotController';
-import { RiCloseFill, RiRobotFill, RiSendPlaneFill, RiUserFill } from '@remixicon/react'
+import { renderMarkdown } from '@/libs/util';
+import { RiCloseFill, RiRobotFill, RiSendPlaneFill, RiUserFill, RiExpandDiagonalLine, RiCollapseDiagonalLine } from '@remixicon/react'
 import { useEffect, useState } from 'react'
 
 interface InteractionBotProps {
@@ -35,14 +36,12 @@ export function InteractionBot({
     } = useChatBotController();
 
      const [internalIsOpen, setInternalIsOpen] = useState(false);
+     const [isExpanded, setIsExpanded] = useState(false);
     
     // Usar controle externo ou interno do estado isOpen
     const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
     const setIsOpen = externalSetIsOpen !== undefined ? externalSetIsOpen : setInternalIsOpen;
     const safeMessages = Array.isArray(messages) ? messages : [];
-
-    
-
 
     // Efeito para abrir automaticamente quando necessário
     useEffect(() => {
@@ -53,7 +52,6 @@ export function InteractionBot({
     }, [autoOpen, isOpen, setIsOpen]);
 
     // Adicionar mensagem de contexto de workflow quando houver interação
-    // InteractionBot.tsx - Solução mais robusta
     useEffect(() => {
         if (isWorkflowInteraction && interactionContext && isOpen) {
             console.log("Interação do workflow detectada:", interactionContext);
@@ -77,15 +75,6 @@ export function InteractionBot({
             }
         }
     }, [isWorkflowInteraction, interactionContext, isOpen]);
-
-    // CORREÇÃO: Remover completamente este useEffect que causa o loop
-    // ⚠️ REMOVER ESTE BLOCO ⚠️
-    // useEffect(() => {
-    //     if (!isOpen && messages.length > 0) {
-    //         console.log("Limpando mensagens ao fechar chat");
-    //         clearMessages();
-    //     }
-    // }, []); // Remover clearMessages das dependências
 
     // Função para enviar mensagem
     const handleSend = () => {
@@ -113,7 +102,11 @@ export function InteractionBot({
     // Função para fechar com ESC - não permite fechar durante interação de workflow
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Escape' && !isWorkflowInteraction) {
-            setIsOpen(false);
+            if (isExpanded) {
+                setIsExpanded(false);
+            } else {
+                setIsOpen(false);
+            }
         }
     }
 
@@ -121,10 +114,14 @@ export function InteractionBot({
     const handleCloseChat = () => {
         if (!isWorkflowInteraction) {
             // Limpar mensagens apenas quando fechar manualmente (não durante workflow)
-            console.log("Fechando chat e limpando mensagens");
             clearMessages();
             setIsOpen(false);
         }
+    }
+
+    // Função para alternar entre modo expandido e normal
+    const handleToggleExpand = () => {
+        setIsExpanded(!isExpanded);
     }
 
     // Última mensagem para aria-live
@@ -158,7 +155,7 @@ export function InteractionBot({
             aria-label={isWorkflowInteraction ? "Chat para interação com workflow" : "Chat com assistente de workflow"}
             aria-modal="true"
             onKeyDown={handleKeyDown}
-            className="fixed bottom-6 right-6 w-96 h-[32rem] bg-card dark:bg-card/95 border border-border dark:border-gray-700 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-4 duration-300 backdrop-blur-sm dark:shadow-xl"
+            className={`fixed ${isExpanded ? 'inset-4' : 'bottom-6 right-6 w-96 h-[32rem]'} bg-card dark:bg-card/95 border border-border dark:border-gray-700 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-4 duration-300 backdrop-blur-sm dark:shadow-xl`}
         >
             {/* Área para anunciar novas mensagens para screen readers */}
             <div 
@@ -185,6 +182,7 @@ export function InteractionBot({
                     <div>
                         <h2 className="font-semibold block text-lg">
                             {isWorkflowInteraction ? 'Interação com Workflow' : 'Assistente de Workflow'}
+                            {isExpanded && ' (Expandido)'}
                         </h2>
                         <span className="text-xs opacity-80">
                             {isWorkflowInteraction ? 'Aguardando sua resposta' : 'Online'}
@@ -192,6 +190,20 @@ export function InteractionBot({
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {/* Botão de expandir/recolher */}
+                    <button
+                        onClick={handleToggleExpand}
+                        className="w-8 h-8 bg-white/20 hover:bg-white/30 dark:bg-white/10 dark:hover:bg-white-20 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-purple-600 dark:focus:ring-offset-purple-700"
+                        aria-label={isExpanded ? "Recolher chat" : "Expandir chat"}
+                    >
+                        {isExpanded ? (
+                            <RiCollapseDiagonalLine className="w-4 h-4" aria-hidden="true" />
+                        ) : (
+                            <RiExpandDiagonalLine className="w-4 h-4" aria-hidden="true" />
+                        )}
+                        <span className="sr-only">{isExpanded ? "Recolher" : "Expandir"}</span>
+                    </button>
+
                     {/* Botão de fechar - desabilitado durante interação de workflow */}
                     {!isWorkflowInteraction && (
                         <button
@@ -272,7 +284,15 @@ export function InteractionBot({
                                     : "bg-muted dark:bg-gray-800 text-foreground dark:text-gray-100 rounded-bl-md border dark:border-gray-700 shadow-sm"
                             }`}
                         >
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                            {
+                                message.sender === "bot" ? (
+                                    <div className="text-sm leading-relaxed whitespace-pre-wrap"
+                                        dangerouslySetInnerHTML={{ __html: renderMarkdown(message.text) }} />
+                                ) : (
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                                )
+                            }   
+                           
                             <span className={`text-xs opacity-70 mt-2 block text-right ${
                                 message.sender === "user" 
                                     ? isWorkflowInteraction ? "text-purple-100" : "text-blue-100"
