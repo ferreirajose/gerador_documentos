@@ -62,7 +62,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, onClose }) => {
   };
 
   return (
-    <div className="absolute top-4 right-4 w-96 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-300/50 dark:border-gray-600/50 overflow-hidden z-20">
+    <div className="absolute bottom-2 right-4 w-96 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-300/50 dark:border-gray-600/50 overflow-hidden z-20">
       {/* Header com gradiente */}
       <div className={`bg-gradient-to-r ${
         nodeTypeColor === 'green' ? 'from-green-500 to-green-600' :
@@ -153,7 +153,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, onClose }) => {
       </div>
 
       {/* Conteúdo das tabs */}
-      <div className="p-4 max-h-[calc(100vh-280px)] overflow-y-auto space-y-4">
+      <div className="p-4 max-h-[calc(100vh-300px)] overflow-y-auto space-y-4">
         
         {/* Tab: Visão Geral */}
         {activeTab === 'overview' && (
