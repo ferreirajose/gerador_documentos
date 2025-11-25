@@ -65,10 +65,10 @@ export default function ConnectionManager() {
 
         <button
           onClick={() => setShowCreateForm(true)}
-          disabled={state.nodes.length < 2}
+          disabled={state.nodes.length < 1}
           data-testid="create-connection-button"
           className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 whitespace-nowrap ${
-            state.nodes.length < 2
+            state.nodes.length < 1
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400'
               : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
           }`}

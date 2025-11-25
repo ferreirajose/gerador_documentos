@@ -487,11 +487,12 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                             </label>
                                             <select
                                                 value={entrada.origem}
-                                                onChange={(e) => updateEntrada(index, 'origem', e.target.value as "documento_anexado" | "resultado_no_anterior")}
+                                                onChange={(e) => updateEntrada(index, 'origem', e.target.value as "documento_anexado" | "resultado_no_anterior" | "documento_upload_execucao")}
                                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-600 dark:text-white"
                                             >
                                                 <option value="documento_anexado">Documento Anexado</option>
                                                 <option value="resultado_no_anterior">Resultado do Anterior</option>
+                                                <option value="documento_upload_execucao">Upload Durante Execução</option>
                                             </select>
                                         </div>
 
@@ -547,6 +548,27 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                         </option>
                                                     ))}
                                                 </select>
+                                            </div>
+                                        )}
+
+                                        {entrada.origem === 'documento_upload_execucao' && (
+                                            <div id="input-quantidade-arquivos">
+                                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                                    Quantidade de Arquivos
+                                                </label>
+                                                <select
+                                                    value={entrada.quantidade_arquivos || ''}
+                                                    onChange={(e) => updateEntrada(index, 'quantidade_arquivos', e.target.value as "zero" | "um" | "varios")}
+                                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8 dark:bg-gray-600 dark:text-white"
+                                                    required
+                                                >
+                                                    <option value="zero">Selecione a quantidade</option>
+                                                    <option value="um">Um único arquivo</option>
+                                                    <option value="varios">Vários arquivos</option>
+                                                </select>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    Os arquivos serão solicitados durante a execução do workflow
+                                                </p>
                                             </div>
                                         )}
                                     </div>

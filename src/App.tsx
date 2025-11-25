@@ -10,11 +10,11 @@ function App() {
     <ThemeProvider defaultTheme="system" storageKey="app-theme">
       <WorkflowProvider>
         <Router>
-          <Routes>
-            {/* <Route path="/home" element={<Home />} /> */}
-            <Route path="/" element={<Dashboard />} />
-            {/* Adicione outras rotas conforme necessário */}
-          </Routes>
+            <Routes>
+              {/* <Route path="/home" element={<Home />} /> */}
+              <Route path="/" element={<Dashboard />} />
+              {/* Adicione outras rotas conforme necessário */}
+            </Routes>
         </Router>
       </WorkflowProvider>
     </ThemeProvider>

@@ -44,7 +44,7 @@ export interface FormData {
 const initialFormData: FormData = {
   nome: "",
   entrada_grafo: false,
-  modelo_llm: "o3",
+  modelo_llm: "gemini-2.5-pro", // Alinhado com default do backend (65,535 tokens de saída)
   temperatura: 0.3,
   prompt: "",
   entradas: [],
