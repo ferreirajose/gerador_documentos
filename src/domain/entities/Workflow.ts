@@ -24,23 +24,36 @@ export class Workflow {
       this.formato_resultado_final.validate(this.grafo.nos);
     }
 
-    // Valida referências de documentos nos nós
+    // Valida referências de documentos nos nós (apenas se houver entradas)
     this.grafo.nos.forEach(node => {
-      node.entradas.forEach(input => {
-        if (input.origem === 'documento_anexado' && input.chave_documento_origem) {
-          const documentoExiste = this.documentos_anexados.some(
-            doc => doc.chave === input.chave_documento_origem
-          );
-          if (!documentoExiste) {
-            throw new Error(`Nó '${node.nome}': documento '${input.chave_documento_origem}' não encontrado em documentos_anexados`);
+      if (node.entradas && node.entradas.length > 0) {
+        node.entradas.forEach(input => {
+          if (input.origem === 'documento_anexado' && input.chave_documento_origem) {
+            const documentoExiste = this.documentos_anexados.some(
+              doc => doc.chave === input.chave_documento_origem
+            );
+            if (!documentoExiste) {
+              throw new Error(`Nó '${node.nome}': documento '${input.chave_documento_origem}' não encontrado em documentos_anexados`);
+            }
           }
-        }
-      });
+        });
+      }
     });
 
-    // Valida variáveis no prompt (código existente mantido)
+    // Valida variáveis no prompt (apenas se houver entradas)
     this.grafo.nos.forEach(node => {
       const promptVariables = this.extractPromptVariables(node.prompt);
+      
+      // Se não há variáveis no prompt, não precisa validar
+      if (promptVariables.length === 0) {
+        return;
+      }
+
+      // Se há variáveis no prompt mas não há entradas, é um erro
+      if (!node.entradas || node.entradas.length === 0) {
+        throw new Error(`Nó '${node.nome}': possui variáveis no prompt mas não tem entradas configuradas: ${promptVariables.join(', ')}`);
+      }
+
       const inputVariables = node.entradas.map(input => input.variavel_prompt);
       
       const missingVariables = promptVariables.filter(variable => 
@@ -51,7 +64,6 @@ export class Workflow {
         throw new Error(`Nó '${node.nome}': variáveis no prompt sem entrada correspondente: ${missingVariables.join(', ')}`);
       }
     });
-  
   }
 
   private extractPromptVariables(prompt: string): string[] {
