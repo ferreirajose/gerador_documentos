@@ -8,6 +8,7 @@ export interface UploadedFile {
   status: 'pending' | 'uploading' | 'completed' | 'error';
   errorMessage?: string;
   documentKey?: string; // Chave retornada pela API após upload
+  uuid_documento?: string;
 }
 
 export interface FileUploadDuringExecutionProps {
@@ -109,20 +110,29 @@ export function FileUploadDuringExecution({
       const file = selectedFiles[i];
       const fileRecord = newFiles[i];
 
+      // No trecho do upload dentro do FileUploadDuringExecution
       try {
         // Atualizar status para uploading
         setFiles(prev => prev.map(f =>
           f.id === fileRecord.id ? { ...f, status: 'uploading' as const } : f
         ));
 
-        // Fazer upload
+        // Fazer upload - agora retorna o uuid_documento
         const documentKey = await uploadFile(file);
+
+        // Se você quiser manter informações adicionais, precisaria modificar a API
+        // Para este caso, vamos manter apenas o documentKey (uuid_documento)
 
         // Atualizar com sucesso
         setFiles(prev => {
           const updated = prev.map(f =>
             f.id === fileRecord.id
-              ? { ...f, status: 'completed' as const, documentKey }
+              ? {
+                ...f,
+                status: 'completed' as const,
+                documentKey,
+                // Se quiser adicionar mais propriedades aqui, precisaria modificar a interface
+              }
               : f
           );
 
@@ -143,10 +153,10 @@ export function FileUploadDuringExecution({
         setFiles(prev => prev.map(f =>
           f.id === fileRecord.id
             ? {
-                ...f,
-                status: 'error' as const,
-                errorMessage: error instanceof Error ? error.message : 'Erro ao fazer upload'
-              }
+              ...f,
+              status: 'error' as const,
+              errorMessage: error instanceof Error ? error.message : 'Erro ao fazer upload'
+            }
             : f
         ));
       }
