@@ -1,6 +1,6 @@
 export interface Entrada {
   variavel_prompt: string;
-  origem: "documento_anexado" | "resultado_no_anterior" | "documento_upload_execucao";
+  origem: "documento_anexado" | "resultado_no_anterior" | "documento_upload_execucao" | '';
 
   // Campos para documento pré-anexado (origem: "documento_anexado")
   chave_documento_origem?: string;
@@ -14,6 +14,7 @@ export interface Entrada {
   // Campo comum
   executar_em_paralelo?: boolean;
 }
+
 export interface InteracaoComUsuario {
   permitir_usuario_finalizar: boolean;
   ia_pode_concluir: boolean;
@@ -21,6 +22,7 @@ export interface InteracaoComUsuario {
   maximo_de_interacoes: number
   modo_de_saida: "ultima_mensagem" | "historico_completo";
 }
+
 export interface NodeOutput {
   nome: string;
   formato: "markdown" | "json";
@@ -63,6 +65,11 @@ export default class NodeEntitie {
       throw new Error(`Já existe um nó com o nome "${this.nome}"`);
     }
 
+    // Se não há entradas, não precisa validar campos específicos
+    if (this.entradas.length === 0) {
+      return;
+    }
+
     // Apenas uma entrada por nó pode ter executar_em_paralelo: true
     const parallelInputs = this.entradas.filter(
       (input) => input.executar_em_paralelo
@@ -75,6 +82,14 @@ export default class NodeEntitie {
 
     // Validação dos campos de entrada de acordo com a origem
     this.entradas.forEach((entrada, index) => {
+      // Valida se a variável do prompt está definida
+      if (!entrada.variavel_prompt || entrada.variavel_prompt.trim() === "") {
+        throw new Error(
+          `Entrada ${index + 1} do nó '${this.nome}': campo 'variavel_prompt' é obrigatório`
+        );
+      }
+
+      // Valida campos específicos baseados na origem
       if (entrada.origem === "documento_upload_execucao") {
         if (!entrada.quantidade_arquivos) {
           throw new Error(

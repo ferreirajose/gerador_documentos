@@ -263,7 +263,7 @@ export function useNodeManagerController() {
   const addEntrada = () => {
     const novaEntrada: Entrada = {
       variavel_prompt: "",
-      origem: "documento_anexado",
+      origem: "",
       chave_documento_origem: "",
       executar_em_paralelo: false,
     };
