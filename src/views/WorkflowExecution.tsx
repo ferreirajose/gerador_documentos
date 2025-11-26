@@ -3,7 +3,6 @@ import { RiChat3Line, RiLoader4Line, RiPlayCircleLine, RiRefreshLine, RiRestartL
 import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
 import FetchAdapter from '@/infra/FetchAdapter';
 import { GerarDocCallbacks } from '@/types/node';
-//import { WORFLOW_INTER_PIADA, WORFLOW_MINUTA_INTERACAO_SEM_DOC, WORFLOW_MINUTA_INTERACAO_COM_DOC, WORFLOW_MOCK } from '@/mock/workflow-mock';
 
 import { ExecuteProgress } from '@/components/common/ExecuteProgress';
 import { useWorkflow } from '@/context/WorkflowContext';
@@ -16,6 +15,7 @@ import SaveWorkflowModal from '@/components/modals/SaveWorkflowModal';
 import LoadWorkflowModal from '@/components/modals/LoadWorkflowModal';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
+const BASE_URL_DOC_PARSER = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
 
 interface NodeTimer {
@@ -606,6 +606,8 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
         }
       };
 
+      console.log("WORKFLOW JSON", workflowJson);
+
       await workFlowGateway.gerarRelatorio(workflowJson, handleOnEvent);
 
     } catch (error) {
@@ -871,8 +873,23 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
                     }}
                     uploadFile={async (file) => {
                       const httpClient = new FetchAdapter();
-                      const gateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL, AUTH_TOKEN);
-                      return await gateway.uploadDocument(file);
+                      const gateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL_DOC_PARSER, AUTH_TOKEN);
+                      
+                      try {
+                        // Chama uploadAndProcess que retorna ResponseData
+                        const response = await gateway.uploadAndProcess(file);
+                        
+                        // Verifica se a resposta foi bem-sucedida e tem dados
+                        if (response.success && response.data) {
+                          // Retorna o uuid_documento que será usado como documentKey
+                          return response.data.uuid_documento;
+                        } else {
+                          throw new Error(response.message || 'Erro desconhecido no upload');
+                        }
+                      } catch (error) {
+                        console.error('Erro no upload do arquivo:', error);
+                        throw error;
+                      }
                     }}
                   />
 
