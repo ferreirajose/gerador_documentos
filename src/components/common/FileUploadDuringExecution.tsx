@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
-import { RiUploadCloudLine, RiFileTextLine, RiDeleteBin6Line, RiCheckLine, RiCloseLine, RiLoaderLine } from '@remixicon/react';
+import { RiUploadCloudLine, RiFileTextLine, RiDeleteBin6Line, RiCheckLine, RiCloseLine, RiLoaderLine, RiRefreshLine } from '@remixicon/react';
+import { formatFileSize } from '@/libs/util';
 
 export interface UploadedFile {
   id: string;
   name: string;
+  rawFile: File; // Armazenar o arquivo original para o retry
   size: number;
   status: 'pending' | 'uploading' | 'completed' | 'error';
   errorMessage?: string;
@@ -66,14 +68,6 @@ export function FileUploadDuringExecution({
     return null;
   }
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
 
@@ -99,6 +93,7 @@ export function FileUploadDuringExecution({
     const newFiles: UploadedFile[] = selectedFiles.map(file => ({
       id: crypto.randomUUID(),
       name: file.name,
+      rawFile: file,
       size: file.size,
       status: 'pending' as const
     }));
@@ -106,65 +101,64 @@ export function FileUploadDuringExecution({
     setFiles(prev => [...prev, ...newFiles]);
 
     // Fazer upload de cada arquivo
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i];
-      const fileRecord = newFiles[i];
-
-      // No trecho do upload dentro do FileUploadDuringExecution
-      try {
-        // Atualizar status para uploading
-        setFiles(prev => prev.map(f =>
-          f.id === fileRecord.id ? { ...f, status: 'uploading' as const } : f
-        ));
-
-        // Fazer upload - agora retorna o uuid_documento
-        const documentKey = await uploadFile(file);
-
-        // Se você quiser manter informações adicionais, precisaria modificar a API
-        // Para este caso, vamos manter apenas o documentKey (uuid_documento)
-
-        // Atualizar com sucesso
-        setFiles(prev => {
-          const updated = prev.map(f =>
-            f.id === fileRecord.id
-              ? {
-                ...f,
-                status: 'completed' as const,
-                documentKey,
-                // Se quiser adicionar mais propriedades aqui, precisaria modificar a interface
-              }
-              : f
-          );
-
-          // Notificar sobre arquivos completos
-          const completedKeys = updated
-            .filter(f => f.status === 'completed' && f.documentKey)
-            .map(f => f.documentKey!);
-
-          if (completedKeys.length > 0) {
-            onFilesUploaded(completedKeys);
-          }
-
-          return updated;
-        });
-
-      } catch (error) {
-        // Atualizar com erro
-        setFiles(prev => prev.map(f =>
-          f.id === fileRecord.id
-            ? {
-              ...f,
-              status: 'error' as const,
-              errorMessage: error instanceof Error ? error.message : 'Erro ao fazer upload'
-            }
-            : f
-        ));
-      }
-    }
+    await Promise.all(newFiles.map(fileRecord => uploadSingleFile(fileRecord)));
 
     // Limpar input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadSingleFile = async (fileRecord: UploadedFile) => {
+    try {
+      // Atualizar status para uploading
+      setFiles(prev => prev.map(f =>
+        f.id === fileRecord.id ? { ...f, status: 'uploading' as const, errorMessage: undefined } : f
+      ));
+
+      // Fazer upload
+      const documentKey = await uploadFile(fileRecord.rawFile);
+
+      // Atualizar com sucesso
+      setFiles(prev => {
+        const updated = prev.map(f =>
+          f.id === fileRecord.id
+            ? {
+              ...f,
+              status: 'completed' as const,
+              documentKey,
+            }
+            : f
+        );
+
+        // Notificar sobre arquivos completos
+        const completedKeys = updated
+          .filter(f => f.status === 'completed' && f.documentKey)
+          .map(f => f.documentKey!);
+
+        onFilesUploaded(completedKeys);
+
+        return updated;
+      });
+
+    } catch (error) {
+      // Atualizar com erro
+      setFiles(prev => prev.map(f =>
+        f.id === fileRecord.id
+          ? {
+            ...f,
+            status: 'error' as const,
+            errorMessage: error instanceof Error ? error.message : 'Erro ao fazer upload'
+          }
+          : f
+      ));
+    }
+  };
+
+  const handleRetryUpload = (fileId: string) => {
+    const fileToRetry = files.find(f => f.id === fileId);
+    if (fileToRetry) {
+      uploadSingleFile(fileToRetry);
     }
   };
 
@@ -277,15 +271,28 @@ export function FileUploadDuringExecution({
                 </div>
               </div>
 
-              {/* Botão de remover */}
-              <button
-                onClick={() => handleRemoveFile(file.id)}
-                disabled={file.status === 'uploading'}
-                className="ml-2 p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
-                aria-label={`Remover ${file.name}`}
-              >
-                <RiDeleteBin6Line className="w-4 h-4" aria-hidden="true" />
-              </button>
+              <div className="flex items-center">
+                {/* Botão de retry */}
+                {file.status === 'error' && (
+                  <button
+                    onClick={() => handleRetryUpload(file.id)}
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                    aria-label={`Tentar novamente o upload de ${file.name}`}
+                  >
+                    <RiRefreshLine className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                )}
+
+                {/* Botão de remover */}
+                <button
+                  onClick={() => handleRemoveFile(file.id)}
+                  disabled={file.status === 'uploading'}
+                  className="ml-2 p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
+                  aria-label={`Remover ${file.name}`}
+                >
+                  <RiDeleteBin6Line className="w-4 h-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
