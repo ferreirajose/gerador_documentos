@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { RiUploadCloudLine, RiFileTextLine, RiDeleteBin6Line, RiCheckLine, RiCloseLine, RiLoaderLine, RiRefreshLine } from '@remixicon/react';
+import { RiUploadCloudLine, RiFileTextLine, RiDeleteBin6Line, RiCheckLine, RiCloseLine, RiRefreshLine, RiLoader4Line } from '@remixicon/react';
 import { formatFileSize } from '@/libs/util';
 
 export interface UploadedFile {
@@ -246,7 +246,7 @@ export function FileUploadDuringExecution({
                     <RiCheckLine className="w-5 h-5 text-green-500 dark:text-green-400 flex-shrink-0" aria-label="Upload completo" />
                   )}
                   {file.status === 'uploading' && (
-                    <RiLoaderLine className="w-5 h-5 text-blue-500 dark:text-blue-400 animate-spin flex-shrink-0" aria-label="Fazendo upload" />
+                    <RiLoader4Line className="w-5 h-5 text-blue-500 dark:text-blue-400 animate-spin flex-shrink-0" aria-label="Fazendo upload" />
                   )}
                   {file.status === 'error' && (
                     <RiCloseLine className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0" aria-label="Erro no upload" />
