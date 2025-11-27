@@ -5,6 +5,7 @@ import { DocumentoAnexado } from '@/domain/entities/Workflow';
 import { FormatoResultadoFinal, Combinacao } from '@/domain/entities/ResultadoFinal'; 
 import { Grafo } from '@/domain/entities/Grafo';
 import { Workflow } from '@/domain/entities/Workflow';
+import { WorkflowResult, NodeTimer, WorkflowErrorData, InteractionData, UploadNeeded } from '@/types/workflow';
 
 export interface NodeState extends Omit<NodeEntitie, 'validate'> {
   id: string;
@@ -12,6 +13,21 @@ export interface NodeState extends Omit<NodeEntitie, 'validate'> {
 
 export interface Connection extends Aresta {
   id: string;
+}
+
+// Adicione esta interface ao WorkflowContext.tsx
+export interface WorkflowExecutionResult {
+  executionState: 'idle' | 'executing' | 'completed' | 'error' | 'awaiting_interaction' | 'awaiting_uploads';
+  progress: number;
+  workflowResults: WorkflowResult;
+  nodeStatus: Record<string, string>;
+  nodeTimers: Record<string, NodeTimer>;
+  workflowError: WorkflowErrorData | null;
+  interactionData: InteractionData | null;
+  sessionId: string | null;
+  uploadsNeeded: UploadNeeded[];
+  completedNodes: string[];
+  uploadedDocuments: Record<string, string[]>;
 }
 
 // Adicionar interface para mensagens do chat
@@ -33,6 +49,8 @@ export interface WorkflowState {
   documentos_anexados: DocumentoAnexado[];
   formato_resultado_final?: FormatoResultadoFinal;
   chat: ChatState; // Novo estado do chat
+  executionResult: WorkflowExecutionResult; // Novo estado para resultados
+
 }
 
 // Atualize os tipos de ação
@@ -52,7 +70,21 @@ export type WorkflowAction =
   | { type: 'SET_CHAT_INPUT_VALUE'; payload: string }
   | { type: 'SET_CHAT_OPEN'; payload: boolean }
   | { type: 'CLEAR_CHAT_MESSAGES' }
-  | { type: 'SET_CHAT_MESSAGES'; payload: ChatMessage[] };
+  | { type: 'SET_CHAT_MESSAGES'; payload: ChatMessage[] }
+  | { type: 'SET_EXECUTION_STATE'; payload: 'idle' | 'executing' | 'completed' | 'error' | 'awaiting_interaction' | 'awaiting_uploads' }
+  | { type: 'SET_EXECUTION_PROGRESS'; payload: number }
+  | { type: 'SET_WORKFLOW_RESULTS'; payload: WorkflowResult }
+  | { type: 'SET_NODE_STATUS'; payload: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>) }
+  | { type: 'SET_NODE_TIMERS'; payload: Record<string, NodeTimer> | ((prev: Record<string, NodeTimer>) => Record<string, NodeTimer>) }
+  | { type: 'SET_WORKFLOW_ERROR'; payload: WorkflowErrorData | null }
+  | { type: 'SET_INTERACTION_DATA'; payload: InteractionData | null }
+  | { type: 'SET_SESSION_ID'; payload: string | null }
+  | { type: 'SET_UPLOADS_NEEDED'; payload: UploadNeeded[] }
+  | { type: 'SET_UPLOADED_DOCUMENTS'; payload: Record<string, string[]> }
+  | { type: 'SET_COMPLETED_NODES'; payload: string[] | ((prev: string[]) => string[]) }
+  | { type: 'RESET_EXECUTION_RESULT' }
+  | { type: 'UPDATE_EXECUTION_RESULT'; payload: Partial<WorkflowExecutionResult> };
+
 
 
 export const initialState: WorkflowState = {
@@ -64,6 +96,19 @@ export const initialState: WorkflowState = {
     messages: [],
     inputValue: '',
     isChatOpen: false
+  },
+  executionResult: {
+    executionState: 'idle',
+    progress: 0,
+    workflowResults: {},
+    nodeStatus: {},
+    nodeTimers: {},
+    workflowError: null,
+    interactionData: null,
+    sessionId: null,
+    uploadsNeeded: [],
+    completedNodes: [],
+    uploadedDocuments: {}
   }
 };
 
@@ -139,7 +184,8 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
 
     case 'RESET_WORKFLOW':
       return {
-        ...initialState
+        ...initialState,
+        executionResult: initialState.executionResult
       }
 
     case 'LOAD_WORKFLOW':
@@ -197,6 +243,130 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         }
       };
 
+     // Novos casos para execução
+    case 'SET_EXECUTION_STATE':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          executionState: action.payload
+        }
+      };
+
+    case 'SET_EXECUTION_PROGRESS':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          progress: action.payload
+        }
+      };
+
+    case 'SET_WORKFLOW_RESULTS':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          workflowResults: action.payload
+        }
+      };
+
+    case 'SET_NODE_STATUS':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          nodeStatus:
+            typeof action.payload === 'function'
+              ? action.payload(state.executionResult.nodeStatus)
+              : action.payload
+        }
+      };
+
+    case 'SET_NODE_TIMERS':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          nodeTimers:
+            typeof action.payload === 'function'
+              ? action.payload(state.executionResult.nodeTimers)
+              : action.payload
+        }
+      };
+
+    case 'SET_WORKFLOW_ERROR':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          workflowError: action.payload
+        }
+      };
+
+    case 'SET_INTERACTION_DATA':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          interactionData: action.payload
+        }
+      };
+
+    case 'SET_SESSION_ID':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          sessionId: action.payload
+        }
+      };
+
+    case 'SET_UPLOADS_NEEDED':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          uploadsNeeded: action.payload
+        }
+      };
+
+    case 'SET_UPLOADED_DOCUMENTS':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          uploadedDocuments: action.payload
+        }
+      };
+
+    case 'SET_COMPLETED_NODES':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          completedNodes:
+            typeof action.payload === 'function'
+              ? action.payload(state.executionResult.completedNodes)
+              : action.payload
+        }
+      };
+
+    case 'RESET_EXECUTION_RESULT':
+      return {
+        ...state,
+        executionResult: initialState.executionResult
+      };
+
+    case 'UPDATE_EXECUTION_RESULT':
+      return {
+        ...state,
+        executionResult: {
+          ...state.executionResult,
+          ...action.payload
+        }
+      };
+
     default:
       return state;
   }
@@ -227,6 +397,21 @@ interface WorkflowContextType {
   loadWorkflow: (workflowData: any) => void;
   getWorkflowJSON: () => string;
   validateWorkflow: () => { isValid: boolean; errors: string[] };
+
+   // Novas funções para execução
+  setExecutionState: (state: WorkflowExecutionResult['executionState']) => void;
+  setExecutionProgress: (progress: number) => void;
+  setWorkflowResults: (results: WorkflowResult) => void;
+  setNodeStatus: (status: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
+  setNodeTimers: (timers: Record<string, NodeTimer> | ((prev: Record<string, NodeTimer>) => Record<string, NodeTimer>)) => void;
+  setWorkflowError: (error: WorkflowErrorData | null) => void;
+  setInteractionData: (data: InteractionData | null) => void;
+  setSessionId: (id: string | null) => void;
+  setUploadsNeeded: (uploads: UploadNeeded[]) => void;
+  setUploadedDocuments: (documents: Record<string, string[]>) => void;
+  setCompletedNodes: (nodes: string[] | ((prev: string[]) => string[])) => void;
+  resetExecutionResult: () => void;
+  updateExecutionResult: (result: Partial<WorkflowExecutionResult>) => void;
 }
 
 const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined);
@@ -282,6 +467,60 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
   const resetWorkflow = () => {
     dispatch({ type: 'RESET_WORKFLOW' });
   };
+
+   // Novas funções para execução
+  const setExecutionState = (executionState: WorkflowExecutionResult['executionState']) => {
+    dispatch({ type: 'SET_EXECUTION_STATE', payload: executionState });
+  };
+
+  const setExecutionProgress = (progress: number) => {
+    dispatch({ type: 'SET_EXECUTION_PROGRESS', payload: progress });
+  };
+
+  const setWorkflowResults = (workflowResults: WorkflowResult) => {
+    dispatch({ type: 'SET_WORKFLOW_RESULTS', payload: workflowResults });
+  };
+
+  const setNodeStatus = (nodeStatus: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
+    dispatch({ type: 'SET_NODE_STATUS', payload: nodeStatus });
+  };
+
+  const setNodeTimers = (nodeTimers: Record<string, NodeTimer> | ((prev: Record<string, NodeTimer>) => Record<string, NodeTimer>)) => {
+    dispatch({ type: 'SET_NODE_TIMERS', payload: nodeTimers });
+  };
+
+  const setWorkflowError = (workflowError: WorkflowErrorData | null) => {
+    dispatch({ type: 'SET_WORKFLOW_ERROR', payload: workflowError });
+  };
+
+  const setInteractionData = (interactionData: InteractionData | null) => {
+    dispatch({ type: 'SET_INTERACTION_DATA', payload: interactionData });
+  };
+
+  const setSessionId = (sessionId: string | null) => {
+    dispatch({ type: 'SET_SESSION_ID', payload: sessionId });
+  };
+
+  const setUploadsNeeded = (uploadsNeeded: UploadNeeded[]) => {
+    dispatch({ type: 'SET_UPLOADS_NEEDED', payload: uploadsNeeded });
+  };
+
+  const setUploadedDocuments = (uploadedDocuments: Record<string, string[]>) => {
+    dispatch({ type: 'SET_UPLOADED_DOCUMENTS', payload: uploadedDocuments });
+  };
+
+  const setCompletedNodes = (nodes: string[] | ((prev: string[]) => string[])) => {
+    dispatch({ type: 'SET_COMPLETED_NODES', payload: nodes });
+  };
+
+  const resetExecutionResult = () => {
+    dispatch({ type: 'RESET_EXECUTION_RESULT' });
+  };
+
+  const updateExecutionResult = (result: Partial<WorkflowExecutionResult>) => {
+    dispatch({ type: 'UPDATE_EXECUTION_RESULT', payload: result });
+  };
+
 
   const loadWorkflow = (workflowData: any) => {
     try {
@@ -544,7 +783,22 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     resetWorkflow,
     loadWorkflow,
     getWorkflowJSON,
-    validateWorkflow
+    validateWorkflow,
+
+    // Novas funções
+    setExecutionState,
+    setExecutionProgress,
+    setWorkflowResults,
+    setNodeStatus,
+    setNodeTimers,
+    setWorkflowError,
+    setInteractionData,
+    setSessionId,
+    setUploadsNeeded,
+    setUploadedDocuments,
+    setCompletedNodes,
+    resetExecutionResult,
+    updateExecutionResult
   };
 
   return (

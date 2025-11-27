@@ -13,78 +13,41 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { FileUploadDuringExecution } from '@/components/common/FileUploadDuringExecution';
 import SaveWorkflowModal from '@/components/modals/SaveWorkflowModal';
 import LoadWorkflowModal from '@/components/modals/LoadWorkflowModal';
+import { WorkflowErrorData, UploadNeeded, ResultItem } from '@/types/workflow';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const BASE_URL_DOC_PARSER = import.meta.env.VITE_API_URL_MINUTA;
 const AUTH_TOKEN = import.meta.env.VITE_API_AUTH_TOKEN;
-
-interface NodeTimer {
-  start: number;
-  end?: number;
-  duration?: number;
-}
-
-interface ResultItem {
-  value: string | object;
-  metadata: {
-    format: 'markdown' | 'json';
-    source_nodes: string[];
-    combined?: boolean;
-    size_bytes?: number;
-  };
-}
-
-interface WorkflowResult {
-  [key: string]: ResultItem;
-}
-
-// Interface para o erro
-interface WorkflowErrorData {
-  type: string;
-  message: string;
-  node: string | null;
-}
-
-// Nova interface para interação
-interface InteractionData {
-  session_id: string;
-  node: string;
-  agent_message: string;
-}
-
-// Interface para uploads necessários
-interface UploadNeeded {
-  nodeNome: string;
-  variavelPrompt: string;
-  quantidadeArquivos: "zero" | "um" | "varios";
-}
 
 interface WorkflowExecutionProps {
   onNavigationLock?: (locked: boolean) => void;
 }
 
 export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutionProps) {
-  const { state, resetWorkflow, getWorkflowJSON, loadWorkflow, setChatOpen, clearChatMessages } = useWorkflow();
-  const WORFLOW = JSON.parse(getWorkflowJSON());
+  const {
+    state,
+    resetWorkflow,
+    getWorkflowJSON,
+    loadWorkflow,
+    setChatOpen,
+    clearChatMessages,
+    setExecutionState,
+    setExecutionProgress,
+    setWorkflowResults,
+    setNodeStatus,
+    setNodeTimers,
+    setWorkflowError,
+    setInteractionData,
+    setSessionId,
+    setUploadsNeeded,
+    setUploadedDocuments,
+    setCompletedNodes,
+    resetExecutionResult
+  } = useWorkflow();
 
+  const { executionState, progress, workflowResults, nodeStatus, nodeTimers, workflowError, interactionData, sessionId, uploadsNeeded, uploadedDocuments } = state.executionResult;
 
-  const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'completed' | 'error' | 'awaiting_interaction' | 'awaiting_uploads'>('idle');
-  const [progress, setProgress] = useState(0);
-  const [workflowResults, setWorkflowResults] = useState<WorkflowResult>({});
-
-  const [nodeStatus, setNodeStatus] = useState<Record<string, string>>({});
-  const [nodeTimers, setNodeTimers] = useState<Record<string, NodeTimer>>({});
-  const [_, setCompletedNodes] = useState<string[]>([]);
-
-  const [workflowError, setWorkflowError] = useState<WorkflowErrorData | null>(null);
-
-  // Novos estados para interação
-  const [interactionData, setInteractionData] = useState<InteractionData | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-
-  // Estados para uploads durante execução
-  const [uploadsNeeded, setUploadsNeeded] = useState<UploadNeeded[]>([]);
-  const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, string[]>>({});
+  const WORFLOW = JSON.parse(getWorkflowJSON()); // TODO: Memoize this
 
   // Estados para modais de salvar/carregar
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -146,6 +109,16 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
         throw new Error(`Falha no upload de ${file.name}: Erro desconhecido`);
       }
     }
+  };
+
+  const handleFilesUploaded = (uploadKey: string, keys: string[]) => {
+    console.log(`Upload completo para ${uploadKey}:`, keys);
+
+    const newUploadedDocuments = {
+      ...uploadedDocuments,
+      [uploadKey]: keys
+    };
+    setUploadedDocuments(newUploadedDocuments);
   };
 
   /**
@@ -394,11 +367,11 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
             };
           });
 
-          setCompletedNodes(prev => {
+          setCompletedNodes((prev: string[]) => {
             if (!prev.includes(node)) {
               const newCompletedNodes = [...prev, node];
               const newProgress = calculateProgress(newCompletedNodes);
-              setProgress(newProgress);
+              setExecutionProgress(newProgress);
               return newCompletedNodes;
             }
             return prev;
@@ -416,7 +389,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
       onComplete: (result) => {
         console.log("Processamento completo (interação):", result);
         setExecutionState('completed');
-        setProgress(100);
+        setExecutionProgress(100);
 
         setNodeStatus(prev => {
           const updatedStatus = { ...prev };
@@ -480,13 +453,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
       onNavigationLock(true);
     }
 
-    // Resetar estados
-    setProgress(0);
-    setNodeStatus({});
-    setNodeTimers({});
-    setCompletedNodes([]);
-    setWorkflowResults({});
-    setWorkflowError(null);
+    resetExecutionResult();
     setInteractionData(null);
     setSessionId(null);
     setUploadedDocuments({});
@@ -556,18 +523,17 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
               };
             });
 
-            setCompletedNodes(prev => {
+            setCompletedNodes((prev: string[]) => {
               if (!prev.includes(node)) {
                 const newCompletedNodes = [...prev, node];
                 const newProgress = calculateProgress(newCompletedNodes);
-                setProgress(newProgress);
+                setExecutionProgress(newProgress);
                 return newCompletedNodes;
               }
               return prev;
             });
           }
         },
-
         onData: (data) => {
           console.log("Data recebida:", data);
           if (data) {
@@ -582,22 +548,20 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
           if (executionState !== 'awaiting_interaction') {
             setExecutionState('completed');
           }
-          setProgress(100);
+          setExecutionProgress(100);
 
           // Se não há interação com usuário no workflow, podemos fechar o chat
           if (!hasInteracaoUsuario) {
             setChatOpen(false);
           }
 
-          setNodeStatus(prev => {
-            const updatedStatus = { ...prev };
-            WORFLOW.grafo.nos.forEach((node: any) => {
-              if (updatedStatus[node.nome] !== 'finished') {
-                updatedStatus[node.nome] = 'completed';
-              }
-            });
-            return updatedStatus;
+          const updatedStatus = { ...nodeStatus };
+          WORFLOW.grafo.nos.forEach((node: any) => {
+            if (updatedStatus[node.nome] !== 'finished') {
+              updatedStatus[node.nome] = 'completed';
+            }
           });
+          setNodeStatus(updatedStatus);
         },
 
         onError: (error: any) => {
@@ -664,18 +628,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
       onNavigationLock(false);
     }
 
-    // Resetar todos os estados locais
-    setExecutionState('idle');
-    setProgress(0);
-    setNodeStatus({});
-    setNodeTimers({});
-    setCompletedNodes([]);
-    setWorkflowResults({});
-    setWorkflowError(null);
-    setInteractionData(null);
-    setSessionId(null);
-
-    // Limpar estado do chat global
+    resetExecutionResult();
     setChatOpen(false);
     clearChatMessages();
 
@@ -705,16 +658,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
       loadWorkflow(workflowData);
       console.log('✅ Workflow carregado com sucesso!');
 
-      // Resetar execução após carregar
-      setExecutionState('idle');
-      setProgress(0);
-      setNodeStatus({});
-      setNodeTimers({});
-      setCompletedNodes([]);
-      setWorkflowResults({});
-      setWorkflowError(null);
-      setInteractionData(null);
-      setSessionId(null);
+      resetExecutionResult();
       setChatOpen(false);
       clearChatMessages();
     } catch (error) {
@@ -896,13 +840,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
                   <FileUploadDuringExecution
                     quantidadeArquivos={upload.quantidadeArquivos}
                     variavelPrompt={upload.variavelPrompt}
-                    onFilesUploaded={(keys) => {
-                      console.log(`Upload completo para ${key}:`, keys);
-                      setUploadedDocuments(prev => ({
-                        ...prev,
-                        [key]: keys
-                      }));
-                    }}
+                    onFilesUploaded={(keys) => handleFilesUploaded(key, keys)}
                     uploadFile={handleFileUpload}
                   />
 
