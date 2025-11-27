@@ -237,62 +237,72 @@ export function FileUploadDuringExecution({
       {files.length > 0 && (
         <div className="mt-4 space-y-2" role="list" aria-label="Arquivos selecionados">
           {files.map(file => (
-            <div
-              key={file.id}
-              className="flex items-center justify-between bg-muted dark:bg-gray-700/50 p-3 rounded-lg border border-border dark:border-gray-600"
-              role="listitem"
-            >
-              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                {/* Ícone de status */}
-                {file.status === 'completed' && (
-                  <RiCheckLine className="w-5 h-5 text-green-500 dark:text-green-400 flex-shrink-0" aria-label="Upload completo" />
-                )}
-                {file.status === 'uploading' && (
-                  <RiLoaderLine className="w-5 h-5 text-blue-500 dark:text-blue-400 animate-spin flex-shrink-0" aria-label="Fazendo upload" />
-                )}
-                {file.status === 'error' && (
-                  <RiCloseLine className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0" aria-label="Erro no upload" />
-                )}
-                {file.status === 'pending' && (
-                  <RiFileTextLine className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" aria-label="Aguardando" />
-                )}
+            <div key={file.id}>
+              <div className="flex items-center justify-between bg-muted dark:bg-gray-700/50 p-3 rounded-lg border border-border dark:border-gray-600"
+                role="listitem">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  {/* Ícone de status */}
+                  {file.status === 'completed' && (
+                    <RiCheckLine className="w-5 h-5 text-green-500 dark:text-green-400 flex-shrink-0" aria-label="Upload completo" />
+                  )}
+                  {file.status === 'uploading' && (
+                    <RiLoaderLine className="w-5 h-5 text-blue-500 dark:text-blue-400 animate-spin flex-shrink-0" aria-label="Fazendo upload" />
+                  )}
+                  {file.status === 'error' && (
+                    <RiCloseLine className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0" aria-label="Erro no upload" />
+                  )}
+                  {file.status === 'pending' && (
+                    <RiFileTextLine className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" aria-label="Aguardando" />
+                  )}
 
-                {/* Informações do arquivo */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground dark:text-gray-200 truncate">
-                    {file.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground dark:text-gray-400">
-                    {formatFileSize(file.size)}
-                    {file.status === 'uploading' && ' • Enviando...'}
-                    {file.status === 'completed' && ' • Completo'}
-                    {file.status === 'error' && ` • ${file.errorMessage || 'Erro'}`}
-                  </p>
+                  {/* Informações do arquivo */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground dark:text-gray-200 truncate">
+                      {file.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground dark:text-gray-400">
+                      {formatFileSize(file.size)}
+                      {file.status === 'uploading' && ' • ⏳ Enviando...'}
+                      {file.status === 'completed' && ' • ✅ Completo'}
+                      {file.status === 'error' && ' • ❌ Erro no upload'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Botões de ação */}
+                <div className="flex items-center space-x-1 ml-2">
+                  {/* Botão de retry - aparece apenas quando há erro */}
+                  {file.status === 'error' && (
+                    <button
+                      onClick={() => handleRetryUpload(file.id)}
+                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      aria-label={`Tentar novamente ${file.name}`}
+                    >
+                      <RiRefreshLine className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  )}
+
+                  {/* Botão de remover */}
+                  <button
+                    onClick={() => handleRemoveFile(file.id)}
+                    disabled={file.status === 'uploading'}
+                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
+                    aria-label={`Remover ${file.name}`}
+                  >
+                    <RiDeleteBin6Line className="w-4 h-4" aria-hidden="true" />
+                  </button>
                 </div>
               </div>
 
-              <div className="flex items-center">
-                {/* Botão de retry */}
-                {file.status === 'error' && (
-                  <button
-                    onClick={() => handleRetryUpload(file.id)}
-                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                    aria-label={`Tentar novamente o upload de ${file.name}`}
-                  >
-                    <RiRefreshLine className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                )}
-
-                {/* Botão de remover */}
-                <button
-                  onClick={() => handleRemoveFile(file.id)}
-                  disabled={file.status === 'uploading'}
-                  className="ml-2 p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
-                  aria-label={`Remover ${file.name}`}
-                >
-                  <RiDeleteBin6Line className="w-4 h-4" aria-hidden="true" />
-                </button>
-              </div>
+              {/* Mensagem de erro abaixo do arquivo */}
+              {file.status === 'error' && file.errorMessage && (
+                <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
+                  <p className="text-xs text-red-800 dark:text-red-300 flex items-center gap-1">
+                    <RiCloseLine className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+                    {file.errorMessage}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
         </div>
