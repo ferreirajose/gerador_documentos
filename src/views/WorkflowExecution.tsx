@@ -116,6 +116,38 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
     return Math.round((completedCount / totalNodes) * 100);
   };
 
+  const handleFileUpload = async (file: File): Promise<string> => {
+    try {
+      console.log(`Iniciando upload do arquivo: ${file.name} (${file.size} bytes)`);
+
+      const httpClient = new FetchAdapter();
+      const gateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL_DOC_PARSER, AUTH_TOKEN);
+
+      const response = await gateway.uploadAndProcess(file);
+
+      if (!response.success) {
+        throw new Error(response.message || 'Falha no upload do arquivo');
+      }
+
+      if (!response.data?.uuid_documento) {
+        throw new Error('UUID do documento não retornado pelo servidor');
+      }
+
+      console.log(`Upload concluído com sucesso. UUID: ${response.data.uuid_documento}`);
+      return response.data.uuid_documento;
+
+    } catch (error) {
+      console.error(`Erro no upload do arquivo ${file.name}:`, error);
+
+      // Lança um erro mais descritivo
+      if (error instanceof Error) {
+        throw new Error(`Falha no upload de ${file.name}: ${error.message}`);
+      } else {
+        throw new Error(`Falha no upload de ${file.name}: Erro desconhecido`);
+      }
+    }
+  };
+
   /**
    * Detecta quais uploads são necessários antes da execução do workflow
    * Analisa todos os nós e suas entradas para identificar uploads durante execução
@@ -178,7 +210,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
             // Transformar em documento_anexado apontando para o grupo
             entrada.origem = "documento_anexado";
             entrada.chave_documento_origem = groupKey;
-          } 
+          }
           // Para único arquivo, manter como uuid_unico
           else if (documentKeys.length === 1) {
             const singleKey = documentKeys[0];
@@ -301,7 +333,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
 
       // Mudar estado para executando enquanto processa a resposta
       setExecutionState('executing');
-      
+
       // Garantir que o chat esteja aberto durante a interação
       setChatOpen(true);
 
@@ -545,7 +577,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
 
         onComplete: (result) => {
           console.log("Processamento completo:", result);
-          
+
           // Só muda para completed se não estiver aguardando interação
           if (executionState !== 'awaiting_interaction') {
             setExecutionState('completed');
@@ -763,7 +795,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
 
   const hasInteracaoUsuario = WORFLOW.grafo.nos.some((node: any) =>
     node.interacao_com_usuario && Object.keys(node.interacao_com_usuario).length > 0);
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -871,26 +903,7 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
                         [key]: keys
                       }));
                     }}
-                    uploadFile={async (file) => {
-                      const httpClient = new FetchAdapter();
-                      const gateway = new WorkflowHttpGatewayV2(httpClient, BASE_URL_DOC_PARSER, AUTH_TOKEN);
-                      
-                      try {
-                        // Chama uploadAndProcess que retorna ResponseData
-                        const response = await gateway.uploadAndProcess(file);
-                        
-                        // Verifica se a resposta foi bem-sucedida e tem dados
-                        if (response.success && response.data) {
-                          // Retorna o uuid_documento que será usado como documentKey
-                          return response.data.uuid_documento;
-                        } else {
-                          throw new Error(response.message || 'Erro desconhecido no upload');
-                        }
-                      } catch (error) {
-                        console.error('Erro no upload do arquivo:', error);
-                        throw error;
-                      }
-                    }}
+                    uploadFile={handleFileUpload}
                   />
 
                   {uploadedKeys.length > 0 && (
@@ -1008,8 +1021,8 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
         </div>
       )}
 
-      { WORFLOW.grafo.nos.length === 0 && (
-        <EmptyState  />
+      {WORFLOW.grafo.nos.length === 0 && (
+        <EmptyState />
       )}
 
       {/* Modais de Salvar e Carregar Workflow */}

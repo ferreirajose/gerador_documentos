@@ -284,7 +284,9 @@ export function ExecuteProgress({ progress, steps, title = "Gerando Relatório" 
                           className="ml-2 text-xs text-gray-500"
                           aria-label={`Duração: ${formatDuration(step.duration)}`}
                         >
-                          ({formatDuration(step.duration)})
+                          {/*
+                          @TODO QUANDO ENTRAR EM NODE DE INTERAÇÃO O TIME É 0 VERIFICAR NO COMPONENTE PAI calculateProgress
+                           ({formatDuration(step.duration)}) */}
                         </span>
                       )}
                     </div>
