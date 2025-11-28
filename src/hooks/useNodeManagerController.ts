@@ -161,7 +161,6 @@ export function useNodeManagerController() {
   // Carregar dados do nó para edição
   const loadNodeData = useCallback((nodeId: string) => {
     const node = state.nodes.find((n) => n.id === nodeId);
-    console.log(node, 'interacaoUsuario')
     if (node) {
       // Verificar se o nó tem interacao_com_usuario configurada
       const hasInteracaoUsuario = !!(node.interacao_com_usuario && 
