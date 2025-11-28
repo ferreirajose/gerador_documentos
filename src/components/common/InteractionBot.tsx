@@ -329,6 +329,7 @@ export function InteractionBot({
                         placeholder={isWorkflowInteraction ? 'Digite sua resposta para continuar...' : 'Digite sua mensagem...'}
                         className="flex-1 px-4 py-3 border border-input dark:border-gray-600 rounded-xl bg-background dark:bg-gray-800 text-foreground dark:text-gray-100 placeholder:text-muted-foreground dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 focus:border-purple-500/50 dark:focus:border-purple-400/50 transition-all resize-none min-h-[3rem] max-h-32"
                         disabled={isLoading}
+                        readOnly={!inputValue.trim() || isLoading}
                         aria-describedby="chat-instructions"
                         rows={3}
                     />
