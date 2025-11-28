@@ -203,26 +203,36 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
       });
     });
 
-    // Reconstruir documentos_anexados com a estrutura correta
-    modified.documentos_anexados = [];
+    // CORREÇÃO: Preservar documentos anexados existentes e adicionar novos
+    const existingDocuments = modified.documentos_anexados || [];
+    const newDocuments: any[] = [];
 
-    documentGroups.forEach((documentGroup, key) => {
-      if (documentGroup.uuids.length === 1) {
-        // Documento único - usar uuid_unico
-        modified.documentos_anexados.push({
-          chave: documentGroup.chave,
-          descricao: documentGroup.descricao,
-          uuid_unico: documentGroup.uuids[0]
-        });
-      } else {
-        // Múltiplos documentos - usar uuids_lista
-        modified.documentos_anexados.push({
-          chave: documentGroup.chave,
-          descricao: documentGroup.descricao,
-          uuids_lista: documentGroup.uuids
-        });
+    documentGroups.forEach((documentGroup) => {
+      // Verificar se já existe um documento com esta chave
+      const existingDocIndex = existingDocuments.findIndex((doc: any) => doc.chave === documentGroup.chave);
+
+      if (existingDocIndex === -1) {
+        // Só adiciona se não existir
+        if (documentGroup.uuids.length === 1) {
+          // Documento único - usar uuid_unico
+          newDocuments.push({
+            chave: documentGroup.chave,
+            descricao: documentGroup.descricao,
+            uuid_unico: documentGroup.uuids[0]
+          });
+        } else {
+          // Múltiplos documentos - usar uuids_lista
+          newDocuments.push({
+            chave: documentGroup.chave,
+            descricao: documentGroup.descricao,
+            uuids_lista: documentGroup.uuids
+          });
+        }
       }
     });
+
+    // Combinar documentos existentes com novos documentos
+    modified.documentos_anexados = [...existingDocuments, ...newDocuments];
 
     console.log("Workflow modificado com uploads:", modified);
     console.log("Documentos anexados:", modified.documentos_anexados);
