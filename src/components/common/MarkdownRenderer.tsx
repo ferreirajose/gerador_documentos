@@ -1,6 +1,5 @@
-// components/common/MarkdownRenderer.tsx
-import { downloadMarkdown, renderMarkdown } from '@/libs/util';
 import { useState } from 'react';
+import { downloadMarkdown, renderMarkdown } from '@/libs/util';
 
 interface MarkdownRendererProps {
   content: string;
@@ -36,7 +35,31 @@ export default function MarkdownRenderer({
 
   const handleCopyContent = async () => {
     try {
-      await navigator.clipboard.writeText(content);
+      // Verificar se a API Clipboard está disponível e estamos em contexto seguro
+      if (typeof navigator !== 'undefined' && navigator.clipboard && typeof window !== 'undefined' && window.isSecureContext) {
+        // HTTPS ou localhost com API disponível
+        await navigator.clipboard.writeText(content);
+      } else {
+        // Fallback para método alternativo (HTTP ou API não disponível)
+        const textArea = document.createElement('textarea');
+        textArea.value = content;
+        textArea.style.position = 'fixed';
+        textArea.style.top = '-9999px';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          const successful = document.execCommand('copy');
+          if (!successful) {
+            throw new Error('Falha na cópia via execCommand');
+          }
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
+
       setCopyStatus('success');
       setTimeout(() => setCopyStatus('idle'), 2000);
     } catch (error) {
@@ -47,7 +70,12 @@ export default function MarkdownRenderer({
   };
 
   const handleDownload = () => {
-    downloadMarkdown(content, filename);
+    try {
+      downloadMarkdown(content, filename);
+    } catch (error) {
+      console.error('Erro ao baixar arquivo:', error);
+      // Opcional: mostrar feedback visual de erro
+    }
   };
 
   const getCopyButtonText = () => {
