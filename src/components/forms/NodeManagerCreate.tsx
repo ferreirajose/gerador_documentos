@@ -476,9 +476,7 @@ export default function NodeManagerCreate({ onClose, onSubmit }: NodeManagerCrea
                                                 value={entrada.variavel_prompt}
                                                 onChange={(e) => updateEntrada(index, 'variavel_prompt', e.target.value)}
                                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-white"
-                                                placeholder="ex: auditoria, defesa"
-                                                required
-                                            />
+                                                placeholder="ex: auditoria, defesa"/>
                                         </div>
 
                                         <div>
