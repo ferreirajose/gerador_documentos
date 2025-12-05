@@ -239,18 +239,25 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                         </div>
                     </div>
 
-                    <textarea
-                        ref={promptTextareaRef}
-                        value={formData.prompt}
-                        onChange={(e) => handleInputChange('prompt', e.target.value)}
-                        rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="Digite o prompt para este nó... Configure as entradas abaixo e use o botão 'Inserir Variável' para referenciar"
-                        required
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Configure as entradas abaixo e use o botão "Inserir Variável" para referenciar dados no prompt
-                    </p>
+                    <div className="relative">
+                        <textarea
+                            ref={promptTextareaRef}
+                            value={formData.prompt}
+                            onChange={(e) => handleInputChange('prompt', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white resize-y min-h-[300px]"
+                            placeholder="Digite o prompt para este nó... Configure as entradas abaixo e use o botão 'Inserir Variável' para referenciar"
+                            required
+                        />
+                    </div>
+                    
+                    <div className="flex justify-between items-center mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Configure as entradas abaixo e use o botão "Inserir Variável" para referenciar dados no prompt
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                            Use o canto inferior direito para ajustar o tamanho
+                        </p>
+                    </div>
                 </div>
 
                 {/* Seção de Documentos Anexados */}
