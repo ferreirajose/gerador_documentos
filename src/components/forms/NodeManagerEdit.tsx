@@ -2,7 +2,7 @@ import { RiCloseLine, RiDeleteBinLine, RiFileAddLine, RiFileListLine, RiRefreshL
 import { useNodeManagerController } from "@/hooks/useNodeManagerController";
 import { formatFileSize } from "@/libs/util";
 import { useWorkflow } from "@/context/WorkflowContext";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 interface NodeManagerEditProps {
     nodeId: string;
@@ -70,15 +70,44 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
     };
 
     const handleDeleteInput = (inputIndex: number) => {
-        if (window.confirm('Tem certeza que deseja remover esta entrada?')) {
+        const entrada = formData.entradas[inputIndex];
+        let message = 'Tem certeza que deseja remover esta entrada?';
+
+        if (entrada.chave_documento_origem) {
+            message += `\n\nAtenção: Isso também removerá o documento "${entrada.chave_documento_origem}" anexado.`;
+        }
+
+        if (window.confirm(message)) {
             removeEntrada(inputIndex);
         }
     };
 
-    const documentosAnexados = formData.documentosAnexados.map(doc => ({
-        chave: doc.chave,
-        descricao: doc.descricao
-    }));
+    const documentosAnexados = useMemo(() => {
+        // Criar um mapa para evitar duplicatas (usando chave como identificador)
+        const documentosMap = new Map<string, { chave: string; descricao: string }>();
+
+        // 1. Adicionar documentos do estado global
+        state.documentos_anexados.forEach(doc => {
+            if (doc.chave) {
+                documentosMap.set(doc.chave, {
+                    chave: doc.chave,
+                    descricao: doc.descricao
+                });
+            }
+        });
+
+        // 2. Adicionar documentos do formulário atual (sobrescrevendo se necessário)
+        formData.documentosAnexados.forEach(doc => {
+            if (doc.chave) {
+                documentosMap.set(doc.chave, {
+                    chave: doc.chave,
+                    descricao: doc.descricao
+                });
+            }
+        });
+
+        return Array.from(documentosMap.values());
+    }, [state.documentos_anexados, formData.documentosAnexados]);
 
     const nodes = state.nodes
         .filter(node => node.id !== nodeId)
@@ -201,7 +230,7 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                     </div>
                 </div>
 
-                
+
 
                 {/* Prompt - largura total */}
                 <div id="input-text-prompt">
@@ -249,7 +278,7 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                             required
                         />
                     </div>
-                    
+
                     <div className="flex justify-between items-center mt-1">
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                             Configure as entradas abaixo e use o botão "Inserir Variável" para referenciar dados no prompt
@@ -482,7 +511,7 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
                                                 value={entrada.variavel_prompt}
                                                 onChange={(e) => updateEntrada(index, 'variavel_prompt', e.target.value)}
                                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-white"
-                                                placeholder="ex: auditoria, defesa"/>
+                                                placeholder="ex: auditoria, defesa" />
                                         </div>
 
                                         <div>
@@ -618,7 +647,7 @@ export default function NodeManagerEdit({ nodeId, onClose, onSubmit }: NodeManag
 
                 </div>
 
-                
+
                 {/* Interação do Usuário */}
                 <div id="input-interacao-usuario">
                     <div className="flex items-center justify-between mb-3">
