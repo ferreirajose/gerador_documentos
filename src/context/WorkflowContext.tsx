@@ -2,7 +2,7 @@ import NodeEntitie from '@/domain/entities/NodeEntitie';
 import { Aresta } from '@/domain/entities/Aresta';
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { DocumentoAnexado } from '@/domain/entities/Workflow';
-import { FormatoResultadoFinal, Combinacao } from '@/domain/entities/ResultadoFinal'; 
+import { FormatoResultadoFinal, Combinacao } from '@/domain/entities/ResultadoFinal';
 import { Grafo } from '@/domain/entities/Grafo';
 import { Workflow } from '@/domain/entities/Workflow';
 import { WorkflowResult, NodeTimer, WorkflowErrorData, InteractionData, UploadNeeded } from '@/types/workflow';
@@ -120,17 +120,17 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         nodes: [...state.nodes, action.payload]
       };
 
-    case 'UPDATE_NODE': 
+    case 'UPDATE_NODE':
       return {
         ...state,
-        nodes: state.nodes.map(node => 
+        nodes: state.nodes.map(node =>
           node.id === action.payload.id ? action.payload : node
         ),
         // Remover documentos duplicados baseado na chave
-        documentos_anexados: state.documentos_anexados.filter((doc, index, self) => 
+        documentos_anexados: state.documentos_anexados.filter((doc, index, self) =>
           index === self.findIndex(d => d.chave === doc.chave)
         )
-    };
+      };
 
     case 'DELETE_NODE':
       return {
@@ -172,12 +172,12 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         ...state,
         connections: state.connections.filter(conn => conn.id !== action.payload.connectionId)
       };
-    
+
     case 'UPDATE_RESULTADO_FINAL':
       return {
         ...state,
         formato_resultado_final: new FormatoResultadoFinal(
-          action.payload.combinacoes, 
+          action.payload.combinacoes,
           action.payload.saidas_individuais
         )
       }
@@ -197,7 +197,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         formato_resultado_final: action.payload.formato_resultado_final || new FormatoResultadoFinal([], [])
       }
 
-     // Novos casos para o chat
+    // Novos casos para o chat
     case 'ADD_CHAT_MESSAGE':
       return {
         ...state,
@@ -243,7 +243,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         }
       };
 
-     // Novos casos para execução
+    // Novos casos para execução
     case 'SET_EXECUTION_STATE':
       return {
         ...state,
@@ -386,7 +386,7 @@ interface WorkflowContextType {
   updateConnection: (connection: Connection) => void;
   deleteConnection: (connectionId: string) => void;
   updateResultadoFinal: (combinacoes: Combinacao[], saidas_individuais: string[]) => void;
-   // Chat actions
+  // Chat actions
   addChatMessage: (message: ChatMessage) => void;
   setChatInputValue: (value: string) => void;
   setChatOpen: (isOpen: boolean) => void;
@@ -398,7 +398,7 @@ interface WorkflowContextType {
   getWorkflowJSON: () => string;
   validateWorkflow: () => { isValid: boolean; errors: string[] };
 
-   // Novas funções para execução
+  // Novas funções para execução
   setExecutionState: (state: WorkflowExecutionResult['executionState']) => void;
   setExecutionProgress: (progress: number) => void;
   setWorkflowResults: (results: WorkflowResult) => void;
@@ -423,26 +423,43 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'ADD_NODE', payload: { ...node, id: node.id } });
   };
 
-  const updateNode = (node: NodeState) => { 
+  const updateNode = (node: NodeState) => {
     dispatch({ type: 'UPDATE_NODE', payload: node });
   };
 
   const deleteNode = (nodeId: string, chavesDocumentos?: string[]) => {
+    const nodeToDelete = state.nodes.find(node => node.id === nodeId);
+
+    // Coletar automaticamente as chaves de documentos referenciadas pelo nó
+    let documentosParaRemover: string[] = [];
+
+    if (nodeToDelete) {
+      // Extrair chaves de documentos das entradas do nó
+      const chavesDasEntradas = nodeToDelete.entradas
+        ?.filter(entrada => entrada.origem === 'documento_anexado' && entrada.chave_documento_origem)
+        .map(entrada => entrada.chave_documento_origem as string) || [];
+
+      // Combinar com chaves fornecidas manualmente
+      documentosParaRemover = [...new Set([...chavesDasEntradas, ...(chavesDocumentos || [])])];
+    } else {
+      documentosParaRemover = chavesDocumentos || [];
+    }
+
     // Primeiro remove o nó
-    dispatch({ type: 'DELETE_NODE', payload: { nodeId, chavesDocumentos } });
-    
+    dispatch({ type: 'DELETE_NODE', payload: { nodeId, chavesDocumentos: documentosParaRemover } });
+
     // Se houver chaves de documentos para remover, remove os documentos também
-    if (chavesDocumentos && chavesDocumentos.length > 0) {
-      dispatch({ type: 'REMOVE_DOCUMENTOS_POR_CHAVE', payload: chavesDocumentos });
+    if (documentosParaRemover.length > 0) {
+      dispatch({ type: 'REMOVE_DOCUMENTOS_POR_CHAVE', payload: documentosParaRemover });
     }
   };
 
   const removeDocumentosPorChave = (chaves: string[]) => {
     dispatch({ type: 'REMOVE_DOCUMENTOS_POR_CHAVE', payload: chaves });
   };
-  
+
   const addDocumentoAnexo = (documento: DocumentoAnexado) => {
-    dispatch({ type: 'ADD_DOCUMENTO_ANEXO', payload: { ...documento} });
+    dispatch({ type: 'ADD_DOCUMENTO_ANEXO', payload: { ...documento } });
   };
 
   const addConnection = (connection: Connection) => {
@@ -457,10 +474,10 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_CONNECTION', payload: { connectionId } });
   };
 
-   const updateResultadoFinal = (combinacoes: Combinacao[], saidas_individuais: string[]) => {
-    dispatch({ 
-      type: 'UPDATE_RESULTADO_FINAL', 
-      payload: { combinacoes, saidas_individuais } 
+  const updateResultadoFinal = (combinacoes: Combinacao[], saidas_individuais: string[]) => {
+    dispatch({
+      type: 'UPDATE_RESULTADO_FINAL',
+      payload: { combinacoes, saidas_individuais }
     });
   };
 
@@ -468,7 +485,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'RESET_WORKFLOW' });
   };
 
-   // Novas funções para execução
+  // Novas funções para execução
   const setExecutionState = (executionState: WorkflowExecutionResult['executionState']) => {
     dispatch({ type: 'SET_EXECUTION_STATE', payload: executionState });
   };
@@ -609,7 +626,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
   const getWorkflowJSON = (): string => {
     try {
       // Convert NodeState[] to NodeEntitie[]
-      const nodes: NodeEntitie[] = state.nodes.map(node => 
+      const nodes: NodeEntitie[] = state.nodes.map(node =>
         new NodeEntitie(
           node.nome,
           node.prompt,
@@ -740,7 +757,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
 
       // Validate the workflow
       workflow.validate();
-      
+
     } catch (error) {
       if (error instanceof Error) {
         errors.push(error.message);
@@ -768,7 +785,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     deleteNode,
     removeDocumentosPorChave,
     addDocumentoAnexo,
-    
+
     addConnection,
     deleteConnection,
     updateConnection,
