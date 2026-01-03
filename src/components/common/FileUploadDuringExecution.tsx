@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { RiUploadCloudLine, RiFileTextLine, RiDeleteBin6Line, RiCheckLine, RiCloseLine, RiRefreshLine, RiLoader4Line } from '@remixicon/react';
 import { formatFileSize } from '@/libs/util';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface UploadedFile {
   id: string;
@@ -91,7 +92,7 @@ export function FileUploadDuringExecution({
 
     // Criar registros de arquivos pendentes
     const newFiles: UploadedFile[] = selectedFiles.map(file => ({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       name: file.name,
       rawFile: file,
       size: file.size,

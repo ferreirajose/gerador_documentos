@@ -1,7 +1,8 @@
 import { NodeState, useWorkflow } from "@/context/WorkflowContext";
 import { FERRAMENTAS_DISPONIVEIS } from "@/data/ferramentas";
 import { llmModelsByProvider } from "@/data/llmodels";
-import { Entrada, InteracaoComUsuario as InteracaoComUsuario2 } from "@/domain/entities/NodeEntitie";
+import { Entrada, InteracaoComUsuario as InteracaoComUsuario2,
+} from "@/domain/entities/NodeEntitie";
 import WorkflowHttpGatewayV2 from "@/gateway/WorkflowHttpGatewayV2";
 import FetchAdapter from "@/infra/FetchAdapter";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -88,21 +89,14 @@ export function useNodeManagerController() {
     const existingNodes = state.nodes;
     if (isEditing) {
       // Em modo edição, exclui o próprio nó da verificação
-      const otherNodes = existingNodes.filter(
-        (node) => node.id !== editingNodeId
-      );
-      const duplicateNode = otherNodes.find(
-        (node) => node.nome === formData.nome
-      );
-
+      const otherNodes = existingNodes.filter(node => node.id !== editingNodeId);
+      const duplicateNode = otherNodes.find(node => node.nome === formData.nome);
       if (duplicateNode) {
         throw new Error(`Já existe um nó com o nome "${formData.nome}"`);
       }
     } else {
       // Em modo criação, verifica todos os nós
-      const duplicateNode = existingNodes.find(
-        (node) => node.nome === formData.nome
-      );
+      const duplicateNode = existingNodes.find((node) => node.nome === formData.nome);
 
       if (duplicateNode) {
         throw new Error(`Já existe um nó com o nome "${formData.nome}"`);
@@ -111,16 +105,13 @@ export function useNodeManagerController() {
 
     const workflowData = buildAttachedDocument();
 
-    console.log("Dados do workflow para envio:", workflowData);
-
     try {
       // Remover a propriedade 'habilitado' antes de salvar
       let interacaoComUsuarioFinal;
 
       if (formData.interacao_com_usuario.habilitado) {
         // Se habilitado, remove apenas a propriedade 'habilitado'
-        const { habilitado, ...interacaoComUsuarioSemHabilitado } =
-          formData.interacao_com_usuario;
+        const { habilitado, ...interacaoComUsuarioSemHabilitado } = formData.interacao_com_usuario;
         interacaoComUsuarioFinal = interacaoComUsuarioSemHabilitado;
       } else {
         // Se desabilitado, sempre define como undefined
@@ -129,10 +120,7 @@ export function useNodeManagerController() {
 
       // PRIMEIRO: Identificar documentos do formulário atual
       const documentosFormularioAtual = new Map<string, any>();
-      if (
-        workflowData.documentosAnexados &&
-        Array.isArray(workflowData.documentosAnexados)
-      ) {
+      if (workflowData.documentosAnexados && Array.isArray(workflowData.documentosAnexados)) {
         workflowData.documentosAnexados.forEach((documento: any) => {
           if (documento && documento.chave) {
             documentosFormularioAtual.set(documento.chave, documento);
@@ -198,9 +186,7 @@ export function useNodeManagerController() {
 
       const nodeData = {
         ...formData,
-        interacao_com_usuario: interacaoComUsuarioFinal,
-        // Incluir documentos anexados diretamente no nodeData para evitar duplicação
-        documentosAnexados: formData.documentosAnexados,
+        interacao_com_usuario: interacaoComUsuarioFinal
       };
 
       if (isEditing && editingNodeId) {
@@ -221,23 +207,11 @@ export function useNodeManagerController() {
         console.log("Nó criado com sucesso:", newNode);
       }
 
-      // NÃO adicionar documentos aqui - eles já estão no nodeData
-      // Apenas adicionar documentos que não existem no estado global
-      if (
-        workflowData.documentosAnexados &&
-        Array.isArray(workflowData.documentosAnexados)
-      ) {
+      // Adicionar cada documento individualmente
+      if (workflowData.documentosAnexados && Array.isArray(workflowData.documentosAnexados)) {
         workflowData.documentosAnexados.forEach((documento: any) => {
           if (documento) {
-            // Verificar se o documento já existe no estado global
-            const documentoJaExiste = state.documentos_anexados.some(
-              (doc) => doc.chave === documento.chave
-            );
-
-            // Se não existe, adicionar
-            if (!documentoJaExiste) {
-              addDocumentoAnexo(documento);
-            }
+            addDocumentoAnexo(documento);
           }
         });
       }
@@ -246,65 +220,43 @@ export function useNodeManagerController() {
       resetForm();
     } catch (error) {
       console.error("Erro ao criar/atualizar nó:", error);
-      alert(error instanceof Error ? error.message : "Erro ao salvar o nó");
+      console.log(error instanceof Error ? error.message : "Erro ao salvar o nó");
     }
   };
 
   // Carregar dados do nó para edição
-  const loadNodeData = useCallback(
-    (nodeId: string) => {
-      const node = state.nodes.find((n) => n.id === nodeId);
-      if (node) {
-        // Verificar se o nó tem interacao_com_usuario configurada
-        const hasInteracaoUsuario = !!(
-          node.interacao_com_usuario &&
-          Object.keys(node.interacao_com_usuario).length > 0
-        );
-
-        // Garantir que todos os campos de interação com usuário sejam carregados corretamente
-        const interacaoUsuario: any = node.interacao_com_usuario || {};
-
-        // Filtrar documentos que já estão no estado global para evitar duplicação
-        const documentosDoFormulario = (node as any).documentosAnexados || [];
-
-        // Verificar quais documentos do nó já existem no estado global
-        const documentosFiltrados = documentosDoFormulario.filter(
-          (doc: any) =>
-            !state.documentos_anexados.some(
-              (globalDoc) => globalDoc.chave === doc.chave
-            )
-        );
-
-        setFormData({
-          nome: node.nome || "",
-          entrada_grafo: node.entrada_grafo || false,
-          modelo_llm: node.modelo_llm || "",
-          temperatura: node.temperatura || 0.3,
-          ferramentas: node.ferramentas || [],
-          prompt: node.prompt || "",
-          documentosAnexados: documentosFiltrados, // Usar apenas documentos não existentes
-          entradas: node.entradas || [],
-          saida: node.saida || { nome: "", formato: "json" },
-          interacao_com_usuario: {
-            habilitado: hasInteracaoUsuario,
-            permitir_usuario_finalizar:
-              interacaoUsuario.permitir_usuario_finalizar || false,
-            ia_pode_concluir:
-              interacaoUsuario.ia_pode_concluir !== undefined
-                ? interacaoUsuario.ia_pode_concluir
-                : true,
-            requer_aprovacao_explicita:
-              interacaoUsuario.requer_aprovacao_explicita || false,
-            maximo_de_interacoes: interacaoUsuario.maximo_de_interacoes || 1,
-            modo_de_saida: interacaoUsuario.modo_de_saida || "ultima_mensagem",
-          },
-        });
-        setIsEditing(true);
-        setEditingNodeId(nodeId);
-      }
-    },
-    [state.nodes, state.documentos_anexados] // Adicionar dependência
-  );
+  const loadNodeData = useCallback((nodeId: string) => {
+    const node = state.nodes.find((n) => n.id === nodeId);
+    if (node) {
+      // Verificar se o nó tem interacao_com_usuario configurada
+      const hasInteracaoUsuario = !!(node.interacao_com_usuario && 
+        Object.keys(node.interacao_com_usuario).length > 0);
+      
+      // Garantir que todos os campos de interação com usuário sejam carregados corretamente
+      const interacaoUsuario: any = node.interacao_com_usuario || {};
+      setFormData({
+        nome: node.nome || "",
+        entrada_grafo: node.entrada_grafo || false,
+        modelo_llm: node.modelo_llm || "",
+        temperatura: node.temperatura || 0.3,
+        ferramentas: node.ferramentas || [],
+        prompt: node.prompt || "",
+        documentosAnexados: (node as any).documentosAnexados || [],
+        entradas: node.entradas || [],
+        saida: node.saida || { nome: "", formato: "json" },
+        interacao_com_usuario: {
+          habilitado: hasInteracaoUsuario,
+          permitir_usuario_finalizar: interacaoUsuario.permitir_usuario_finalizar || false,
+          ia_pode_concluir: interacaoUsuario.ia_pode_concluir !== undefined ? interacaoUsuario.ia_pode_concluir : true,
+          requer_aprovacao_explicita: interacaoUsuario.requer_aprovacao_explicita || false,
+          maximo_de_interacoes: interacaoUsuario.maximo_de_interacoes || 1,
+          modo_de_saida: interacaoUsuario.modo_de_saida || "ultima_mensagem",
+        }
+      });
+      setIsEditing(true);
+      setEditingNodeId(nodeId);
+    }
+  }, [state.nodes]);
 
   // NOVO MÉTODO: Reset para modo criação
   const resetToCreateMode = () => {
@@ -393,11 +345,7 @@ export function useNodeManagerController() {
     });
   };
 
-  const updateEntrada = <K extends keyof Entrada>(
-    index: number,
-    field: K,
-    value: Entrada[K]
-  ) => {
+  const updateEntrada = <K extends keyof Entrada>(index: number, field: K, value: Entrada[K]) => {
     setFormData((prev) => {
       const updatedEntradas = [...prev.entradas];
       updatedEntradas[index] = {
@@ -425,61 +373,26 @@ export function useNodeManagerController() {
   };
 
   const removeDocumento = (index: number) => {
-    const documentoRemovido = formData.documentosAnexados[index];
-
-    if (documentoRemovido?.chave) {
-      // Verificar se o documento está sendo usado por alguma entrada
-      const documentoEmUso = formData.entradas.some(
-        (entrada) => entrada.chave_documento_origem === documentoRemovido.chave
-      );
-
-      if (documentoEmUso) {
-        // Se o documento está sendo usado, não permitir remover sem confirmar
-        if (
-          window.confirm(
-            `Este documento está sendo usado por uma ou mais entradas. 
-        Remover o documento também removerá as entradas que o referenciam. 
-        Deseja continuar?`
-          )
-        ) {
-          // Remover as entradas que usam este documento
-          const entradasAtualizadas = formData.entradas.filter(
-            (entrada) =>
-              entrada.chave_documento_origem !== documentoRemovido.chave
-          );
-
-          setFormData((prev) => ({
-            ...prev,
-            entradas: entradasAtualizadas,
-            documentosAnexados: prev.documentosAnexados.filter(
-              (_, i) => i !== index
-            ),
-          }));
-
+      setFormData((prev) => {
+          const documentoRemovido = prev.documentosAnexados[index];
           // Agendar remoção do estado global
-          setDocumentsToRemove((prev) => [...prev, documentoRemovido.chave]);
-        }
-      } else {
-        // Se não está sendo usado, remover normalmente
-        setFormData((prev) => ({
-          ...prev,
-          documentosAnexados: prev.documentosAnexados.filter(
-            (_, i) => i !== index
-          ),
-        }));
-
-        // Agendar remoção do estado global
-        setDocumentsToRemove((prev) => [...prev, documentoRemovido.chave]);
-      }
-    }
+          if (documentoRemovido?.chave) {
+              setDocumentsToRemove(prev => [...prev, documentoRemovido.chave]);
+          }
+          // Remover imediatamente do formData (UI)
+          return {
+              ...prev,
+              documentosAnexados: prev.documentosAnexados.filter((_, i) => i !== index),
+          };
+      });
   };
 
   // Efeito para remover documentos do estado global
   useEffect(() => {
-    if (documentsToRemove.length > 0) {
-      removeDocumentosPorChave(documentsToRemove);
-      setDocumentsToRemove([]);
-    }
+      if (documentsToRemove.length > 0) {
+          removeDocumentosPorChave(documentsToRemove);
+          setDocumentsToRemove([]);
+      }
   }, [documentsToRemove, removeDocumentosPorChave]);
 
   const updateDocumento = (
@@ -718,23 +631,21 @@ export function useNodeManagerController() {
     []
   );
 
-  const handleChangeInteractions = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChangeInteractions = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
     const valueNumber = Number(value);
-
-    // Validação: permite de 1 até 10 (incluindo 10)
-    if (valueNumber >= 1 && valueNumber <= 10) {
-      handleInteracaoUsuarioChange("maximo_de_interacoes", valueNumber);
-    } else if (valueNumber > 10) {
-      // Se digitar mais que 10, mantém 10
-      handleInteracaoUsuarioChange("maximo_de_interacoes", 10);
-    } else if (valueNumber < 1 || !value) {
-      // Se digitar menos que 1 ou vazio, mantém 1
-      handleInteracaoUsuarioChange("maximo_de_interacoes", 1);
-    }
-  };
+      
+      // Validação: permite de 1 até 10 (incluindo 10)
+      if (valueNumber >= 1 && valueNumber <= 10) {
+          handleInteracaoUsuarioChange('maximo_de_interacoes', valueNumber);
+      } else if (valueNumber > 10) {
+          // Se digitar mais que 10, mantém 10
+          handleInteracaoUsuarioChange('maximo_de_interacoes', 10);
+      } else if (valueNumber < 1 || !value) {
+          // Se digitar menos que 1 ou vazio, mantém 1
+          handleInteracaoUsuarioChange('maximo_de_interacoes', 1);
+      }
+  }
 
   const toggleInteracaoUsuario = useCallback(() => {
     setFormData((prev) => ({

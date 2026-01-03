@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RiChat3Line, RiLoader4Line, RiPlayCircleLine, RiRefreshLine, RiRestartLine, RiSave3Line, RiFolderOpenLine, RiBugLine } from '@remixicon/react';
+import { RiChat3Line, RiLoader4Line, RiPlayCircleLine, RiRefreshLine, RiRestartLine } from '@remixicon/react';
 import WorkflowHttpGatewayV2 from '@/gateway/WorkflowHttpGatewayV2';
 import FetchAdapter from '@/infra/FetchAdapter';
 import { GerarDocCallbacks } from '@/types/node';
@@ -12,7 +12,6 @@ import { InteractionBot } from '@/components/common/InteractionBot';
 import { EmptyState } from '@/components/common/EmptyState';
 import { FileUploadDuringExecution } from '@/components/common/FileUploadDuringExecution';
 import SaveWorkflowModal from '@/components/modals/SaveWorkflowModal';
-import LoadWorkflowModal from '@/components/modals/LoadWorkflowModal';
 import { WorkflowErrorData, UploadNeeded, ResultItem } from '@/types/workflow';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -28,7 +27,6 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
     state,
     resetWorkflow,
     getWorkflowJSON,
-    loadWorkflow,
     setChatOpen,
     clearChatMessages,
     setExecutionState,
@@ -51,7 +49,6 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
 
   // Estados para modais de salvar/carregar
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-  const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
 
   // Usar estado global do chat
   const isChatOpen = state.chat.isChatOpen;
@@ -401,6 +398,9 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
         setExecutionState('completed');
         setExecutionProgress(100);
 
+        // Fechar chat quando workflow terminar
+        setChatOpen(false);
+
         setNodeStatus(prev => {
           const updatedStatus = { ...prev };
           WORFLOW.grafo.nos.forEach((node: any) => {
@@ -557,13 +557,10 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
           // Só muda para completed se não estiver aguardando interação
           if (executionState !== 'awaiting_interaction') {
             setExecutionState('completed');
-          }
-          setExecutionProgress(100);
-
-          // Se não há interação com usuário no workflow, podemos fechar o chat
-          if (!hasInteracaoUsuario) {
+            // Fechar chat quando workflow terminar
             setChatOpen(false);
           }
+          setExecutionProgress(100);
 
           const updatedStatus = { ...nodeStatus };
           WORFLOW.grafo.nos.forEach((node: any) => {
@@ -655,28 +652,6 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
     setIsSaveModalOpen(false);
   };
 
-  const handleOpenLoadModal = () => {
-    setIsLoadModalOpen(true);
-  };
-
-  const handleCloseLoadModal = () => {
-    setIsLoadModalOpen(false);
-  };
-
-  const handleLoadWorkflow = (workflowData: any) => {
-    try {
-      loadWorkflow(workflowData);
-      console.log('✅ Workflow carregado com sucesso!');
-
-      resetExecutionResult();
-      setChatOpen(false);
-      clearChatMessages();
-    } catch (error) {
-      console.error('❌ Erro ao carregar workflow:', error);
-      alert(`Erro ao carregar workflow: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-    }
-  };
-
   // Preparar steps para o ExecuteProgress
   const steps = WORFLOW.grafo.nos.map((node: any, idx: number) => {
     const nodeName = node.nome;
@@ -750,109 +725,54 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
   const hasInteracaoUsuario = WORFLOW.grafo.nos.some((node: any) =>
     node.interacao_com_usuario && Object.keys(node.interacao_com_usuario).length > 0);
 
-  // Adicione este estado logo após os outros estados
-  const [isSimulatingError, setIsSimulatingError] = useState(false);
-
-  // Adicione esta função na seção de funções
-  const simulateApiError = () => {
-    setIsSimulatingError(true);
-
-    // Simula o novo formato de erro da API
-    const simulatedError = {
-      type: 'validation_error',
-      message: 'Erro de validação na requisição do workflow',
-      node: null,
-      detail: 'Erro de validação na requisição',
-      errors: [
-        {
-          field: 'grafo',
-          message: 'Campo "grafo": Field required',
-          type: 'missing'
-        },
-        {
-          field: 'documentos_anexados',
-          message: 'Documentos anexados devem ser um array',
-          type: 'invalid_type'
-        },
-        {
-          field: 'formato_resultado_final',
-          message: 'Formato de resultado inválido',
-          type: 'value_error'
-        }
-      ],
-      hint: 'Verifique os campos obrigatórios e seus tipos de dados. Certifique-se de que todos os nós estão conectados corretamente.'
-    };
-
-    setWorkflowError(simulatedError);
-    setExecutionState('error');
-
-    // Resetar após 3 segundos
-    setTimeout(() => {
-      setIsSimulatingError(false);
-    }, 3000);
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center space-x-3">
-        {/* Botão Carregar Workflow */}
-        <button
-          onClick={handleOpenLoadModal}
-          disabled={executionState === 'executing'}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center space-x-2"
-          title="Carregar workflow de arquivo"
-        >
-          <RiFolderOpenLine className="w-4 h-4" />
-          <span>Carregar</span>
-        </button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Executar Workflow</h2>
+          <p className="text-gray-600 dark:text-gray-400">Execute e monitore o processamento do seu workflow</p>
+        </div>
 
-        {/* Botão Salvar Workflow */}
-        <button
-          onClick={handleOpenSaveModal}
-          disabled={executionState === 'executing' || state.nodes.length === 0}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center space-x-2"
-          title="Salvar workflow em arquivo"
-        >
-          <RiSave3Line className="w-4 h-4" />
-          <span>Salvar</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          {/* Botão Carregar Workflow */}
 
-        {/* Botão Limpar */}
-        <button
-          onClick={resetExecution}
-          data-testid="reset-execution-button"
-          disabled={executionState === 'executing'}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700"
-        >
-          <i className="ri-close-line mr-2"></i>
-          Limpar
-        </button>
+          {/* Botão Salvar Workflow */}
+          {/* <button
+            onClick={handleOpenSaveModal}
+            disabled={executionState === 'executing' || state.nodes.length === 0}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center space-x-2"
+            title="Salvar workflow em arquivo"
+          >
+            <RiSave3Line className="w-4 h-4" />
+            <span>Salvar</span>
+          </button> */}
 
-        {/* Botão Simular Erro (APENAS PARA DESENVOLVIMENTO) */}
-        <button
-          onClick={simulateApiError}
-          disabled={executionState === 'executing' || isSimulatingError}
-          className="px-4 py-2 text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50 transition-colors whitespace-nowrap disabled:opacity-50 dark:text-orange-400 dark:border-orange-600 dark:hover:bg-orange-900/20 flex items-center space-x-2"
-          title="Simular erro da API (apenas desenvolvimento)"
-        >
-          <RiBugLine className="w-4 h-4" />
-          <span>{isSimulatingError ? 'Simulando...' : 'Simular Erro'}</span>
-        </button>
+          {/* Botão Limpar */}
+          <button
+            onClick={resetExecution}
+            data-testid="reset-execution-button"
+            disabled={executionState === 'executing'}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700"
+          >
+            <i className="ri-close-line mr-2"></i>
+            Limpar
+          </button>
 
-        {/* Botão Executar */}
-        <button
-          onClick={executeWorkflow}
-          data-testid="execute-workflow-button"
-          disabled={buttonConfig.disabled}
-          className={`px-6 py-2 rounded-lg transition-colors flex items-center space-x-2 whitespace-nowrap font-medium ${buttonConfig.className} ${buttonConfig.disabled ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-        >
-          {buttonConfig.icon && <buttonConfig.icon className={executionState === 'executing' ? 'animate-spin' : ''} />}
-          <span data-testid="text-executing">
-            {buttonConfig.text}
-          </span>
-        </button>
+          {/* Botão Executar */}
+          <button
+            onClick={executeWorkflow}
+            data-testid="execute-workflow-button"
+            disabled={buttonConfig.disabled}
+            className={`px-6 py-2 rounded-lg transition-colors flex items-center space-x-2 whitespace-nowrap font-medium ${buttonConfig.className} ${buttonConfig.disabled ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+          >
+            {buttonConfig.icon && <buttonConfig.icon className={executionState === 'executing' ? 'animate-spin' : ''} />}
+            <span data-testid="text-executing">
+              {buttonConfig.text}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Exibir erro se houver */}
@@ -1024,12 +944,6 @@ export default function WorkflowExecution({ onNavigationLock }: WorkflowExecutio
         isOpen={isSaveModalOpen}
         onClose={handleCloseSaveModal}
         workflowData={JSON.parse(getWorkflowJSON())}
-      />
-
-      <LoadWorkflowModal
-        isOpen={isLoadModalOpen}
-        onClose={handleCloseLoadModal}
-        onLoad={handleLoadWorkflow}
       />
 
       {/* InteractionBot com suporte para interação de workflow */}

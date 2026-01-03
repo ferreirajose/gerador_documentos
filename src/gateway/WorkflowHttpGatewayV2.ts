@@ -57,7 +57,7 @@ export default class WorkflowHttpGatewayV2 implements WorkflowGateway {
     try {
       const requestData = {
         session_id: sessionId,
-        user_response: userMessage,
+        user_message: userMessage,
         approve: false
       };
 
